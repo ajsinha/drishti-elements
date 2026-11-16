@@ -1209,6 +1209,9 @@ copyright header. The examples in this document follow the same rule (`example.o
 
 ## 15. Research: a portable view-Sutra compiler (not planned)
 
+> **Superseded by [SUTRA_FOR_EVERYONE.md](SUTRA_FOR_EVERYONE.md), section 3**, which re-examines where the compiler runs and reaches a
+> different recommendation. This section is kept until that design is decided, then deleted.
+
 > **An idea, researched and written down. It is not planned.** No step of section 13 or of Appendix A builds any of it, no effort is
 > counted for it, and nothing else in this document depends on it. It names one host's vocabulary (a *Sutra* is the Drishti product's
 > screen definition) because the idea came from that host; if it were ever built, the Elements side would need a neutral name and would
