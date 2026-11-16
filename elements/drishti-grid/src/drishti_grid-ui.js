@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The visual layer's decisions, without a page: the heading rows of a pivot (member groups spanning their columns, the collapsible
    ones), conditional formats (colour scales, data bars), which columns a phone shows, the column menu's and the context menu's items
@@ -23,7 +23,7 @@
 export const VIEW_EVENTS = Object.freeze(['layoutChanged', 'densityChanged', 'menuOpened', 'menuAction', 'chartRequested', 'drillThrough',
   'viewSaved', 'measureSwitched', 'phoneChanged', 'explainShown', 'copied', 'exported', 'customizeChanged']);
 
-/** Below this width (px) the grid is drawn for a phone (ELEMENTS.md O2). */
+/** Below this width (px) the grid is drawn for a phone. */
 export const PHONE_WIDTH = 640;
 
 /** The terminal layout's function keys, each an action of the view. */
@@ -260,7 +260,7 @@ export function cellLook(col, value, row) {
 }
 
 /**
- * The columns a phone shows (ELEMENTS.md O2): a grid keeps every column with the first one pinned (it scrolls across); a pivot collapses
+ * The columns a phone shows: a grid keeps every column with the first one pinned (it scrolls across); a pivot collapses
  * to its row headings and one value column, the grand total of the measure picked in the switcher.
  * @param {Array<{col: Object, i: number, pin: ?string}>} display the shown columns with their pinning
  * @param {boolean} pivot

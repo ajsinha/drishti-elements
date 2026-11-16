@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* A page's code areas made code editors: every <textarea data-di-code="yaml|python|rachana|text"> becomes a CodeEditor in its place, and
    every <input data-di-code="rachana"> a one-line CodeEditor (a formula, a filter: Enter adds no line, it grows as the line wraps). The

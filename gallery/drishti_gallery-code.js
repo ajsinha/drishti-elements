@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery's pure parts (no page: they run under Node too): the options panel's controls read from a typedef's JSDoc types, the code
    tabs written from the very object the live component was given (a web component, plain JavaScript, a Sutra panel, the AG Grid option
@@ -115,7 +115,7 @@
     const set = [];
     if (b.spec) { set.push('el.spec = ' + literal(b.spec, b.names) + ';'); }
     if (b.options && Object.keys(b.options).length) { set.push('el.options = ' + literal(b.options, b.names) + ';'); }
-    const lines = ['<' + b.tag + attrs + '></' + b.tag + '>', '<script src="/static/elements/drishti-core/drishti_core.js"></script>', '<script>',
+    const lines = ['<' + b.tag + attrs + '></' + b.tag + '>', '<script src="/elements/drishti-core/drishti_core.js"></script>', '<script>',
       "Drishti.elements.load('" + b.library + "').then(() => {", "  const el = document.querySelector('" + b.tag + "');"];
     if (given) { lines.push('  ' + given.trim()); }
     set.forEach((s) => lines.push('  ' + s.replace(/\n/g, '\n  ')));
@@ -123,7 +123,7 @@
     const element = lines.join('\n');
     const opts = Object.assign({}, b.options || {}, b.jsOptions || {});
     const args = b.spec ? [literal(b.spec, b.names), literal(opts, b.names)] : [literal(opts, b.names)];
-    const js = "import { " + b.ctor + " } from '/static/elements/" + b.library + "/src/drishti_index.js';\n\n" + given +
+    const js = "import { " + b.ctor + " } from '/elements/" + b.library + "/src/drishti_index.js';\n\n" + given +
       'const ' + short.replace(/-(.)/g, (m, c) => c.toUpperCase()) + ' = new ' + b.ctor + '(document.getElementById(\'' + short + '\'), ' + args.join(', ') + ');';
     return { element: element, js: js };
   }
@@ -187,7 +187,7 @@
     const s = agShape(o, names, extra);
     return "// AG Grid Enterprise's option shapes, as an application written for it passes them: the adapter builds this drishti-grid from\n" +
       "// them (no AG Grid anywhere; written from its public documentation). The keys under drishti are drishti-grid's own.\n" +
-      "import { createGridFromAgOptions } from '/static/elements/drishti-grid/src/drishti_index.js';\n\n" +
+      "import { createGridFromAgOptions } from '/elements/drishti-grid/src/drishti_index.js';\n\n" +
       "const api = createGridFromAgOptions(document.getElementById('grid'), " + literal(s.options, s.names) + ');\n' +
       "api.reportUnsupported();   // every option not taken in full, with drishti-grid's way";
   }

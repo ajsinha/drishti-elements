@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-chart's maps under Node, on the vendored Natural Earth files themselves: the projections (Equal Earth, Albers, the fitted
    conic), the loader (the world once, a country's regions on demand, cached, a failure forgotten), the United States with Alaska and
@@ -22,9 +22,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as C from '../../web/static/elements/drishti-chart/src/drishti_index.js';
+import * as C from '../../elements/drishti-chart/src/drishti_index.js';
 
-const MAPS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'static', 'vendor', 'echarts', 'maps') + path.sep;
+const MAPS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'vendor', 'echarts', 'maps') + path.sep;
 const read = (u) => Promise.resolve(JSON.parse(fs.readFileSync(u, 'utf8')));
 const th = C.chartTheme({ theme: 'terminal' });
 

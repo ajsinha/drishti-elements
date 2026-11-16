@@ -1,24 +1,24 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-tree's table tree without a page: a server's tree table read (rows nested by data-depth, the open state of each toggle, the
    tones, the highlighted row, the footer), and which trees are one chain (they open as the org chart). The drawing itself is checked in
    Chromium (test_tree_rows.py). */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as T from '../../web/static/elements/drishti-tree/src/drishti_index.js';
+import * as T from '../../elements/drishti-tree/src/drishti_index.js';
 
 /** A cell or row as the reader sees it: text, classes, attributes and the toggle. */
 function cell(text, cls) { return { textContent: text, className: cls || '', classList: { contains: (c) => (cls || '').split(' ').includes(c) } }; }

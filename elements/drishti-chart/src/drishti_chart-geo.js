@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The map's shapes: the vendored Natural Earth data (public domain, static/vendor/echarts/maps: world-countries.json at 1:110m,
    world-points.json for the countries too small for it, regions/<ISO3>.json for a country's first-level regions at 1:10m, simplified)
@@ -272,13 +272,14 @@ export function findPlace(geo, code) {
 /**
  * A loader of the shapes: the world once, each country's regions the first time they are asked, cached for the session (a failed
  * load is forgotten, so it can be asked again).
- * @param {{base: string, fetchJson: function(string): Promise<Object>}} o base: the maps folder ("/static/vendor/echarts/maps/");
+ * @param {{base: string, fetchJson: function(string): Promise<Object>}} o base: the maps folder, required ("/vendor/echarts/maps/");
  *   fetchJson: how to read a file (default: fetch, same origin)
  * @returns {{world: function(): Promise<RegionGeo>, regions: function(string): Promise<RegionGeo>, regionLevel: function(string): Promise<RegionGeo>, hasRegions: function(string): boolean, loads: string[]}}
  */
 export function createGeoLoader(o) {
   o = o || {};
-  const base = (o.base || drishtiUrl('/static/vendor/echarts/maps/')).replace(/\/?$/, '/');
+  if (!o.base) { throw new Error('createGeoLoader: the maps folder is required (option base, e.g. "/vendor/echarts/maps/")'); }
+  const base = o.base.replace(/\/?$/, '/');
   const get = o.fetchJson || ((url) => fetch(drishtiUrl(url), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error('map ' + url + ': ' + r.status); } return r.json(); }));
   const cache = { world: null, regions: {}, levels: {} }, loads = [];
   const fetched = (file) => { loads.push(file); return Promise.resolve().then(() => get(base + file)); };

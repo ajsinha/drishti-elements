@@ -1,24 +1,24 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* new Chart(element, spec, options): the chart, drawn by the vendored ECharts from the spec. Every chart gets, without asking: the
    theme (it follows the page's) and the density (comfortable, compact, terminal), drishti-core's formats on axes and tooltips, a
    crosshair tooltip, legend toggles, click on any mark: Explain (the grid's hook and drawing) and the mark's rows selected (linked with
    a grid through drishti-core's bus), the data table (▦, the accessible alternative), export (PNG at 2x, SVG, CSV, the spec), drag-to-
    zoom with an overview window, the keyboard (arrows walk the marks, Enter explains, T the table), live updates by row id (throttled),
-   and the card's chrome and status line. Two modes of one component (g2): 'card' (A, the default) and 'studio' (B: the kinds in a rail,
+   and the card's chrome and status line. Two modes of one component : 'card' (A, the default) and 'studio' (B: the kinds in a rail,
    the chart with its table, the spec beside it with options that change both). A map (kind: 'map') is drawn by its view
    (drishti_map-view.js) inside the same card. */
 import { h, stateBlock, showState, renderExplain, EventBus, bus as sharedBus, announce, SELECTION_EVENT, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
@@ -35,7 +35,7 @@ export const CHART_EVENTS = Object.freeze(['rendered', 'markClicked', 'selection
   'tableToggled', 'dataUpdated', 'modeChanged', 'densityChanged', 'kindChanged', 'levelChanged', 'metricChanged', 'placeSelected', 'pointerMoved',
   'error']);
 
-/** The modes of a chart: card (g2 A, the default) and studio (g2 B). */
+/** The modes of a chart: card (the default) and studio . */
 export const CHART_MODES = Object.freeze(['card', 'studio']);
 
 /**
@@ -48,10 +48,10 @@ export const CHART_MODES = Object.freeze(['card', 'studio']);
  * @property {{channel: string, bus: Object}} [link] linked selection: the bus (default drishti-core's) and the channel a grid shares
  * @property {function(string): Promise<Object>} [fetch] reads a spec's data.source (default: fetch, same origin, JSON)
  * @property {Object} [echarts] the engine (default window.echarts)
- * @property {string} [mapsBase] the folder of the map shapes (default /static/vendor/echarts/maps/)
+ * @property {string} [mapsBase] the folder of the map shapes (default: vendor/echarts/maps/ beside the elements folder the core bundle was loaded from; else required)
  * @property {function(string): Promise<Object[]>} [placeData] a map's rows of a level (a country's ISO alpha-3) when it is drilled
  * @property {Object<string, Object>} [samples] the studio's spec of each kind
- * @property {('ranking'|'table')} [mapMode='ranking'] a map's mode (g3 A or B)
+ * @property {('ranking'|'table')} [mapMode='ranking'] a map's mode (A or B)
  * @property {function(string, (string|Blob), string): void} [download] where exports go (default: a download)
  * @property {number} [height] the drawing's height in pixels (default 300; a map 440)
  * @property {string} [asOf] the data's date, for the status line
@@ -394,7 +394,7 @@ export class Chart extends ChartIO {
   }
 
   /**
-   * Switches the mode: card (g2 A) or studio (g2 B).
+   * Switches the mode: card  or studio .
    * @param {('card'|'studio')} mode
    * @returns {void}
    */
@@ -407,7 +407,7 @@ export class Chart extends ChartIO {
   }
 
   /**
-   * Switches a map's mode: ranking (g3 A) or table (g3 B); nothing for other kinds.
+   * Switches a map's mode: ranking  or table ; nothing for other kinds.
    * @param {('ranking'|'table')} mode
    * @returns {void}
    */

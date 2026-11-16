@@ -1,16 +1,16 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 
 """The Elements' performance budget (a quick file check): each library's bundle stays under its byte budget, and the style sheets of the
 components under theirs. A budget is raised only with a reason in the commit; a library that grows past it is split or lazy-loaded
@@ -21,12 +21,11 @@ import pytest
 
 pytestmark = pytest.mark.static
 
-ELEMENTS = Path(__file__).resolve().parent.parent / "web" / "static" / "elements"
-CSS = Path(__file__).resolve().parent.parent / "web" / "static" / "css"
+ELEMENTS = Path(__file__).resolve().parent.parent / "elements"
+CSS = Path(__file__).resolve().parent.parent / "css"
 # bytes; about 15% over the size when written (2026-11-16); raised the same day for the chart (more kinds, the world regions) and data (worker, feed monitor)
 BUNDLES = {"drishti-core": 180_000, "drishti-inputs": 290_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
-           "drishti-data": 56_000, "drishti-chart": 275_000, "drishti-graph": 165_000, "drishti-insight": 82_000, "drishti-risk": 32_000,
-           "drishti-renderer": 165_000}
+           "drishti-data": 56_000, "drishti-chart": 275_000, "drishti-graph": 165_000}
 SHEETS = {"drishti_states.css": 4_000, "drishti_command-palette.css": 5_000, "drishti_dock.css": 5_000, "drishti_chips.css": 5_000}
 
 

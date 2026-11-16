@@ -1,30 +1,30 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The loader: a page (or a domain module) loads a library only when it needs it. drishti-core is on the page already (it carries the
    loader); load('drishti-grid') adds the libraries it requires first, then its style sheets, its vendored engine's scripts (ECharts for
    drishti-chart: once, and not when the page has them) and its bundle (?v=<version>, so a new
    version is never read from a stale cache), once each, and resolves with the library's API. Where the files are: the folder
    drishti-core's bundle was loaded from, or configure({base}). The manifest is generated from drishti_elements.json by the build.
-   A library ships with a module (drishti-risk with banking; core: every installation). Where the page says which modules are on for
+   A library ships with a module (a domain library with its module; core: every installation). Where the page says which modules are on for
    the person (configure({modules}), else the page's <meta name="drishti-modules" content="banking economy">), a library of another
    module is refused, and so is every library that requires it; with nothing said (a page without a Drishti server) every library loads. */
 import { MANIFEST } from './drishti_manifest.js';
 import { url } from './drishti_base.js';
 
-const state = { base: null, staticBase: null, pending: {}, modules: null };
+const state = { base: null, staticBase: null, pending: {}, modules: null, endpoints: {}, extra: {} };
 
 function root() { return typeof window !== 'undefined' ? window : globalThis; }
 function registry() {
@@ -34,17 +34,46 @@ function registry() {
 }
 
 /**
- * Where the libraries are: base, the elements folder ("/static/elements/"); staticBase, the static root the style sheets are named from
+ * Where the libraries are: base, the elements folder ("/elements/"); staticBase, the static root the style sheets are named from
  * (default: the folder above base); modules, the domain modules on for the person (a library of any other module is refused; null:
  * the page's own meta, or nothing said).
- * @param {{base: string, staticBase: string, modules: ?string[]}} o
+ * endpoints names the addresses of the host's server for the components that talk to one: live (the live-set API), changes (the change
+ * history), pivotPage (the page a pivot opens in), capabilities (what the data server offers). A component with no address for what it needs
+ * says so in words and does the rest of its work without it.
+ * @param {{base: string, staticBase: string, modules: ?string[], endpoints: Object<string, string>}} o
  * @returns {void}
  */
 export function configure(o) {
   if (o.base) { state.base = o.base.replace(/\/?$/, '/'); }
   if (o.staticBase) { state.staticBase = o.staticBase.replace(/\/?$/, '/'); }
+  if (o.endpoints) { Object.assign(state.endpoints, o.endpoints); }
   if (o.modules === null || Array.isArray(o.modules)) { state.modules = o.modules ? o.modules.map(String) : null; }
 }
+
+/**
+ * An address the host configured (configure({ endpoints })), or '' when it did not.
+ * @param {string} name live, changes, pivotPage or capabilities
+ * @returns {string}
+ */
+export function endpoint(name) { return state.endpoints[name] ? url(state.endpoints[name]) : ''; }
+
+/**
+ * Registers a library that lives outside the manifest (a host's own, or a domain module's): the loader loads it, orders it after what it
+ * requires and refuses it by the same rules as the manifest's libraries.
+ * @param {string} name for example "drishti-extra"
+ * @param {{base: string, entry: string, bundle: string, requires: string[], css: string[], scripts: string[], module: string}} o base: the folder
+ *   holding the bundle (default: the elements folder); bundle: the file below it ("drishti-extra/drishti_extra.js", `entry` is the same
+ *   thing under its older name); requires: library names; css and scripts: addresses below the static root; module: the module it belongs to
+ * @returns {void}
+ */
+export function register(name, o) {
+  o = o || {};
+  const bundle = o.bundle || o.entry;
+  if (!bundle) { throw new Error('register ' + name + ': the bundle (the file that registers the library) is required'); }
+  state.extra[name] = { bundle: bundle, requires: o.requires || [], css: o.css || [], scripts: o.scripts || [], module: o.module || 'core', own: o.base || null };
+}
+
+function lib(name) { return MANIFEST.libraries[name] || state.extra[name]; }
 
 function modulesOn() {
   if (state.modules) { return state.modules; }
@@ -55,18 +84,22 @@ function modulesOn() {
 
 /**
  * Why a library may not be loaded on this page (its module is not on for the person), or null when it may.
- * @param {string} name for example "drishti-risk"
+ * @param {string} name for example "drishti-extra"
  * @returns {?string}
  */
 export function refused(name) {
-  const l = MANIFEST.libraries[name];
+  const l = lib(name);
   const mod = l && l.module ? l.module : 'core';
   const on = modulesOn();
   if (mod === 'core' || on === null || on.indexOf(mod) >= 0) { return null; }
   return name + " belongs to the module '" + mod + "', which is not available here: ask your administrator";
 }
 
-function base() { return state.base || registry().base || url('/static/elements/'); }
+function base() {
+  const b = state.base || registry().base;
+  if (!b) { throw new Error('load: the folder of the libraries is not known (the core bundle was not loaded by a script tag, e.g. an ES module import): call configure({ base: "/path/to/elements/" })'); }
+  return b;
+}
 function staticBase() { return state.staticBase || base().replace(/[^/]+\/$/, ''); }
 
 /**
@@ -86,7 +119,7 @@ export const ELEMENTS_VERSION = MANIFEST.elements;
  * @param {string} name for example "drishti-grid"
  * @returns {?string}
  */
-export function libraryVersion(name) { const l = MANIFEST.libraries[name]; return l ? MANIFEST.elements : null; }
+export function libraryVersion(name) { const l = lib(name); return l ? MANIFEST.elements : null; }
 
 /**
  * A library and every library it requires, deepest first, each once.
@@ -96,8 +129,8 @@ export function libraryVersion(name) { const l = MANIFEST.libraries[name]; retur
 export function requirements(name) {
   const out = [];
   const visit = (n, trail) => {
-    const l = MANIFEST.libraries[n];
-    if (!l) { throw new Error('there is no library ' + n + ' (it has ' + Object.keys(MANIFEST.libraries).join(', ') + ')'); }
+    const l = lib(n);
+    if (!l) { throw new Error('there is no library ' + n + ' (it has ' + Object.keys(MANIFEST.libraries).concat(Object.keys(state.extra)).join(', ') + ')'); }
     if (trail.indexOf(n) >= 0) { throw new Error('libraries require each other: ' + trail.concat([n]).join(' -> ')); }
     l.requires.forEach((r) => visit(r, trail.concat([n])));
     if (out.indexOf(n) < 0) { out.push(n); }
@@ -128,14 +161,14 @@ function addCss(doc, href) {
 function loadOne(name) {
   if (loaded(name)) { return Promise.resolve(loaded(name)); }
   if (state.pending[name]) { return state.pending[name]; }
-  const l = MANIFEST.libraries[name], r = root();
+  const l = lib(name), r = root();
   const doc = r.document;
   if (!doc) { return Promise.reject(new Error('load: ' + name + ' is not loaded, and there is no page to load it into (under Node: require its bundle)')); }
   l.css.forEach((c) => addCss(doc, staticBase() + c + '?v=' + MANIFEST.elements));
   const engine = (l.scripts || []).reduce((p, src) => p.then(() => loadScript(staticBase() + src)), Promise.resolve());
   state.pending[name] = engine.then(() => new Promise((resolve, reject) => {
     const s = doc.createElement('script');
-    s.src = base() + l.bundle + '?v=' + MANIFEST.elements;
+    s.src = (l.own ? l.own.replace(/\/?$/, '/') : base()) + l.bundle + '?v=' + MANIFEST.elements;
     s.async = false;
     s.setAttribute('data-drishti-library', name);
     s.onload = () => { delete state.pending[name]; const api = loaded(name); if (api) { resolve(api); } else { reject(new Error(name + ' loaded but did not register itself')); } };

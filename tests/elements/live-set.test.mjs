@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-grid's live mode, the model without a page: rows merged by key and version (an older or equal version never replaces a newer one,
    a row outside the viewer's window is not added), the grid's rows and columns from a declaration, the page window, the edit's items and
@@ -19,7 +19,8 @@
    the masked paths of a record, and the HTTP calls' addresses. The behaviours on a real page are tests/test_live_grid_browser.py. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
+import { configure } from '../../elements/drishti-core/src/drishti_index.js';
 
 const spec = {
   id: 'trade', kind: 'trade', key: 'TRADE_ID', version: 'TRADE_VERSION', groupBy: [], subtotals: ['QUANTITY'], reason: 'required',
@@ -93,6 +94,8 @@ test('the Pivot gets the kind, the filters as members, the grouping and the numb
   assert.deepEqual(l.view.rows, ['PORTFOLIO']);
   assert.deepEqual(l.view.filters, { PORTFOLIO: { in: ['BOOK-A', 'BOOK-B'] } });
   assert.deepEqual(l.view.values.map((v) => v.measure), ['sum(QUANTITY)', 'sum(PRICE)']);
+  assert.equal(G.pivotHref(l, true), '');                       // no pivot page configured: no link
+  configure({ endpoints: { pivotPage: '/pivot' } });
   const href = G.pivotHref(l, true);
   assert.match(href, /^\/pivot\?source=trade&lay=/);
   assert.match(href, /&live=1$/);
@@ -117,7 +120,7 @@ test('a change\'s state in words, and which changes are still open', () => {
 test('the HTTP api asks the console\'s /api/live addresses and rejects with the server\'s words', async () => {
   const calls = [];
   const fetch = (url, o) => { calls.push([o.method, url, o.body]); return Promise.resolve({ ok: !/edit/.test(url), status: /edit/.test(url) ? 409 : 200, json: () => Promise.resolve(/edit/.test(url) ? { code: 'DRS-1', detail: 'changed by feed' } : {}) }); };
-  const api = G.httpLiveApi({ id: 'trade', fetch: fetch });
+  const api = G.httpLiveApi({ id: 'trade', base: '/api/live', changesUrl: '/api/changes', fetch: fetch });
   await api.rows({ limit: 10, sort: 'TRADE_ID', descending: '' });
   await api.row('T/1');
   await api.window('s-1', { all: true });

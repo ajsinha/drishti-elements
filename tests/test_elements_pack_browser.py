@@ -1,18 +1,18 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 
-"""Drishti Elements packed for another application (``drishti.py elements pack``; docs/guides/EMBED_GUIDE.md): a tiny static
+"""Drishti Elements packed for another application (``drishti.py elements pack``; docs/MOVING_FROM_AG_GRID.md): a tiny static
 page that loads only the two packed files draws a grid and a chart, with no Drishti server, under a strict CSP (nothing inline), and
 asks for nothing but the packed files. The packing itself (dependencies, the banking exclusion, themes) is test_elements_dist.py."""
 import re

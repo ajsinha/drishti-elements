@@ -1,24 +1,24 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* drishti-grid under Node: what a screen moving onto the grid needs of it (ELEMENTS.md section 12, the BI and Pivot family): the
+/* drishti-grid under Node: what a screen moving onto the grid needs of it: the
    server's own aggregations in the wells, a server pivot's figures shown by the answer's own fields (measureText: units, show-as, the
    server's text), an answer the host fetched itself (showAnswer, a patch), the open state given back, and a value's label kept. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
 
 const COLS = [{ field: 'DESK', header: 'Desk' }, { field: 'NOTIONAL', type: 'number', header: 'Notional' },
   { id: 'm:var', field: 'var', header: 'VaR', type: 'number', measure: 'var()', additive: false, enableRowGroup: false, enablePivot: false }];

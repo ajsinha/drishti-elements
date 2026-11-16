@@ -1,33 +1,35 @@
 #!/usr/bin/env python3
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 """The Drishti Elements build: each library's ES modules into one bundled file, offline, with nothing but Python (no npm, no CDN).
 
     python3 tools/elements/build.py            # write every library's bundle and the generated modules
     python3 tools/elements/build.py --check    # exit 1 when anything written by the build is out of date (a static test asks the same)
 
-The libraries live under ``drishti-console/web/static/elements/<library>/`` and are listed, each with its version, in the manifest
-``drishti-console/web/static/elements/drishti_elements.json``. A library is plain ES modules under ``src/`` (usable as they are with
+The libraries live under ``elements/<library>/`` and are listed, each with its version, in the manifest
+``elements/drishti_elements.json``. The same tool bundles libraries that live elsewhere (a host's own, built against a copy of this tree):
+``--root DIR`` is the folder holding the library folders, ``--manifest FILE`` their manifest, ``--header FILE`` the licence header, and
+``--elements DIR`` this project's own ``elements/`` folder (the libraries they require; default: the one beside this tool). A library is plain ES modules under ``src/`` (usable as they are with
 ``import``) and one bundled file, ``drishti_<name>.js``, which this build writes: a classic script that registers the library on
 ``window.Drishti.elements`` (``Drishti.elements.core``, ``Drishti.elements.libs['drishti-core']``) and is also a CommonJS module under Node.
 
 The build also writes the generated modules of drishti-core, each from its one home, so nothing is kept twice:
 
 * ``src/drishti_manifest.js``      the manifest (libraries, versions, files, requirements) the loader reads;
-* ``src/drishti_formats-table.js`` the server's named formats (``compute/drishti-rachana/src/main/resources/formats.yaml``);
-* ``src/drishti_theme-table.js``   the themes and their colour tokens (``static/css/drishti_tokens.css``);
-* drishti-chart's ``src/drishti_world-regions.js``  the world's regions (``compute/drishti-rachana/src/main/resources/world-regions.yaml``, which the server reads too).
+* ``src/drishti_formats-table.js`` the server's named formats (``data/formats.yaml``);
+* ``src/drishti_theme-table.js``   the themes and their colour tokens (``css/drishti_tokens.css``);
+* drishti-chart's ``src/drishti_world-regions.js``  the world's regions (``data/world-regions.yaml``).
 
 The module grammar the bundler accepts (anything else is refused with the file and line):
 
@@ -47,13 +49,19 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-ELEMENTS = ROOT / "drishti-console" / "web" / "static" / "elements"
+HOME = Path(__file__).resolve().parents[2]                # this project's root
+ROOT = HOME                                                # the root the build reads from (--root)
+ELEMENTS = HOME / "elements"                               # the folder holding the library folders being built
+OWN_ELEMENTS = HOME / "elements"                           # this project's libraries (what a host's libraries may require)
 MANIFEST = ELEMENTS / "drishti_elements.json"
-WORLD_REGIONS_YAML = ROOT / "compute/drishti-rachana" / "src" / "main" / "resources" / "world-regions.yaml"
-FORMATS_YAML = ROOT / "compute/drishti-rachana" / "src" / "main" / "resources" / "formats.yaml"
-TOKENS_CSS = ROOT / "drishti-console" / "web" / "static" / "css" / "drishti_tokens.css"
-HEADER = "/*\n" + "".join(f" * {line}".rstrip() + "\n" for line in (ROOT / "config" / "license-header.txt").read_text(encoding="utf-8").strip().splitlines()) + " */\n"
+WORLD_REGIONS_YAML = HOME / "data" / "world-regions.yaml"
+FORMATS_YAML = HOME / "data" / "formats.yaml"
+TOKENS_CSS = HOME / "css" / "drishti_tokens.css"
+HEADER_FILE = HOME / "config" / "license-header.txt"
+
+
+def header() -> str:
+    return "/*\n" + "".join(f" * {line}".rstrip() + "\n" for line in HEADER_FILE.read_text(encoding="utf-8").strip().splitlines()) + " */\n"
 
 NAME = r"[A-Za-z_$][\w$]*"
 IMPORT = re.compile(r"^import\s+(\{[^}]*\}|\*\s+as\s+" + NAME + r")\s+from\s+(['\"])([^'\"]+)\2\s*;?[ \t]*$", re.M)
@@ -69,6 +77,19 @@ class BuildError(Exception):
 
 def manifest() -> dict:
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
+
+
+def own_manifest() -> dict:
+    return json.loads((OWN_ELEMENTS / "drishti_elements.json").read_text(encoding="utf-8"))
+
+
+def known() -> dict[str, tuple[Path, dict]]:
+    """Every library a build can see: (its folder, its manifest entry). Those being built win; this project's own are the ones they may require."""
+    out = {n: (ELEMENTS / n, spec) for n, spec in manifest()["libraries"].items()}
+    if OWN_ELEMENTS != ELEMENTS:
+        for n, spec in own_manifest()["libraries"].items():
+            out.setdefault(n, (OWN_ELEMENTS / n, spec))
+    return out
 
 
 def short(lib: str) -> str:
@@ -171,6 +192,7 @@ class Library:
     def __init__(self, name: str, spec: dict, all_specs: dict):
         self.name, self.spec = name, spec
         self.root = ELEMENTS / name
+        all_specs = {n: sp for n, (_, sp) in known().items()}
         self.entry = (self.root / spec["entry"]).resolve()
         self.requires = list(spec.get("requires") or [])
         for r in self.requires:
@@ -182,8 +204,8 @@ class Library:
 
     def owner(self, target: str) -> str | None:
         p = Path(target)
-        for lib in manifest()["libraries"]:
-            if (ELEMENTS / lib) in p.parents:
+        for lib, (folder, _) in known().items():
+            if folder in p.parents:
                 return lib
         return None
 
@@ -200,8 +222,8 @@ class Library:
                 raise BuildError(f"{m.path.relative_to(ROOT)} imports {t}, outside every library")
             elif lib not in self.requires:
                 raise BuildError(f"{m.path.relative_to(ROOT)} imports from {lib}, which {self.name}'s manifest entry does not require")
-            elif Path(t) != (ELEMENTS / lib / manifest()["libraries"][lib]["entry"]).resolve():
-                raise BuildError(f"{m.path.relative_to(ROOT)} imports {Path(t).relative_to(ELEMENTS)}: another library only through its entry")
+            elif Path(t) != (known()[lib][0] / known()[lib][1]["entry"]).resolve():
+                raise BuildError(f"{m.path.relative_to(ROOT)} imports {Path(t).name}: another library only through its entry")
 
     def _order(self) -> list[str]:
         done: list[str] = []
@@ -262,7 +284,7 @@ class Library:
         entry_rel = self.modules[str(self.entry)].rel
         version = manifest()["elements"]
         node_paths = {r: "../" + r + "/" + bundle_name(r) for r in self.requires}
-        return (HEADER +
+        return (header() +
                 f"/* {self.name} {version}: Drishti Elements. GENERATED by tools/elements/build.py from {self.name}/src/ (edit the modules, then\n"
                 f"   run the build; a static test refuses a stale bundle). A classic script: it registers the library as\n"
                 f"   window.Drishti.elements.{short(self.name).replace('-', '_')} (and .libs[{json.dumps(self.name)}]); under Node it is the CommonJS module of the same API. */\n"
@@ -291,7 +313,7 @@ class Library:
 
 # -- the generated modules of drishti-core -------------------------------------------------------------------------------------------
 def gen_header(what: str, source: str) -> str:
-    return HEADER + f"/* {what}. GENERATED by tools/elements/build.py from {source}: do not edit (a static test refuses a stale copy). */\n"
+    return header() + f"/* {what}. GENERATED by tools/elements/build.py from {source}: do not edit (a static test refuses a stale copy). */\n"
 
 
 def gen_manifest(m: dict) -> str:
@@ -302,7 +324,7 @@ def gen_manifest(m: dict) -> str:
                       "requires": list(spec.get("requires") or []), "css": list(spec.get("css") or []),
                       "scripts": list(spec.get("scripts") or []), "module": str(spec.get("module") or "core")}
     body = json.dumps({"elements": m["elements"], "libraries": libs}, indent=2, ensure_ascii=False)
-    return (gen_header("The Elements manifest: every library, its files and what it requires (and the one version of Elements)", "static/elements/drishti_elements.json")
+    return (gen_header("The Elements manifest: every library, its files and what it requires (and the one version of Elements)", "elements/drishti_elements.json")
             + "\n/** The libraries of Drishti Elements by name (all at the one Elements version, `elements`): bundle and entry (relative to the elements folder), global name, the\n"
             " *  libraries each requires, the style sheets and the vendored engine's scripts (both relative to the static root) it needs, and the\n"
             " *  module it ships with (core: every installation; a domain module's library is loaded only where that module is on for the person).\n"
@@ -315,7 +337,7 @@ def gen_world_regions() -> str:
     subs = {k: {"name": v["name"], "continent": v["continent"], "countries": list(v["countries"])} for k, v in raw["subregions"].items()}
     by_country = {c: k for k, v in subs.items() for c in v["countries"]}
     body = json.dumps({"continents": raw["continents"], "subregions": subs, "byCountry": by_country}, indent=2, ensure_ascii=False)
-    return (gen_header("The world's regions: continents, sub-regions and the countries in each", "compute/drishti-rachana/src/main/resources/world-regions.yaml (the server reads the same file)")
+    return (gen_header("The world's regions: continents, sub-regions and the countries in each", "data/world-regions.yaml")
             + "\n/** The one grouping of countries (ISO alpha-3) into sub-regions and continents, from Natural Earth (public domain): codes CT-<ABC> and SR-<NAME>.\n"
             " *  @type {{continents: Object<string, string>, subregions: Object<string, {name: string, continent: string, countries: string[]}>, byCountry: Object<string, string>}} */\n"
             f"export const WORLD_REGIONS = Object.freeze({body});\n")
@@ -329,7 +351,7 @@ def gen_formats() -> str:
         table[name] = {"type": f.get("type", "number"), "decimals": int(f.get("decimals", 0)), "grouping": bool(f.get("grouping", True)),
                        "sign": f.get("sign", "auto"), "scale": float(f.get("scale", 1)), "suffix": f.get("suffix"), "pattern": f.get("pattern")}
     body = json.dumps(table, indent=2, ensure_ascii=False)
-    return (gen_header("The server's named formats (fmt: amount0, pct2, compact, dmy, ...)", "compute/drishti-rachana/src/main/resources/formats.yaml")
+    return (gen_header("The server's named formats (fmt: amount0, pct2, compact, dmy, ...)", "data/formats.yaml")
             + "\n/** The bundled named formats, exactly as the server reads them (Formats.java): a pack's or a site's formats are added at run\n"
             " *  time with defineFormats().\n"
             " *  @type {Object<string, {type: string, decimals: number, grouping: boolean, sign: string, scale: number, suffix: ?string, pattern: ?string}>} */\n"
@@ -368,7 +390,7 @@ def gen_themes() -> str:
         themes[n]["tokens"] = {**base, **themes[n]["tokens"]}
         themes[n]["scheme"] = themes[n]["scheme"] or "dark"
     body = json.dumps({n: themes[n] for n in order}, indent=2, ensure_ascii=False)
-    return (gen_header("The themes and their colour tokens", "static/css/drishti_tokens.css, the one home of every colour")
+    return (gen_header("The themes and their colour tokens", "css/drishti_tokens.css, the one home of every colour")
             + "\n/** Every theme (data-theme on <html>): light or dark, and each --d-* token's value. The first is the default.\n"
             " *  @type {Object<string, {scheme: string, tokens: Object<string, string>}>} */\n"
             f"export const THEME_TABLE = Object.freeze({body});\n")
@@ -377,8 +399,10 @@ def gen_themes() -> str:
 def outputs() -> dict[Path, str]:
     m = manifest()
     core = ELEMENTS / "drishti-core" / "src"
-    out = {core / "drishti_manifest.js": gen_manifest(m), core / "drishti_formats-table.js": gen_formats(), core / "drishti_theme-table.js": gen_themes()}
-    out[ELEMENTS / "drishti-chart" / "src" / "drishti_world-regions.js"] = gen_world_regions()
+    out: dict[Path, str] = {}
+    if "drishti-core" in m["libraries"]:                 # a host's own libraries have no generated modules: only this project's core and chart do
+        out = {core / "drishti_manifest.js": gen_manifest(m), core / "drishti_formats-table.js": gen_formats(), core / "drishti_theme-table.js": gen_themes()}
+        out[ELEMENTS / "drishti-chart" / "src" / "drishti_world-regions.js"] = gen_world_regions()
     for name, spec in m["libraries"].items():
         out[ELEMENTS / name / bundle_name(name)] = None  # rendered after the generated modules are in place
     return out
@@ -412,8 +436,27 @@ def build(check: bool) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--root", help="the root the build reads from (default: this project's root)")
+    ap.add_argument("--elements", help="this project's own elements/ folder, for the libraries a host's libraries require")
+    ap.add_argument("--manifest", help="the manifest of the libraries to build (default: elements/drishti_elements.json under --root)")
+    ap.add_argument("--header", help="the licence header file (default: config/license-header.txt under --root)")
     ap.add_argument("--check", action="store_true", help="exit 1 when a bundle or a generated module is out of date; write nothing")
     a = ap.parse_args(argv)
+    global ROOT, ELEMENTS, OWN_ELEMENTS, MANIFEST, HEADER_FILE
+    if a.root:
+        ROOT = Path(a.root).resolve()
+    if a.elements:
+        OWN_ELEMENTS = Path(a.elements).resolve()
+    if a.manifest:
+        MANIFEST = Path(a.manifest).resolve()
+        ELEMENTS = MANIFEST.parent
+    elif a.root:
+        ELEMENTS = ROOT / "elements"
+        MANIFEST = ELEMENTS / "drishti_elements.json"
+    if a.header:
+        HEADER_FILE = Path(a.header).resolve()
+    elif a.root:
+        HEADER_FILE = ROOT / "config" / "license-header.txt"
     try:
         return build(a.check)
     except BuildError as e:

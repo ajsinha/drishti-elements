@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The grid model: the one object a layout draws. Columns, a row model (client-side rows in the page, or server-side blocks), the pivot
    (wells, open state, the answer: computed in the browser for rows in the page, asked of the server for the rest, non-additive totals
@@ -38,10 +38,9 @@ import { cycleSort, FILTER_CHANNEL } from '../../drishti-core/src/drishti_index.
  * @property {function(Object, number): string} [getRowId]
  * @property {('wells'|'panel'|'terminal')} [layout='wells']
  * @property {('comfortable'|'compact'|'terminal')} [density='compact']
- * @property {function({view: Object}, AbortSignal, Object[]): Promise<Object>} [serverPivot] asks a server pivot (POST /api/pivot/query's
- *   body; the third argument: the rows in the page, for an inline pivot); needed for a pivot of server-side rows, for the non-additive
+ * @property {function({view: Object}, AbortSignal, Object[]): Promise<Object>} [serverPivot] asks a server pivot (the body of the host's pivot query; the third argument: the rows in the page, for an inline pivot); needed for a pivot of server-side rows, for the non-additive
  *   totals of a local pivot, and for every pivot when clientAggregation is false
- * @property {boolean} [clientAggregation=true] false: the browser computes no figure (the console's policy, ELEMENTS.md section 3): group
+ * @property {boolean} [clientAggregation=true] false: the browser computes no figure (a server's policy): group
  *   figures and every pivot are the server's
  * @property {function(Object): Promise<*>} [explain] the Explain hook: given a cell's context, the explanation (a layout shows it)
  * @property {('single'|'multiple'|'none')} [rowSelection='multiple']

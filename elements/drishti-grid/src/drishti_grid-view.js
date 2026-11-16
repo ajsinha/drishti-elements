@@ -1,23 +1,23 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-grid as a person sees it: new Grid(element, options) draws the engine's model (drishti_grid.js) in one of three layouts
-   (ELEMENTS.md 5.1): 'wells' (A: the ribbon of wells above the grid, Explain in a drawer that follows the selection; the default),
+  : 'wells' (A: the ribbon of wells above the grid, Explain in a drawer that follows the selection; the default),
    'panel' (B: the side tool panel, Explain as a card at the cell) and 'terminal' (C: the command line, the lane of wells, Explain in a
    split pane, the function keys; the default of VaR screens). The density (comfortable, compact, terminal) is separate. Below 640 px a
-   grid keeps its first column pinned and scrolls across; a pivot shows one value column with a measure switcher (O2). The chrome (toolbar,
+   grid keeps its first column pinned and scrolls across; a pivot shows one value column with a measure switcher. The chrome (toolbar,
    status bar, command line, keys) is drishti_grid-shell.js; menus, keys and actions drishti_grid-actions.js. */
 import { announce } from '../../drishti-core/src/drishti_index.js';
 import { GridModel } from './drishti_grid.js';

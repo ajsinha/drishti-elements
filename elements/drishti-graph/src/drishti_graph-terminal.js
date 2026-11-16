@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The terminal mode's graph query line (g5 C): GRAPH> path A B, expand X, group by country, top 10 <measure>, explain, layout radial,
+/* The terminal mode's graph query line : GRAPH> path A B, expand X, group by country, top 10 <measure>, explain, layout radial,
    filter <type>…, export png. A command is read here into an action on the Graph (its public methods) and lines of answer; completion
    (Tab) offers the command words, then node ids, attributes, measures, layouts or types by what the command takes; the function keys map
    to commands. No page: the Graph is any object with the methods used, so the commands are tested under Node with a stand-in. */

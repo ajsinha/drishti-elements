@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery's demos of drishti-designer, the designer kit: a small report designer assembled from the kit alone (the shell in each of
    its three layouts, the palette, the grid canvas, the inspector, the outline and the YAML pane kept in step both ways), and a flow
@@ -72,11 +72,11 @@
     id: 'designer-kit', library: 'drishti-designer', kind: 'function', ag: false, keys: [], events: [], sutra: () => null,
     title: 'A designer from the kit', about: 'drishti_shell.js', types: ['ShellOptions', 'LayoutCanvasOptions', 'YamlPaneOptions'],
     summary: 'The designer shell (Visual, YAML or both; versions, Validate, Preview, History, Impact, Propose for review) in its three layouts, with the palette, the layout canvas, the inspector, the outline and the YAML pane kept in step both ways.',
-    extra: [{ name: 'layout', control: { kind: 'select', values: ['studio', 'side-by-side', 'terminal'] }, desc: 'The shell\'s layout (mock-up g7: A, B or C), remembered per person by the host.' }],
+    extra: [{ name: 'layout', control: { kind: 'select', values: ['studio', 'side-by-side', 'terminal'] }, desc: 'The shell\'s layout (A, B or C), remembered per person by the host.' }],
     values: { layout: 'studio' },
-    examples: [{ title: 'Studio (g7 A, the default)', values: { layout: 'studio' } }, { title: 'Side by side (g7 B)', values: { layout: 'side-by-side' } }, { title: 'Terminal (g7 C)', values: { layout: 'terminal' } }],
+    examples: [{ title: 'Studio (the default)', values: { layout: 'studio' } }, { title: 'Side by side ', values: { layout: 'side-by-side' } }, { title: 'Terminal ', values: { layout: 'terminal' } }],
     mount: designer,
-    code: (values) => ({ js: "import { DesignerShell, LayoutModel, LayoutCanvas, Selection, Palette, Inspector, Outline, YamlPane } from '/static/elements/drishti-designer/src/drishti_index.js';\n\n" +
+    code: (values) => ({ js: "import { DesignerShell, LayoutModel, LayoutCanvas, Selection, Palette, Inspector, Outline, YamlPane } from '/elements/drishti-designer/src/drishti_index.js';\n\n" +
       "const shell = new DesignerShell(el, { layout: '" + ((values && values.layout) || 'studio') + "', rail: [{ id: 'palette', label: 'Palette' }, { id: 'outline', label: 'Outline' }], inspector: true });\n" +
       "const model = new LayoutModel({ cols: 12 }), selection = new Selection();\n" +
       "new LayoutCanvas(shell.visual, { model, selection });\nnew YamlPane(shell.yamlBody, { selection });" })
@@ -105,6 +105,6 @@
       model.load([{ id: 'p1', label: 'Positions', area: 'main' }, { id: 'p2', label: 'By day', area: 'main', span: 6 }, { id: 'p3', label: 'Limits', area: 'main', span: 6 }, { id: 's1', label: 'Key figures', area: 'right' }]);
       return { target: box, element: box, ready: Promise.resolve(), destroy: () => { canvas.destroy(); box.remove(); } };
     },
-    code: () => ({ js: "import { LayoutModel, LayoutCanvas, Selection } from '/static/elements/drishti-designer/src/drishti_index.js';\n\nconst model = new LayoutModel({ mode: 'flow', areas: ['main', 'right'] });\nconst canvas = new LayoutCanvas(screen, { model, selection: new Selection(), keys: 'select' });\ncanvas.adopt(panelsById, { main, right });" })
+    code: () => ({ js: "import { LayoutModel, LayoutCanvas, Selection } from '/elements/drishti-designer/src/drishti_index.js';\n\nconst model = new LayoutModel({ mode: 'flow', areas: ['main', 'right'] });\nconst canvas = new LayoutCanvas(screen, { model, selection: new Selection(), keys: 'select' });\ncanvas.adopt(panelsById, { main, right });" })
   });
 }(typeof window !== 'undefined' ? window : globalThis));

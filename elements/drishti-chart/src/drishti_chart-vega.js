@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* Vega-Lite into drishti-chart's spec (the product owner's decision O1: Vega is retired, one drawing engine). A BI visual of
+/* Vega-Lite into drishti-chart's spec (Vega is not drawn: one drawing engine). A BI visual of
    type: vega-lite and a Python visual's output: vega-lite are translated here and drawn by drishti-chart, in the theme's colours.
 
    What translates (what Drishti's Vega-Lite visuals use, and the common subset around it):

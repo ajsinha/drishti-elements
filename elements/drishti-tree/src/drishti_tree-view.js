@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The tree, drawn (g6, the product owner's choice of 2026-11-07: option B, the tree grid, the default; A, the org chart, and C, the
-   sunburst and the icicle, as modes of the same component; one engine, the modes only draw). The chrome is g6's: the toolbar (search
+/* The tree, drawn (option B, the tree grid, the default; A, the org chart, and C, the
+   sunburst and the icicle, as modes of the same component; one engine, the modes only draw). The chrome is the: the toolbar (search
    with its count, expand and collapse all, the modes, the size of a partition, ✎ Edit (propose), PNG, SVG, CSV, JSON), the edit bar,
    the breadcrumbs of the selected node, the view and the side panel (the node, its figures with ◆, Explain, the proposal), the status
    line. A non-additive figure is asked of the host (serverMeasures, debounced) and never summed; a selection is shared on drishti-core's
@@ -29,7 +29,7 @@ import { exportTree, keyMove } from './drishti_tree-io.js';
 import { loadOpenChildren } from './drishti_tree-hooks.js';
 import { selectElement } from '../../drishti-inputs/src/drishti_index.js';
 
-/** The modes of one tree: grid (g6 B, the default), org (A), sunburst and icicle (C). */
+/** The modes of one tree: grid (the default), org (A), sunburst and icicle (C). */
 export const TREE_MODES = Object.freeze(['grid', 'org', 'sunburst', 'icicle']);
 
 /** Every event a tree emits (on tree.events, and as drishti:<kebab-name> on its host). */

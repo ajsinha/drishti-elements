@@ -1,17 +1,17 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
-"""Drishti Elements (static/elements/), the quick file checks of the gate: the bundles and generated modules current (tools/elements/build.py
+# See the LICENSE file in the root of this repository.
+"""Drishti Elements (elements/), the quick file checks of the gate: the bundles and generated modules current (tools/elements/build.py
 --check), the API reference current and every public symbol typed (tools/docs/elements_api.py --check), both run in this process, and our
 file names prefixed. The libraries' unit tests in Node and the exported workbook: test_elements_node.py (they start Node)."""
 import importlib.util
@@ -19,12 +19,11 @@ import json
 
 import pytest
 
-from conftest import CONSOLE
+from conftest import ROOT
 
-pytestmark = pytest.mark.static   # a quick file check: the drill's gate runs it (TEST_HARNESS.md, "Quick file checks")
+pytestmark = pytest.mark.static   # a quick file check: the drill's gate runs it
 
-ROOT = CONSOLE.parent
-ELEMENTS = CONSOLE / "web" / "static" / "elements"
+ELEMENTS = ROOT / "elements"
 
 
 def _tool(name, path):
@@ -54,10 +53,10 @@ def test_every_file_of_ours_is_prefixed_and_every_library_is_in_the_manifest():
     for name, spec in manifest["libraries"].items():
         assert (ELEMENTS / name / spec["entry"]).is_file()
         for css in spec.get("css", []):
-            assert (CONSOLE / "web" / "static" / css).is_file(), f"{name} needs {css}"
+            assert (ROOT / css).is_file(), f"{name} needs {css}"
 
 
-#: The size of one Elements module (ELEMENTS.md section 3): a module over it is split by what it does, never trimmed of its comments.
+#: The size of one Elements module: a module over it is split by what it does, never trimmed of its comments.
 MODULE_LINES = 530
 
 

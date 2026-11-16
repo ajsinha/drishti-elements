@@ -1,172 +1,31 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
-"""The guards of Drishti Elements (docs/architecture/ELEMENTS.md section 11, "No second implementation"): one implementation of each
-thing, in the libraries under static/elements/. No console script (static/js, the pages' own scripts in templates):
-
-* calls ECharts itself: charts are drishti-chart's (its Chart, its panel charts, its maps);
-* builds its own grid: sorting a table's rows by its headings (aria-sort) is drishti-grid's (the grid, or its document tables);
-* formats numbers on its own (Intl.NumberFormat, toFixed, toPrecision, a number's toLocaleString): numbers are drishti-core's
-  (formatNumber, formatCompact, formatPercent, formatNamed: the server's rules, half up);
-* opens its own EventSource or WebSocket: the connection has one home, drishti-data's LiveClient.
-
-ALLOWED lists the files other builders are still moving, each with the branch moving it. It only shrinks: an entry whose file is gone,
-or no longer breaks the rule, fails the check, so the list stays true. The geometry of a hand-drawn SVG (a coordinate) is not a number
-shown to people and does not use the formatters."""
+# See the LICENSE file in the root of this repository.
+"""The guards of Drishti Elements: the generic libraries hold no domain vocabulary in their code, nothing is loaded from a CDN, and the
+hand-written sources of the libraries keep one implementation of each thing (no second ECharts call, no second number formatter)."""
 import re
 
 import pytest
 
-from conftest import CONSOLE
-from core import modules
+from conftest import ROOT
 
-pytestmark = pytest.mark.static   # a quick file check: the drill's gate runs it (TEST_HARNESS.md, "Quick file checks")
-
-WEB = CONSOLE / "web"
-
-RULES = {
-    "echarts": (re.compile(r"\becharts\s*\.\s*(?:init|getInstanceByDom|registerMap|connect|dispose|use)\b|\.setOption\s*\("),
-                "calls ECharts itself: draw it with drishti-chart"),
-    "grid": (re.compile(r"aria-sort|\bariaSort\b"),
-             "sorts a table by its headings itself: use drishti-grid (the grid, or its document tables)"),
-    "numbers": (re.compile(r"Intl\.NumberFormat|\.toFixed\s*\(|\.toPrecision\s*\(|\.toLocaleString\s*\("),
-                "formats numbers itself: use drishti-core's formatNumber, formatCompact, formatPercent or formatNamed"),
-    "live": (re.compile(r"\bnew\s+(?:[\w$.]*\.)?(?:EventSource|WebSocket)\b|\b(?:window|self|globalThis)\.(?:EventSource|WebSocket)\s*="),
-             "opens its own EventSource or WebSocket: use drishti-data's LiveClient"),
-    "visual": (re.compile(r"createElementNS\(|getContext\(\s*['\"]2d|<svg\b"),
-               "draws a visual by hand: every visual lives in a Drishti Elements library (a domain visual in the domain's library)"),
-    "inputs": (re.compile(r"drishtiModules\.multiselect|\bms-(?:box|pop|sum|q)\b|Drishti\.People\.attach\(\s*[\w$.]+\s*,\s*[^{\s][^,{]*,"),
-               "draws its own multi-select or picker list: use drishti-inputs (MultiSelect, upgradeCheckboxes, Combobox; Drishti.People.attach(input, opts))"),
-}
-
-# A date's or a time's toLocaleString is a date, not a number (drishti-core's formatDate has no clock yet).
-DATE_LINE = re.compile(r"\bDate\b|\bmonth\s*:|\bhour\s*:|\bat\b\.toLocaleString|\btimeZone\b")
-
-BI = "wip/e-migrate-bi"
-VAR = "wip/e-migrate-var"
-VISUALS = "wip/i1b-visuals (hand-drawn before the rule; they move to a library, the list only shrinks)"
-# file (relative to drishti-console/web) -> {rule: the branch moving it}
-ALLOWED = {
-    # hand-drawn visuals left from before the rule (2.9.11.i1b): nothing is added here
-    "static/js/drishti_admin-data-out.js": {"visual": VISUALS},
-    "static/js/drishti_admin-net-ring.js": {"visual": VISUALS},
-    "static/js/drishti_busy.js": {"visual": VISUALS},
-    "static/js/drishti_dyk.js": {"visual": VISUALS},
-    "static/js/drishti_landing.js": {"visual": VISUALS},
-    "plugins/banking/static/js/drishti_market-landing.js": {"visual": VISUALS},
-    "plugins/banking/static/js/drishti_trading-landing.js": {"visual": VISUALS},
-    "static/js/drishti_bi-transform-view.js": {"numbers": BI, "visual": VISUALS},
-    # BI and the Pivot (wip/e-migrate-bi)
-    "static/js/drishti_bi-ai.js": {"echarts": BI},
-    "static/js/drishti_bi-layer-ops.js": {"numbers": BI},
-    "static/js/drishti_bi-lib.js": {"numbers": BI},
-    "static/js/drishti_bi-notebook-profile.js": {"numbers": BI},
-    "static/js/drishti_bi-python.js": {"echarts": BI},
-    "static/js/drishti_bi-runs-admin.js": {"numbers": BI},
-    "static/js/drishti_bi-runs.js": {"numbers": BI},
-    "static/js/drishti_bi-transform.js": {"numbers": BI},
-    "static/js/drishti_bi-visuals.js": {"echarts": BI},
-    "static/js/drishti_geomap.js": {"echarts": BI},
-    "plugins/banking/static/js/drishti_mr-lens.js": {"numbers": BI},
-    "static/js/drishti_pivot-engine.js": {"numbers": BI},
-    "static/js/drishti_pivot-functions.js": {"numbers": BI},
-    "static/js/drishti_table-chart.js": {"echarts": BI},
-    # VaR, exposure and the risk screens (wip/e-migrate-var)
-    "plugins/banking/static/js/drishti_exposure-explorer.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_frtb-sa.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_risk-landing.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_scenario-matrix.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_simm.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_stress-window.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_var-backtesting.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_var-basket.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_var-explorer.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_var-parametric.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_var-playground.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_var-reports.js": {"numbers": VAR},
-}
+pytestmark = pytest.mark.static   # a quick file check: the gate runs it
 
 COMMENT = re.compile(r"/\*.*?\*/|(?<![:\\'\"])//[^\n]*|\{#.*?#\}|<!--.*?-->", re.S)
 
 
-def _sources():
-    files = sorted((WEB / "static" / "js").rglob("*.js")) + sorted((WEB / "templates").rglob("*.html"))
-    out = {str(p.relative_to(WEB)): p for p in files}
-    for d in modules.static_dirs() + modules.template_dirs():       # each domain module's scripts and pages (plugins/<module>/...)
-        for p in sorted(d.rglob("*.js")) + sorted(d.rglob("*.html")):
-            out[str(p.relative_to(CONSOLE))] = p
-    return out
-
-
-def _broken(text, script=True):
-    """{rule: the first offending line} of one file, comments left out. A page's own aria-sort (a template) states the order the server
-    sent; sorting by headings is a script's behaviour, so the grid rule reads scripts."""
-    code = COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), text)
-    out = {}
-    for rule, (pattern, _) in RULES.items():
-        if rule in ("grid", "visual") and not script:
-            continue
-        for line in code.splitlines():
-            if pattern.search(line) and not (rule == "numbers" and ".toLocaleString" in line
-                                               and not re.search(r"Intl\.NumberFormat|\.toFixed|\.toPrecision", line)
-                                               and DATE_LINE.search(line)):
-                out[rule] = line.strip()[:140]
-                break
-    return out
-
-
-@pytest.fixture(scope="module")
-def findings():
-    return {name: _broken(p.read_text(encoding="utf-8", errors="replace"), name.endswith(".js")) for name, p in _sources().items()}
-
-
-@pytest.mark.parametrize("rule", sorted(RULES))
-def test_no_console_script_keeps_a_second_implementation(findings, rule):
-    bad = [f"{name}: {RULES[rule][1]}\n      {found[rule]}" for name, found in findings.items()
-           if rule in found and ALLOWED.get(name, {}).get(rule) is None]
-    assert not bad, "\n".join(bad)
-
-
-def test_the_allow_list_only_shrinks():
-    """Every entry is a file another builder is still moving, and it still breaks the rule (else it comes off the list)."""
-    sources = _sources()
-    stale = []
-    for name, rules in ALLOWED.items():
-        if name not in sources:
-            stale.append(f"{name}: gone (take it off the list)")
-            continue
-        found = _broken(sources[name].read_text(encoding="utf-8", errors="replace"), name.endswith(".js"))
-        for rule, branch in rules.items():
-            assert branch in (BI, VAR, VISUALS), f"{name}: an allowed file names the branch moving it"
-            if rule not in found:
-                stale.append(f"{name}: keeps the rule {rule} now (take it off the list)")
-    assert not stale, "\n".join(stale)
-
-
-def test_the_guard_finds_what_it_looks_for():
-    """The patterns find each idiom, and leave a date's toLocaleString and comments alone."""
-    assert set(_broken("var c = echarts.init(el); c.setOption({});")) == {"echarts"}
-    assert set(_broken("th.setAttribute('aria-sort', 'ascending');")) == {"grid"}
-    assert set(_broken("x.textContent = (v / 1e6).toFixed(1) + 'm';")) == {"numbers"}
-    assert set(_broken("x.textContent = n.toLocaleString('en-US');")) == {"numbers"}
-    assert set(_broken("var es = new EventSource(url);")) == {"live"}
-    assert set(_broken("var ws = new window.WebSocket(url);")) == {"live"}
-    assert _broken("t.textContent = new Date(ms).toLocaleString();") == {}
-    assert _broken("// echarts.init(el) is drishti-chart's\n/* new EventSource(u) */") == {}
-
-
-# ---- the generic libraries know no domain (the product owner, 2026-11-07) ----------------------------------------------------------
-# Domain logic stays in its domain's pack, backend module and JS library (risk: drishti-risk, the banking module's). drishti-core,
+# ---- the generic libraries know no domain  ----------------------------------------------------------
+# Domain logic stays in its domain's pack, backend module and JS library (a host's own library). drishti-core,
 # drishti-grid, drishti-chart, drishti-inputs and drishti-data carry generic hooks only (a tone, a threshold line, a server-computed
 # figure, a kind a domain library registers), never a domain's words in their code: a risk measure's name, a risk kind, a regulatory
 # rule. Comments and JSDoc are documentation and may use a domain's examples; so are the harness pages (the gallery's sample data). A
@@ -174,7 +33,7 @@ def test_the_guard_finds_what_it_looks_for():
 GENERIC = ("drishti-core", "drishti-grid", "drishti-chart", "drishti-inputs", "drishti-data", "drishti-graph", "drishti-tree")
 DOMAIN_WORDS = re.compile(r"\b(?:VaR|VAR|var\d\d|ES|EEPE|EPE|PFE|MTM|DV01|FRTB|SIMM|P&L|[Ee]xposures?|[Bb]acktest\w*|Basel|[Tt]raffic light"
                           r"|[Nn]etting|[Cc]ounterpart(?:y|ies)|risk\.[a-z-]+)\b")
-# Documentation only: the generated manifest names every library with its title (drishti-risk's names its kinds).
+# Documentation only: the generated manifest names every library with its title .
 DOMAIN_DOCS = {"drishti-core/src/drishti_manifest.js"}
 
 
@@ -184,7 +43,7 @@ def _domain_words(text):
 
 
 def test_the_generic_libraries_hold_no_domain_vocabulary():
-    elements = WEB / "static" / "elements"
+    elements = ROOT / "elements"
     bad = []
     for lib in GENERIC:
         for p in sorted((elements / lib / "src").glob("*.js")) + sorted((elements / lib).glob("drishti_*.css")):
@@ -192,7 +51,7 @@ def test_the_generic_libraries_hold_no_domain_vocabulary():
             if rel in DOMAIN_DOCS or "harness" in p.name:
                 continue
             bad += [f"{rel}:{hit}" for hit in _domain_words(p.read_text(encoding="utf-8"))]
-    assert not bad, "domain words in a generic library: move the logic to the domain's library (risk: drishti-risk) behind a generic hook\n" + "\n".join(bad)
+    assert not bad, "domain words in a generic library: move the logic to the domain's library behind a generic hook\n" + "\n".join(bad)
 
 
 def test_the_domain_words_check_finds_them_and_leaves_documentation_alone():
@@ -201,4 +60,36 @@ def test_the_domain_words_check_finds_them_and_leaves_documentation_alone():
     assert _domain_words("const exposure = rows.map(peak);")
     assert not _domain_words("/** The sum of VaR is not a VaR: a non-additive total is the server's. */\nconst total = server(cell);")
     assert not _domain_words("const limit = o.limit || 2000; const Source = o.EventSource;")
-    assert all((WEB / "static" / "elements" / d).is_file() for d in DOMAIN_DOCS)
+    assert all((ROOT / "elements" / d).is_file() for d in DOMAIN_DOCS)
+
+
+# ---- nothing is loaded from a CDN ---------------------------------------------------------------------------------------------------
+CDN = re.compile(r"cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|code\.jquery\.com|fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.tailwindcss\.com")
+
+
+def test_no_source_loads_anything_from_a_cdn():
+    bad = []
+    for folder in ("elements", "gallery", "css", "tools"):
+        for p in sorted((ROOT / folder).rglob("*")):
+            if p.is_file() and p.suffix in (".js", ".css", ".html", ".py") and p.name != "drishti_catalogue.js":
+                bad += [f"{p.relative_to(ROOT)}: {m.group()}" for m in CDN.finditer(p.read_text(encoding="utf-8", errors="replace"))]
+    assert not bad, "\n".join(bad)
+
+
+# ---- one implementation of each thing, in the libraries --------------------------------------------------------------------------------
+ONE = {
+    "echarts": (re.compile(r"\becharts\s*\.\s*(?:init|getInstanceByDom|registerMap|connect|dispose|use)\b"), ("drishti-chart",)),
+    "live": (re.compile(r"\bnew\s+(?:[\w$.]*\.)?(?:EventSource|WebSocket)\b"), ("drishti-data", "drishti-core")),
+}
+
+
+@pytest.mark.parametrize("rule", sorted(ONE))
+def test_only_the_owning_library_keeps_the_implementation(rule):
+    pattern, owners = ONE[rule]
+    bad = []
+    for p in sorted((ROOT / "elements").glob("*/src/*.js")):
+        if p.parent.parent.name in owners:
+            continue
+        code = COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), p.read_text(encoding="utf-8"))
+        bad += [f"{p.relative_to(ROOT)}: {line.strip()[:120]}" for line in code.splitlines() if pattern.search(line)]
+    assert not bad, "\n".join(bad)

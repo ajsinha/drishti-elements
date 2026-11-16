@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* drishti-tree's drawings in SVG (g6 A and C): the org chart (boxes with the kind, the label, the first figures with ◆ on a non-additive
+/* drishti-tree's drawings in SVG (A and C): the org chart (boxes with the kind, the label, the first figures with ◆ on a non-additive
    one, a bar for a ratio, the ▸/▾ toggle with the children's count; links curved, a further parent's dashed), the sunburst (rings from
    the focus) and the icicle (rows of the same partition). Colours are the theme's values (drishti-core's visualTheme), so a drawing
    exported as SVG keeps them; states (selected, found, proposed, a drop target) are classes the style sheet draws. Each node is a
@@ -74,7 +74,7 @@ function stateClass(c, n, base) {
 function cut(t, k) { t = String(t); return t.length > k ? t.slice(0, k - 1) + '…' : t; }
 
 /**
- * The org chart (g6 A): an <svg> holding a group of boxes (role tree) and their links.
+ * The org chart : an <svg> holding a group of boxes (role tree) and their links.
  * @param {Document} doc
  * @param {DrawContext} c
  * @returns {{svg: SVGSVGElement, width: number, height: number, layer: SVGGElement}}
@@ -119,7 +119,7 @@ export function drawOrg(doc, c) {
 }
 
 /**
- * The sunburst or the icicle (g6 C) of the partition by an additive measure.
+ * The sunburst or the icicle  of the partition by an additive measure.
  * @param {Document} doc
  * @param {DrawContext} c
  * @param {('sunburst'|'icicle')} shape

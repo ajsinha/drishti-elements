@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* drishti-tree's side panel and its chrome's words (g6): the selected node (its label, kind and id, a further parent's mark ⧉, each
+/* drishti-tree's side panel and its chrome's words : the selected node (its label, kind and id, a further parent's mark ⧉, each
    measure with ◆ on a non-additive one, "Σ children" beside it where the measure asks, labelled as not a figure of the measure, the
    children's count), its actions (Explain, expand or collapse, expand everything below, zoom in on a partition, and in the edit mode
    "Move to" for the keyboard), the Explain sheet's place, the edit mode's proposal (its moves, Submit for review, Undo last, Discard),

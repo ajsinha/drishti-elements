@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The grid's live mode, the record panel (mock-up docs/lenses/mockups/trading-blotter, option B): one record beside the grid, in three tabs.
+/* The grid's live mode, the record panel : one record beside the grid, in three tabs.
    Record: its fields, editable with a reason only when the server says this person may edit (otherwise plain text and no edit control at
    all), the four-eyes state of what was submitted, the declaration's links (Explain, VaR, limits). History: the record's changes with who,
    when, why and where each stands. Raw JSON: the full stored record of the row (GET .../rows/{entity}, not only the grid's columns),

@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-chart's look: every colour a drishti-core token (light and dark come with the page's theme), the three densities (data-density
-   comfortable, compact, terminal: the grid's), the card (g2 A) and the studio (g2 B), the map's ranking (g3 A) and table (g3 B) modes,
+   comfortable, compact, terminal: the grid's), the card  and the studio , the map's ranking  and table  modes,
    the Explain sheet (the grid's drawing under the dc- prefix). Nothing inline: the components style through these classes and the CSSOM. */
 
 .dc { display: block; position: relative; color: var(--d-ink); font-family: var(--d-font-sans); font-size: var(--d-density-data-compact); }
@@ -119,7 +119,7 @@ span.dc-lg { cursor: default; }
 .dc-spark-line { fill: none; stroke: var(--d-accent); stroke-width: 2; }
 .dc-spark-limit { stroke: var(--d-bad); stroke-dasharray: 4 3; }
 
-/* the studio (g2 B) */
+/* the studio  */
 .dc-studio { display: grid; grid-template-columns: 190px minmax(0, 1fr) 320px; border: 1px solid var(--d-border); border-radius: var(--d-radius, 10px); overflow: hidden; background: var(--d-surface); min-height: 560px; }
 .dc-studio .dc-card { border: 0; border-radius: 0; border-bottom: 1px solid var(--d-border); }
 .dc-rail { border-right: 1px solid var(--d-border); background: var(--d-surface-2); padding: 6px 0; overflow: auto; }

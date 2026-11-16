@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The Arrow client: a table from a server as Arrow IPC (the vendored Apache Arrow JS reads it; loaded the first time, never from a
    CDN), read without copying where it can: a column of 64-bit floats with no nulls is the Arrow buffer itself, a column of repeated
@@ -22,8 +22,8 @@
 
    Where the bytes come from: Flight over HTTP when the server offers it (a POST of the ticket to its do-get address, an Arrow stream
    back; ArrowClient asks the server's capabilities once), else Arrow over HTTP (Accept: application/vnd.apache.arrow.stream), else JSON.
-   The Drishti server answers Arrow over HTTP today; its Flight service is gRPC (docs/architecture/DATA_ARCHITECTURE.md), which a browser cannot speak. */
-import { staticUrl, loadScript, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
+   A server can answer Arrow over HTTP; a Flight service over gRPC is something a browser cannot speak. */
+import { staticUrl, loadScript, endpoint } from '../../drishti-core/src/drishti_index.js';
 
 /** The media type of an Arrow IPC stream. */
 export const ARROW_MEDIA = 'application/vnd.apache.arrow.stream';
@@ -290,11 +290,11 @@ export function fetchFrame(url, o) {
  */
 export class ArrowClient {
   /**
-   * @param {{capabilitiesUrl: string, flight: (boolean|{doGet: string}), fetch: Function, Arrow: Object, headers: Object}} [o]
+   * @param {{capabilitiesUrl: string (default: the configured endpoint `capabilities`; none: Arrow over HTTP only), flight: (boolean|{doGet: string}), fetch: Function, Arrow: Object, headers: Object}} [o]
    *   capabilitiesUrl: where the server says what it offers ({flightHttp: {doGet: url}}); flight: false never asks, an object names it
    */
   constructor(o) {
-    this.o = Object.assign({ capabilitiesUrl: drishtiUrl('/api/v1/data/capabilities') }, o);
+    this.o = Object.assign({ capabilitiesUrl: endpoint('capabilities') }, o);
     this.caps = null;
   }
 
@@ -306,6 +306,7 @@ export class ArrowClient {
     if (this.caps) { return this.caps; }
     if (this.o.flight === false) { this.caps = Promise.resolve({ flightHttp: null }); return this.caps; }
     if (this.o.flight && this.o.flight.doGet) { this.caps = Promise.resolve({ flightHttp: { doGet: this.o.flight.doGet } }); return this.caps; }
+    if (!this.o.capabilitiesUrl) { this.caps = Promise.resolve({ flightHttp: null }); return this.caps; }   // no address: Arrow over HTTP only
     const f = this.o.fetch || globalThis.fetch.bind(globalThis);
     this.caps = f(this.o.capabilitiesUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
       .then((r) => (r.ok ? r.json() : {}), () => ({}))

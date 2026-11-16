@@ -1,26 +1,26 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The gallery (ELEMENTS.md section 10, mock-up g4): the live documentation of every component, an Elements app drawn with drishti-core.
-   Two modes of one component, A the default (O6):
-     mode 'playground' (g4 A): three panes: the searchable list of libraries and components with version and badge; the live component
+/* The gallery : the live documentation of every component, an Elements app drawn with drishti-core.
+   Two modes of one component, A the default:
+     mode 'playground' : three panes: the searchable list of libraries and components with version and badge; the live component
        with its code tabs (web component, JavaScript, Sutra, AG Grid adapter) written from the object it was given, and the status line
        (size, tests, accessibility); the options generated from the typed JSDoc, the event log;
-     mode 'docs' (g4 B): a documentation page per component: runnable examples with "Open in playground", the API generated from the
+     mode 'docs' : a documentation page per component: runnable examples with "Open in playground", the API generated from the
        JSDoc, the accessibility contract (the keys and the ARIA smoke check) and the library's changelog.
-   Everything it says about a library comes from the catalogue (drishti_catalogue.js, generated with ELEMENTS_API.md); the demos
+   Everything it says about a library comes from the catalogue (drishti_catalogue.js, generated with docs/API.md); the demos
    (drishti_gallery-demos*.js) run on the sample data and stand-in server of drishti_gallery-data.js, so the page needs no server and opens
    from the file system too (the maps then cannot read their shapes: a browser refuses file:// reads). The address keeps the state:
    #mode=docs&c=pivot&tab=api&o={"layout":"terminal"}. window.__gallery is the instance (the browser test drives it). */
@@ -30,7 +30,7 @@
   const GAL = (NS.gallery = NS.gallery || {});
   const MODES = ['playground', 'docs'];
   const DOC_TABS = [['examples', 'Examples'], ['api', 'API'], ['a11y', 'Accessibility'], ['changelog', 'Changelog'], ['page', 'Playground page']];
-  const BADGES = { none: ['ok', 'no server needed'], server: ['srv', 'needs a Drishti server'], licence: ['lic', 'banking module licence'] };
+  const BADGES = { none: ['ok', 'no server needed'], server: ['srv', 'needs a server'], licence: ['lic', 'needs a licensed module'] };
   const kebab = (n) => 'drishti:' + n.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
 
   class Gallery {
@@ -56,7 +56,7 @@
       this.audits = {};
       const s = this.readAddress();
       this.mode = MODES.indexOf(s.mode) >= 0 ? s.mode : (MODES.indexOf(o.mode) >= 0 ? o.mode : 'playground');
-      this.id = this.demos.some((d) => d.id === s.c) || this.planned(s.c) ? s.c : (this.demo(o.start || 'grid') || this.demos[0]).id;
+      this.id = this.demos.some((d) => d.id === s.c) ? s.c : (this.demo(o.start || 'grid') || this.demos[0]).id;
       this.codeTab = 'element';
       this.docTab = DOC_TABS.some((t) => t[0] === s.tab) ? s.tab : 'examples';
       this.q = '';
@@ -68,7 +68,6 @@
 
     /* ---- lookups ---- */
     lib(name) { return this.cat.libraries.find((l) => l.name === name) || null; }
-    planned(name) { return this.cat.planned.find((p) => p.name === name) || null; }
     demo(id) { return this.demos.find((d) => d.id === (id || this.id)) || null; }
     module(file) { for (const l of this.cat.libraries) { const m = l.modules.find((x) => x.file === file); if (m) { return { lib: l, module: m }; } } return null; }
     constant(name) { for (const l of this.cat.libraries) { if (l.constants[name]) { return l.constants[name]; } } return []; }
@@ -143,8 +142,7 @@
       this.el.setAttribute('data-mode', this.mode);
       this.modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === this.mode)));
       this.renderNav();
-      const p = this.planned(this.id);
-      if (p) { this.renderPlanned(p); } else if (this.mode === 'playground') { this.renderPlayground(); } else { this.renderDocs(); }
+      if (this.mode === 'playground') { this.renderPlayground(); } else { this.renderDocs(); }
       this.writeAddress();
     }
 
@@ -173,12 +171,6 @@
           h(doc, 'ul', {}, items.map((d) => h(doc, 'li', {}, [h(doc, 'button', { cls: 'gx-nav-item', text: d.title, attrs: { type: 'button', 'data-c': d.id, 'aria-current': d.id === this.id ? 'page' : null },
             on: { click: () => this.select(d.id) } }, [h(doc, 'span', { cls: 'gx-kind', text: d.kind === 'element' ? '</>' : 'fn', attrs: { 'aria-hidden': 'true' } })])])))]));
       });
-      const planned = this.cat.planned.filter((p) => hit(p.name) || hit(p.what));
-      if (planned.length) {
-        this.navList.appendChild(h(doc, 'section', { cls: 'gx-nav-lib gx-nav-planned', attrs: { 'aria-label': 'Not built yet' } }, [h(doc, 'h2', { cls: 'gx-nav-head', text: 'Not built yet' }),
-          h(doc, 'ul', {}, planned.map((p) => h(doc, 'li', {}, [h(doc, 'button', { cls: 'gx-nav-item', text: p.name, attrs: { type: 'button', 'data-c': p.name, 'aria-current': p.name === this.id ? 'page' : null },
-            on: { click: () => this.select(p.name) } }, [this.badge(p.server)])])))]));
-      }
       if (!this.navList.children.length) { this.navList.appendChild(h(doc, 'p', { cls: 'gx-note', text: 'Nothing matches "' + q + '".' })); }
     }
 
@@ -301,7 +293,7 @@
 
     agTable() {
       const doc = this.doc, h = this.h, ag = this.cat.agGrid;
-      return h(doc, 'details', { cls: 'gx-ag', attrs: { open: true } }, [h(doc, 'summary', { text: (ag.built ? 'The adapter\'s mapping (drishti_grid-ag-map.js; the migration guide: docs/guides/EMBED_GUIDE.md)' : 'Planned: the adapter is not built yet. Its mapping (ELEMENTS.md section 6)') + ', version 1 scope: ' + ag.scope }),
+      return h(doc, 'details', { cls: 'gx-ag', attrs: { open: true } }, [h(doc, 'summary', { text: (ag.built ? 'The adapter\'s mapping (drishti_grid-ag-map.js; the migration guide: docs/MOVING_FROM_AG_GRID.md)' : 'Planned: the adapter is not built yet. Its mapping') + ', version 1 scope: ' + ag.scope }),
         h(doc, 'table', { cls: 'gx-table' }, [h(doc, 'thead', {}, [h(doc, 'tr', {}, [h(doc, 'th', { text: 'AG Grid Enterprise option (public API shape)', attrs: { scope: 'col' } }), h(doc, 'th', { text: 'State', attrs: { scope: 'col' } }), h(doc, 'th', { text: 'drishti-grid', attrs: { scope: 'col' } })])]),
           h(doc, 'tbody', {}, ag.mapping.map((r) => h(doc, 'tr', {}, [h(doc, 'td', {}, [this.prose(r.ag)]), h(doc, 'td', { text: r.state || '' }), h(doc, 'td', {}, [this.prose(r.drishti)])])))]),
         ag.notCovered ? h(doc, 'p', { cls: 'gx-note' }, ['Not covered in version 1 (named in the console when used): ', this.prose(ag.notCovered)]) : null]);
@@ -351,7 +343,7 @@
       const file = (text, path) => h(doc, 'li', {}, [text + ' ', h(doc, 'code', { text: path })]);
       return h(doc, 'section', { cls: 'gx-panel' }, [h(doc, 'h2', { text: 'Docs' }), h(doc, 'ul', { cls: 'gx-links' }, [
         h(doc, 'li', {}, [h(doc, 'button', { cls: 'gx-linkbtn', text: 'This component\'s documentation page', attrs: { type: 'button', 'data-action': 'to-docs' }, on: { click: () => this.setMode('docs') } })]),
-        file('API reference:', 'docs/guides/ELEMENTS_API.md'), file('Design:', 'docs/architecture/ELEMENTS.md')])]);
+        file('API reference:', 'docs/API.md'), file('Design:', 'docs/DESIGN.md')])]);
     }
 
     log(name, detail) {
@@ -424,7 +416,7 @@
         panel.appendChild(h(doc, 'h2', { text: 'Functions and classes of ' + mod }));
         syms.forEach((s) => panel.appendChild(this.symbolBlock(s)));
       }
-      panel.appendChild(h(doc, 'p', { cls: 'gx-note', text: 'Generated by tools/docs/elements_api.py from the typed JSDoc of ' + own.name + ' ' + this.cat.elements + ', the same source as ELEMENTS_API.md (--check fails the build when a public symbol has no typed comment).' }));
+      panel.appendChild(h(doc, 'p', { cls: 'gx-note', text: 'Generated by tools/docs/elements_api.py from the typed JSDoc of ' + own.name + ' ' + this.cat.elements + ', the same source as docs/API.md (--check fails the build when a public symbol has no typed comment).' }));
     }
 
     symbolBlock(s) {
@@ -468,16 +460,7 @@
       if (!l.changelog.length) { panel.appendChild(h(doc, 'p', { text: 'No entries yet.' })); return; }
       panel.appendChild(h(doc, 'table', { cls: 'gx-table gx-changelog' }, [h(doc, 'thead', {}, [h(doc, 'tr', {}, ['Version', 'Release', 'Changes'].map((x) => h(doc, 'th', { text: x, attrs: { scope: 'col' } })))]),
         h(doc, 'tbody', {}, l.changelog.map((c) => h(doc, 'tr', {}, [h(doc, 'td', { text: c.version || '' }), h(doc, 'td', { text: c.release }), h(doc, 'td', {}, [this.prose(c.text)])])))]));
-      panel.appendChild(h(doc, 'p', { cls: 'gx-note', text: 'From the product CHANGELOG (one home): semantic versions per library; a released version never changes; a breaking change only in a new major.' }));
-    }
-
-    renderPlanned(p) {
-      const doc = this.doc, h = this.h;
-      this.main.textContent = '';
-      this.side.textContent = '';
-      this.side.hidden = true;
-      this.main.appendChild(h(doc, 'div', { cls: 'gx-hero' }, [h(doc, 'h1', { cls: 'gx-title' }, [p.name, h(doc, 'span', { cls: 'gx-hero-lib', text: 'library ' + p.number + ' of 8' }), this.badge(p.server)]),
-        this.prose(p.what), h(doc, 'p', { cls: 'gx-note', text: 'Not in this build. Server: ' + p.serverText + '. Its pages appear here when its folder is in the manifest (drishti_elements.json): the gallery lists what the catalogue holds.' })]));
+      panel.appendChild(h(doc, 'p', { cls: 'gx-note', text: 'From the project CHANGELOG (one home): semantic versions per library; a released version never changes; a breaking change only in a new major.' }));
     }
 
     /** Ends the gallery: every demo unmounted. */

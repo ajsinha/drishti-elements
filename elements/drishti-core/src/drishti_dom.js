@@ -1,21 +1,21 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The small DOM parts every drawn component uses: an element maker (no markup strings, no style attributes, so a page with a strict CSP
    draws every component), placements that keep a floating element (a menu, a popover, a calendar) inside the window, and the rules for
-   drawing untrusted data (attrAllowed, safeUrl: the client renderer draws a ViewModel through them, CLIENT_RENDERER.md section 9). */
+   drawing untrusted data (attrAllowed, safeUrl: the client renderer draws a ViewModel through them). */
 
 /** Attribute names a drawing of untrusted data may set (with data-* and aria-*): never an event handler, a style or a script address. */
 const SAFE_ATTRS = new Set(('class id role title href target rel type name value placeholder for colspan rowspan scope tabindex hidden disabled '

@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The View picker in front of the pivot's compact line (bi/PIVOT.md sections 2 and 11, mode C): the ready-made layouts of the source
+/* The View picker in front of the pivot's compact line: the ready-made layouts of the source
    (a preset's views:), then My views and Shared with me (the saved and shared views), and Save view as… (Personal or Shared). The grid
    draws it; the host's views hook lists, opens and saves (GridOptions.views): no store of the grid's own. A layout changed since its view
    was opened shows a dot, with Revert. Keys: Shift+V opens it, 1–9 pick a ready-made view, Enter opens the active one, Ctrl+S saves. */

@@ -1,26 +1,26 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 
-"""drishti-chart (with its maps) and drishti-risk's kinds in a real browser, against the chart's static fixture harness
+"""drishti-chart (with its maps) in a real browser, against the chart's static fixture harness
 (static/elements/drishti-chart/drishti_harness.html): no Drishti server, the files served from the folder under a strict CSP (nothing
-inline), the per-worker browser only. The component is tested here once and deeply; screens test only their wiring (ELEMENTS.md 10).
+inline), the per-worker browser only. The component is tested here once and deeply; screens test only their wiring.
 
-* the board (g2 A): a card of every kind, general and risk, drawn with no error, in both themes and the three densities;
+* the board : a card of every kind, drawn with no error, in both themes and the three densities;
 * the card's behaviour: crosshair tooltips, legend toggles, drag-to-zoom with the overview window and its reset, the keyboard, a click
   on a mark explaining it and outlining its rows, the data table, export (PNG, SVG, CSV, the spec), live updates by id;
-* the studio (g2 B): the kind rail with the risk kinds, the spec beside the chart, options changing both;
-* the map (g3): the world in ranking mode (A) with its quantile legend, counts and top ten, a drill into the United States (Alaska and
+* the studio : the kind rail, the spec beside the chart, options changing both;
+* the map : the world in ranking mode (A) with its quantile legend, counts and top ten, a drill into the United States (Alaska and
   Hawaii insets) and Canada by double-click, the breadcrumb back, the metric picker, another country's regions loaded once on demand,
   and the table mode (B) with its sortable table, floating legend and inset;
 * a drishti-grid and a chart linked through drishti-core's bus, both ways.
@@ -34,9 +34,9 @@ import pytest
 
 pytestmark = pytest.mark.spread
 
-STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
+STATIC = Path(__file__).resolve().parents[1]
 ORIGIN = "http://render.test"
-PAGE = "/static/elements/drishti-chart/drishti_harness.html"
+PAGE = "/elements/drishti-chart/drishti_harness.html"
 HEADERS = {"content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:"}
 TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "application/javascript", ".json": "application/json"}
 SHOTS = os.environ.get("DRISHTI_CHART_SHOTS")
@@ -45,7 +45,7 @@ SHOTS = os.environ.get("DRISHTI_CHART_SHOTS")
 def router(fetched):
     async def route(r):
         path = r.request.url[len(ORIGIN):].split("?")[0]
-        f = STATIC / path[len("/static/"):] if path.startswith("/static/") else None
+        f = STATIC / path[1:] if path.startswith("/") else None
         if f and f.is_file():
             fetched.append(path)
             headers = {"content-type": TYPES.get(f.suffix, "application/octet-stream")}
@@ -98,18 +98,14 @@ def test_the_board_draws_every_kind_in_both_themes_and_three_densities(browsers)
     async def body(pg):
         kinds = await pg.evaluate("() => Object.keys(window.__harness.charts).map((k) => window.__harness.charts[k].spec.kind)")
         for k in ("line", "area", "bar", "scatter", "bubble", "pie", "donut", "heatmap", "waterfall", "histogram", "boxplot", "gauge", "treemap", "sankey",
-                  "candlestick", "layer", "map", "risk.pnl-distribution", "risk.backtest", "risk.exposure-profile", "risk.var-change"):
+                  "candlestick", "layer", "map"):
             assert k in kinds, k
         n = len(kinds)
         assert await pg.locator("drishti-chart .dc-canvas:has(canvas)").count() == n
         assert await pg.locator(".drishti-state-error").count() == 0
         labels = await pg.eval_on_selector_all(".dc-canvas", "els => els.map((e) => e.getAttribute('aria-label'))")
         assert all(labels) and len(set(labels)) == n                                  # every chart described for a screen reader
-        assert re.search(r"(green|amber|red) · \d+ exceptions · plus \d\.\d\d", await pg.text_content("#c-risk-backtest .dc-badge"))
-        assert "computed here" in await pg.text_content("#c-risk-pnl-distribution .dc-badge")
-        assert "PFE over the limit" in await pg.text_content("#c-risk-exposure-profile .dc-badge")
         assert await pg.text_content("#c-vega-bar .dc-status b") == "Vega-Lite, translated"
-        assert await pg.locator(".dc-kind.dc-kind-risk").count() == 4
         await shot(pg, "drishti-chart-board-dark.png", full=True)
         for density, font in (("comfortable", "13.5px"), ("terminal", "11.5px"), ("compact", "12.5px")):
             await pg.click(f".hx-seg [data-density='{density}']")
@@ -207,8 +203,8 @@ def test_tooltips_legend_zoom_keys_explain_selection_table_export_and_live(brows
 def test_the_studio_rail_spec_and_options(browsers):
     async def body(pg):
         rail = await pg.eval_on_selector_all(".dc-rail-k", "els => els.map((e) => e.dataset.kind)")
-        assert "risk.backtest" in rail and "map" in rail and "sankey" in rail and len(rail) >= 21
-        assert await pg.text_content(".dc-rail-k.dc-on") == "P&L distribution"
+        assert "line" in rail and "map" in rail and "sankey" in rail and len(rail) >= 17
+        assert await pg.text_content(".dc-rail-k.dc-on") == "line"
         await shot(pg, "drishti-chart-studio.png")
         await pg.click(".dc-rail-k[data-kind='bar']")
         await pg.wait_for_function("() => document.querySelector('.dc-spec').textContent.indexOf('\"kind\": \"bar\"') >= 0")
@@ -221,12 +217,9 @@ def test_the_studio_rail_spec_and_options(browsers):
         assert await pg.evaluate("() => window.__harness.charts.studio.engine.getOption().yAxis[0].type") == "category"
         await pg.select_option("[data-opt='density']", "terminal")
         assert await pg.get_attribute("#c-studio", "data-density") == "terminal"
-        await pg.click(".dc-rail-k[data-kind='risk.exposure-profile']")
-        await pg.select_option("[data-opt='log']", "off")
-        assert await pg.evaluate("() => window.__harness.charts.studio.engine.getOption().xAxis[0].type") == "value"
         await pg.click(".dc-rail-k[data-kind='map']")
         await pg.wait_for_function("() => window.__harness.charts.studio.map && window.__harness.charts.studio.map.geo")
-        assert await ev(pg, "kindChanged") == 6                                          # bar, stack, bars, exposure, log x, map
+        assert await ev(pg, "kindChanged") == 4                                          # bar, stack, bars, map
     run(browsers, body, "view=studio")
 
 
@@ -279,8 +272,8 @@ def test_the_world_map_ranking_drill_into_the_states_and_canada_and_back(browser
         assert await pg.evaluate("() => window.__harness.charts.map.map.geo.level") == "JPN"
         assert await ev(pg, "levelChanged") == 7
     run(browsers, body, "view=map", fetched=fetched)
-    assert fetched.count("/static/vendor/echarts/maps/regions/JPN.json") == 1
-    assert fetched.count("/static/vendor/echarts/maps/world-countries.json") == 1
+    assert fetched.count("/vendor/echarts/maps/regions/JPN.json") == 1
+    assert fetched.count("/vendor/echarts/maps/world-countries.json") == 1
 
 
 def test_the_map_table_mode(browsers):

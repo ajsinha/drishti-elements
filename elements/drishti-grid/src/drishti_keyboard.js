@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* Keyboard navigation, the model only: which cell has focus and what each key does. A layout (wells, panel, terminal) draws the focus
    and runs the action; the keys are the same in every layout:
@@ -21,7 +21,7 @@
      PageUp / PageDown     a page of rows        Tab / Shift+Tab     next / previous cell, wrapping to the next row
      Shift+Arrows          stretch the range     Shift+Space         select the row        Ctrl+A   select all
      Space                 toggle the row's selection, or a group open
-     Right / Left on a group row's first cell: open / close it (PIVOT_ENGINE.md section 11: Shift+Right opens everything below)
+     Right / Left on a group row's first cell: open / close it (Shift+Right opens everything below)
      Enter or F2           edit (an editable cell) or open (a group, a link, Explain)
      Ctrl+C                copy (the range, else the cell)          Escape   clear the range, or leave editing
      Alt+Down / Alt+Up     open / close the row's detail panel (master-detail rows, GridOptions.detail)

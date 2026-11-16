@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-designer's look: the shell, the canvas, the palette, the inspector, the outline and the YAML pane. Every colour is a
    drishti-core token (light, dark and every theme); positions come from the CSSOM (grid lines, custom properties), never a style
@@ -117,7 +117,7 @@ a.dd-obj { text-decoration: none; }
 .dd-obj[aria-current="page"] { background: var(--d-surface-2); border-left-color: var(--d-accent); font-weight: 600; }
 .dd-rail-off .dd-rail { display: none; }
 
-/* the layouts: studio (g7 A: rail | main with the YAML docked under it | inspector | preview), side by side (B), terminal (C) */
+/* the layouts: studio (A: rail | main with the YAML docked under it | inspector | preview), side by side (B), terminal (C) */
 .dd-preview-off .dd-side { display: none; }
 .dd-layout-side-by-side .dd-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .7fr); gap: 10px; align-items: start; }
 .dd-layout-side-by-side .dd-main > .dd-ro, .dd-layout-side-by-side .dd-main > .dd-docs, .dd-layout-side-by-side .dd-main > .dd-dock { grid-column: 1 / -1; }

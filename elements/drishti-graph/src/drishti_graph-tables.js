@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The graph's tables, each a drishti-grid (never a table of its own): the selection under the canvas (inspector and terminal modes), the
-   Nodes, Edges and Path tabs of the table mode (g5 B) with its filter, "selected only" and "Select these on the graph", and the adjacency
+   Nodes, Edges and Path tabs of the table mode  with its filter, "selected only" and "Select these on the graph", and the adjacency
    table, the text alternative (▦). The Nodes table and the graph select each other's rows (a selection that came from the other side is
    not sent back); a row click flies the view to the node. */
 import { h } from '../../drishti-core/src/drishti_index.js';

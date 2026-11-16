@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery's demos of drishti-graph (every mode: inspector, table and terminal; every layout; the lineage preset; a grid and a graph
-   linked through the bus) and of drishti-risk's counterparty structure preset. The networks are synthetic and made here (a company's
+   linked through the bus). The networks are synthetic and made here (a company's
    services calling each other, with teams, regions, request rates and errors); a stand-in server answers Explain and expands a node's
    neighbours on demand. The options panel is made from GraphOptions' JSDoc; the event log listens to GRAPH_EVENTS. */
 (function (root) {
@@ -87,9 +87,9 @@
   }
 
   demos.push(graphDemo({
-    id: 'graph', title: 'Graph', summary: 'Networks, cyclic or acyclic, on a canvas for thousands of nodes: force (seeded), layered, radial, circular and grouped layouts; zoom, pan, minimap; expand on demand; the shortest path; groups by an attribute; size and colour by a measure; pin, lasso; Explain; three modes of one component (g5).',
+    id: 'graph', title: 'Graph', summary: 'Networks, cyclic or acyclic, on a canvas for thousands of nodes: force (seeded), layered, radial, circular and grouped layouts; zoom, pan, minimap; expand on demand; the shortest path; groups by an attribute; size and colour by a measure; pin, lasso; Explain; three modes of one component .',
     values: { mode: 'inspector', density: 'compact', layout: 'force', title: 'Services (synthetic)', sizeBy: 'rps', height: 460 },
-    examples: [{ title: 'Canvas and inspector (g5 A, the default)', values: {} }, { title: 'Canvas over the linked tables (g5 B)', values: { mode: 'table' } }, { title: 'Terminal with the GRAPH> line (g5 C)', values: { mode: 'terminal', density: 'terminal' } },
+    examples: [{ title: 'Canvas and inspector (the default)', values: {} }, { title: 'Canvas over the linked tables ', values: { mode: 'table' } }, { title: 'Terminal with the GRAPH> line ', values: { mode: 'terminal', density: 'terminal' } },
       { title: 'Layered (a DAG\'s layers, cycles broken)', values: { layout: 'layered' } }, { title: 'Radial around the busiest node', values: { layout: 'radial' } }, { title: 'Grouped by team', values: { layout: 'grouped', groupBy: '' } },
       { title: 'Folded into teams', values: { groupBy: 'team' } }, { title: 'Coloured by error rate', values: { colourBy: 'errors' } }],
     build: function (values, ctx) { return servicesBuild(values, ctx); }
@@ -116,12 +116,12 @@
   /** The code of a demo made by a preset: the preset's call, then the graph. */
   function presetCode(fn, lib, args, values) {
     const o = JSON.stringify(typed(values, ['mode', 'density']));
-    const imp = "import { " + fn + " } from '/static/elements/" + lib + "/src/drishti_index.js';";
+    const imp = "import { " + fn + " } from '/elements/" + lib + "/src/drishti_index.js';";
     return {
       element: ['<drishti-graph' + (values.mode ? ' mode="' + values.mode + '"' : '') + '></drishti-graph>', '<script type="module">', imp,
-        "import '/static/elements/drishti-graph/src/drishti_index.js';", '// ' + args + ': your data',
+        "import '/elements/drishti-graph/src/drishti_index.js';", '// ' + args + ': your data',
         "document.querySelector('drishti-graph').options = " + fn + '(' + args + ');', '</script>'].join('\n'),
-      js: ["import { Graph } from '/static/elements/drishti-graph/src/drishti_index.js';", imp, '', '// ' + args + ': your data',
+      js: ["import { Graph } from '/elements/drishti-graph/src/drishti_index.js';", imp, '', '// ' + args + ': your data',
         "const graph = new Graph(document.getElementById('graph'), " + fn + '(' + args + ', ' + o + '));'].join('\n')
     };
   }
@@ -150,41 +150,5 @@
       c.js = c.js + "\n\n// the grid (drishti-grid) joins the same channel (drishti-core)\nlinkGrid(grid, { channel: 'gallery-graph' });";
       return c;
     }
-  }));
-
-  /* ---------------- drishti-risk: the counterparty structure ---------------- */
-  function structure(ctx) {
-    return ctx.memo('graph-structure', () => {
-      let seed = 3;
-      const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-      const rows = [], links = [];
-      ['Northwind', 'Meridian', 'Halcyon'].forEach((g, i) => {
-        rows.push({ ID: 'G' + i, NAME: g + ' Group', LEVEL: 'group', COUNTRY: ['GB', 'US', 'DE'][i] });
-        for (let e = 0; e < 3; e++) {
-          const le = 'LE' + i + e;
-          rows.push({ ID: le, NAME: g + ' ' + ['Bank', 'Capital', 'Markets'][e], LEVEL: 'legal-entity', PARENT: 'G' + i, COUNTRY: ['GB', 'US', 'DE', 'FR'][(i + e) % 4], RATING: ['AA', 'A', 'BBB'][e] });
-          for (let s = 0; s < 2; s++) {
-            const ns = 'NS' + i + e + s, mtm = Math.round((rnd() - 0.3) * 4e7), coll = Math.round(rnd() * 2e7);
-            rows.push({ ID: ns, NAME: 'Set ' + i + e + s, LEVEL: 'netting-set', PARENT: le, MTM: mtm, COLLATERAL: coll, EAD: Math.round(1.4 * (Math.max(0, mtm - coll) + rnd() * 6e6)), PFE: Math.round(rnd() * 3e7) });
-            if (s === 0) { rows.push({ ID: 'CSA' + i + e, NAME: 'CSA ' + i + e, LEVEL: 'csa', PARENT: ns, THRESHOLD: Math.round(rnd() * 10) * 1e6 }); }
-          }
-        }
-      });
-      links.push({ FROM: 'LE00', TO: 'LE11', KIND: 'guarantees' });
-      return { rows, links };
-    });
-  }
-
-  demos.push(graphDemo({
-    id: 'counterparty-structure', title: 'Counterparty structure', library: 'drishti-risk', typesFrom: 'drishti-graph', about: 'drishti_risk-graph.js',
-    summary: 'drishti-risk\'s preset on drishti-graph: groups → legal entities → netting sets → CSAs, layered top-down, sized by EAD; PFE does not add up (◆, never summed for a group or a selection).',
-    values: { mode: 'inspector', density: 'compact', height: 440 },
-    examples: [{ title: 'The structure', values: {} }, { title: 'Terminal', values: { mode: 'terminal', density: 'terminal' } }],
-    build: function (values, ctx) {
-      const s = structure(ctx), o = ctx.E.risk.counterpartyStructureGraph(s.rows, s.links, Object.assign({ download: ctx.download }, typed(values, ['height'])));
-      const names = new Map([[s.rows, 'rows'], [ctx.download, 'download']]);
-      return { tag: 'drishti-graph', ctor: 'Graph', library: 'drishti-graph', attrs: { mode: values.mode, density: values.density }, data: o.data, options: o, jsOptions: typed(values, ['mode', 'density']), names, given: Array.from(new Set(names.values())) };
-    },
-    code: function (values) { return presetCode('counterpartyStructureGraph', 'drishti-risk', 'rows, links', values); }
   }));
 }(typeof window !== 'undefined' ? window : globalThis));

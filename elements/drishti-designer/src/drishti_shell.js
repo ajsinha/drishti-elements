@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The designer shell (docs/architecture/SHARED_SCREENS.md section 1; mock-up g7, every option of which the product owner took on 2026-11-07): one frame for
-   every editor and designer, in three layouts of the same panes, each person's choice remembered through the host. "studio" (g7 A, the
+/* The designer shell (three layouts): one frame for
+   every editor and designer, in three layouts of the same panes, each person's choice remembered through the host. "studio" (A, the
    default): the left rail's tabs (the objects with a search, the palette, the outline), the canvas or the editor in the middle with the
    live YAML docked under it, the inspector and the live preview with its checks on the right (Preview shows or hides it), a status bar.
    "side-by-side" (B): the outline over the palette, the canvas and the YAML side by side, the preview always on, the inspector a card by
@@ -71,14 +71,14 @@ export function statusWords(s) {
  * @property {Array<{id: string, label: string}>} [rail] the left rail's tabs besides the objects (palette, outline); shell.rail(id) is
  *   each tab's element
  * @property {boolean} [inspector=false] an inspector pane (shell.inspector)
- * @property {('studio'|'side-by-side'|'terminal')} [layout='studio'] g7's options A, B and C
+ * @property {('studio'|'side-by-side'|'terminal')} [layout='studio'] the options A, B and C
  * @property {function(string): (true|string)} [canMode] whether a mode may be picked now, else why not in words
  * @property {boolean} [docs=false] the open documents above the editor (setDocs; "close" {id})
  * @property {Array<{id: string, label: string}>} [dock] the dock's tabs under the editor (dockPane(id), showDock, setDockCount; "dock" {id})
  * @property {boolean} [collapsible=false] the left rail folds away (a button in the header; setRail; "rail" {open})
  */
 
-/** The layouts of the shell (mock-up g7: A the docked studio, B side by side, C the terminal). */
+/** The layouts of the shell (A the docked studio, B side by side, C the terminal). */
 export const SHELL_LAYOUTS = Object.freeze(['studio', 'side-by-side', 'terminal']);
 
 /** The terminal layout's function keys. */
@@ -246,7 +246,7 @@ export class DesignerShell {
 
   /**
    * The layout (user: the person picked it, so the "layout" event lets the host remember it).
-   * @param {string} layout 'studio' (g7 A, the default), 'side-by-side' (B), 'terminal' (C)
+   * @param {string} layout 'studio' (the default), 'side-by-side' (B), 'terminal' (C)
    * @param {boolean} [user]
    * @returns {void}
    */

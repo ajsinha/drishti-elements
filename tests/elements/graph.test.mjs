@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-graph without a page: the model and its transactions, the shortest path (hops and cost), rings, components, the layers of a
    cyclic graph, every layout (deterministic, finite, the force layout's seed, pins kept, 5,000 nodes and 20,000 edges timed), what is
@@ -21,8 +21,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as G from '../../web/static/elements/drishti-graph/src/drishti_index.js';
-import { visualTheme } from '../../web/static/elements/drishti-core/src/drishti_index.js';
+import * as G from '../../elements/drishti-graph/src/drishti_index.js';
+import { visualTheme } from '../../elements/drishti-core/src/drishti_index.js';
 
 const DATA = () => ({
   directed: true,
@@ -102,7 +102,7 @@ test('every layout: finite, deterministic, pins kept; the force layout by its se
   assert.deepEqual(G.presetLayout({ nodes: [{ id: 'a', x: 1, y: 2 }, { id: 'b' }], edges: [] }).get('b'), { x: 0, y: 122 });
 });
 
-test('5,000 nodes and 20,000 edges: every layout in time (the numbers go to ELEMENTS.md 8.8)', () => {
+test('5,000 nodes and 20,000 edges: every layout in time', () => {
   const N = 5000, E = 20000, nodes = [], edges = [];
   let s = 1; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < N; i++) { nodes.push({ id: 'n' + i, label: 'n' + i, type: 't' + (i % 5), group: 'g' + (i % 12) }); }
@@ -242,9 +242,9 @@ test('the view\'s graph panel: groups as types, tree as layered, links kept, bro
 test('the bundle registers drishti-graph with the modes, events and layouts', () => {
   const require = createRequire(import.meta.url);
   globalThis.Drishti = globalThis.Drishti || {};
-  require('../../web/static/elements/drishti-core/drishti_core.js');
-  require('../../web/static/elements/drishti-grid/drishti_grid.js');
-  const B = require('../../web/static/elements/drishti-graph/drishti_graph.js');
+  require('../../elements/drishti-core/drishti_core.js');
+  require('../../elements/drishti-grid/drishti_grid.js');
+  const B = require('../../elements/drishti-graph/drishti_graph.js');
   assert.deepEqual(Array.from(B.GRAPH_MODES), ['inspector', 'table', 'terminal']);
   assert.ok(B.GRAPH_EVENTS.includes('pathFound') && B.GRAPH_EVENTS.includes('selectionChanged'));
   assert.deepEqual(Array.from(B.LAYOUTS), Array.from(G.LAYOUTS));

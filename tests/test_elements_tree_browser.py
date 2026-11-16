@@ -1,21 +1,21 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 """drishti-tree in a real browser, against its static fixture harness (static/elements/drishti-tree/drishti_harness.html): no Drishti
 server, the files served from the folder under a strict CSP (nothing inline), the per-worker browser only. The component is tested
-here once and deeply; screens test only their wiring (ELEMENTS.md 10).
+here once and deeply; screens test only their wiring.
 
-* the tree grid (g6 B, the default): drishti-grid's treegrid with a column per measure, ◆ on the non-additive ones, every parent's
+* the tree grid (the default): drishti-grid's treegrid with a column per measure, ◆ on the non-additive ones, every parent's
   figure the stand-in server's (never the children's sum, which shows beside it as Σ children), the limit-use bar; open and close
   following the model; search with its breadcrumbs; a click selecting and sharing the selection on the bus; Explain in the side panel;
   the three densities and both themes; CSV and JSON exports;
@@ -32,9 +32,9 @@ import pytest
 
 pytestmark = pytest.mark.spread
 
-STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
+STATIC = Path(__file__).resolve().parents[1]
 ORIGIN = "http://render.test"
-PAGE = "/static/elements/drishti-tree/drishti_harness.html"
+PAGE = "/elements/drishti-tree/drishti_harness.html"
 HEADERS = {"content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:"}
 TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "application/javascript", ".json": "application/json"}
 SHOTS = os.environ.get("DRISHTI_TREE_SHOTS")
@@ -44,7 +44,7 @@ READY = "() => window.__harness && window.__harness.ready"
 def router():
     async def route(r):
         path = r.request.url[len(ORIGIN):].split("?")[0]
-        f = STATIC / path[len("/static/"):] if path.startswith("/static/") else None
+        f = STATIC / path[1:] if path.startswith("/") else None
         if f and f.is_file():
             headers = {"content-type": TYPES.get(f.suffix, "application/octet-stream")}
             if f.suffix == ".html":

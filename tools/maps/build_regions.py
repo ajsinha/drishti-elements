@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 
 """Builds the vendored region maps: one simplified GeoJSON file per country, from Natural Earth admin-1.
 
 Source   Natural Earth 1:10m Admin 1 - States, Provinces (public domain, https://www.naturalearthdata.com/), fetched from the
          natural-earth-vector repository on GitHub.
-Output   drishti-console/web/static/vendor/echarts/maps/regions/<ISO3>.json   one FeatureCollection per country
-         drishti-console/web/static/vendor/echarts/maps/world-points.json     countries too small for the 1:110m world map
-         drishti-console/web/static/vendor/echarts/maps/regions/README.md      source, licence and sizes
+Output   vendor/echarts/maps/regions/<ISO3>.json   one FeatureCollection per country
+         vendor/echarts/maps/world-points.json     countries too small for the 1:110m world map
+         vendor/echarts/maps/regions/README.md      source, licence and sizes
 Usage    python3 tools/maps/build_regions.py [--cache DIR] [--budget-kb 1200]
 
 Each feature is {"properties": {"code": "AU-NSW", "name": "New South Wales", "iso3": "AUS"}, "geometry": ...}. Codes are ISO 3166-2
@@ -37,7 +37,7 @@ from pathlib import Path
 
 URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson"
 ROOT = Path(__file__).resolve().parents[2]
-MAPS = ROOT / "drishti-console/web/static/vendor/echarts/maps"
+MAPS = ROOT / "vendor/echarts/maps"
 OUT = MAPS / "regions"
 MAX_FILE = 1_500_000
 MAX_TOTAL = 15_000_000

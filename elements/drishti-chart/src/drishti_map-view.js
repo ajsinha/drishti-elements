@@ -1,22 +1,22 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The map inside a chart card (kind: 'map'): the world, then double-click a country (or "Drill into regions ›") for its first-level
    regions, loaded on demand (regions/<ISO3>.json) and cached; a breadcrumb back; the metric picker; a choropleth with its quantile or
    continuous legend and counts, no-data places hatched, bubbles; wheel and drag to zoom and pan, + − ⟲ too. Two modes of one component
-   (g3): 'ranking' (A, the default: a side column with the legend, the top ten with bars and the selected place with Explain and the
+   : 'ranking' (A, the default: a side column with the legend, the top ten with bars and the selected place with Explain and the
    drill) and 'table' (B: a floating legend, a world inset once drilled, the selected place in a floating card, a sortable table under
    the map). A click selects a place (its rows go to a linked grid) and explains it. */
 import { isRegionLevel, regionName } from './drishti_chart-regions.js';
@@ -27,7 +27,7 @@ import { rowsOf } from './drishti_chart-data.js';
 import { tooltipElement } from './drishti_chart-parts.js';
 import { selectElement } from '../../drishti-inputs/src/drishti_index.js';
 
-/** A map's modes: ranking (g3 A, the default) and table (g3 B). */
+/** A map's modes: ranking (the default) and table . */
 export const MAP_MODES = Object.freeze(['ranking', 'table']);
 
 const loaders = new Map();
@@ -54,7 +54,7 @@ export class MapView {
   constructor(chart) {
     this.c = chart;
     const w = chart.win, eb = w.Drishti && w.Drishti.elements && w.Drishti.elements.base;
-    this.base = chart.o.mapsBase || (eb ? eb.replace(/elements\/$/, '') + 'vendor/echarts/maps/' : drishtiUrl('/static/vendor/echarts/maps/'));
+    this.base = chart.o.mapsBase || (eb ? eb.replace(/elements\/$/, '') + 'vendor/echarts/maps/' : '');
     this.loader = geoLoader(this.base, chart.o.fetchMap);
     this.mode = MAP_MODES.indexOf(chart.o.mapMode) >= 0 ? chart.o.mapMode : 'ranking';
     this.metricIndex = 0;
@@ -394,7 +394,7 @@ export class MapView {
   }
 
   /**
-   * Switches the mode: ranking (g3 A) or table (g3 B).
+   * Switches the mode: ranking  or table .
    * @param {('ranking'|'table')} mode
    * @returns {void}
    */

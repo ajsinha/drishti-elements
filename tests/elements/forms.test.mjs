@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-inputs' forms without a page (node --test): typed times and dates with times, the time slots, the form types time, datetime
    and money with their checks and currencies, and dependent lists. The drawn Form (live mode, steps, names, hooks, custom widgets) is
@@ -19,7 +19,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as I from '../../web/static/elements/drishti-inputs/src/drishti_index.js';
+import * as I from '../../elements/drishti-inputs/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -75,7 +75,7 @@ test('dependent lists: the values offered follow what the field they depend on h
 });
 
 test('the bundle carries the pickers and the form\'s new names', () => {
-  const B = require('../../web/static/elements/drishti-inputs/drishti_inputs.js');
+  const B = require('../../elements/drishti-inputs/drishti_inputs.js');
   ['TimePicker', 'DateTimePicker', 'parseTime', 'parseDateTime', 'timeSlots', 'defineWidget', 'applyHook', 'currencyOf', 'offeredValues',
     'upgradeTimeInput', 'upgradeDateTimeInput', 'formOf', 'upgradeForms'].forEach((n) => assert.equal(typeof B[n], 'function', n));
 });

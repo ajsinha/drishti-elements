@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery under Node, without a page: the generated catalogue (every library of the manifest with its version, options, events and
    changelog; the frozen lists equal to what the code exports; the planned libraries; the AG Grid mapping), the pure parts (option
@@ -26,7 +26,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const STATIC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'static');
+const STATIC = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const GALLERY = join(STATIC, 'gallery');
 const cat = require(join(GALLERY, 'drishti_catalogue.js'));
 const code = require(join(GALLERY, 'drishti_gallery-code.js'));
@@ -40,13 +40,12 @@ test('the catalogue holds every library of the manifest, in its order, with its 
     const m = manifest.libraries[l.name];
     assert.equal(l.version, undefined, l.name + ' has no version of its own');
     assert.ok(m);
-    assert.equal(l.server, m.module ? 'licence' : 'none', l.name);
+    assert.equal(l.server, 'none', l.name);
     assert.ok(l.bundle.bytes > 1000 && l.bundle.lines > 10, l.name + ' bundle');
     assert.ok(l.modules.length > 0 && l.modules.every((x) => x.file.startsWith('drishti_')), l.name + ' modules');
     assert.ok(l.symbols.length > 0, l.name + ' symbols');
     assert.ok(l.tests.node > 0, l.name + ' has Node tests');
   });
-  assert.equal(lib('drishti-risk').module, 'banking');
 });
 
 test('the options come from the typed JSDoc: names, types, defaults and words', () => {
@@ -72,18 +71,16 @@ test('the frozen lists are what the code exports (events, layouts, modes)', () =
   assert.deepEqual(lib('drishti-chart').constants.MAP_MODES, ['ranking', 'table']);
 });
 
-test('the planned libraries, the AG Grid mapping and the changelog come from ELEMENTS.md and the CHANGELOG', () => {
+test('the AG Grid mapping and the changelog come from the adapter and the CHANGELOG', () => {
   const built = new Set(cat.libraries.map((l) => l.name));
-  assert.ok(cat.planned.length + built.size >= 8);
-  cat.planned.forEach((p) => { assert.ok(!built.has(p.name)); assert.ok(['none', 'server', 'licence'].includes(p.server)); assert.ok(p.what.length > 10); });
-  if (!built.has('drishti-insight')) { assert.equal(cat.planned.find((p) => p.name === 'drishti-insight').server, 'server'); }
+  assert.equal(built.size, 8);
   assert.equal(typeof cat.agGrid.built, 'boolean');
   assert.ok(cat.agGrid.mapping.length >= 15);
   assert.ok(cat.agGrid.mapping.some((r) => /pivotMode/.test(r.ag)));
   assert.ok(cat.agGrid.mapping.some((r) => /serverSide/.test(r.ag)) && cat.agGrid.mapping.some((r) => /treeData/.test(r.ag)));
   assert.ok(/master-detail/.test(cat.agGrid.notCovered));
   const log = lib('drishti-grid').changelog;
-  assert.ok(log.some((c) => c.version === '0.2.0' && c.release === '2.9.11.e'));
+  assert.ok(log.some((c) => c.release === '2.4.0'));
   assert.ok(log.every((c) => c.text.indexOf('**') < 0 && !/\]\(/.test(c.text)), 'plain words: no bold, no links');
 });
 
@@ -114,7 +111,7 @@ test('the code is the mounted object: shared values by name, shorthand, both for
   assert.match(c.element, /^<drishti-grid layout="terminal"><\/drishti-grid>/);
   assert.match(c.element, /Drishti\.elements\.load\('drishti-grid'\)/);
   assert.match(c.element, /el\.options = \{ rows, title: 'T' \};/);
-  assert.match(c.js, /import \{ Grid \} from '\/static\/elements\/drishti-grid\/src\/drishti_index\.js';/);
+  assert.match(c.js, /import \{ Grid \} from '\/elements\/drishti-grid\/src\/drishti_index\.js';/);
   assert.match(c.js, /new Grid\(document\.getElementById\('grid'\), \{ rows, title: 'T', layout: 'terminal' \}\);/);
   const chart = code.elementCode({ tag: 'drishti-chart', ctor: 'Chart', library: 'drishti-chart', spec: { kind: 'bar' }, options: {}, names: new Map(), given: [] });
   assert.match(chart.js, /new Chart\(document\.getElementById\('chart'\), \{ kind: 'bar' \}, \{\}\);/);
@@ -161,12 +158,11 @@ test('every demo names what the catalogue holds: its library, typedefs, events a
   const demos = globalThis.Drishti.gallery.demos;
   const ids = demos.map((d) => d.id);
   assert.equal(new Set(ids).size, ids.length, 'ids are unique');
-  const planned = new Set(cat.planned.map((p) => p.name));
   const everyModule = new Set([].concat(...cat.libraries.map((l) => l.modules.map((m) => m.file))));
   const everyConstant = new Set([].concat(...cat.libraries.map((l) => Object.keys(l.constants))));
   let shown = 0;
   demos.forEach((d) => {
-    assert.ok(lib(d.library) || planned.has(d.library), d.id + ': ' + d.library);
+    assert.ok(lib(d.library), d.id + ': ' + d.library);
     assert.ok(d.title && d.summary && typeof d.mount === 'function', d.id);
     assert.ok(['element', 'function'].includes(d.kind), d.id);
     if (!lib(d.library)) { return; }
@@ -178,7 +174,7 @@ test('every demo names what the catalogue holds: its library, typedefs, events a
     (d.examples || []).forEach((ex) => assert.ok(ex.title && ex.values, d.id + ' example'));
     if (d.kind === 'element') { assert.ok(typeof d.build === 'function', d.id + ' builds the object it mounts and prints'); }
   });
-  ['drishti-core', 'drishti-grid', 'drishti-chart', 'drishti-graph', 'drishti-tree', 'drishti-risk'].forEach((l) => assert.ok(demos.some((d) => d.library === l), l + ' has demos'));
+  ['drishti-core', 'drishti-grid', 'drishti-chart', 'drishti-graph', 'drishti-tree'].forEach((l) => assert.ok(demos.some((d) => d.library === l), l + ' has demos'));
   assert.ok(shown >= 20);
 });
 

@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-core: what every other library and every page builds on. Formats (the server's rules), business dates, theme tokens, the API
    client, the event bus, accessibility helpers, resize handles, keys, dialogs, drawers and toasts, the element maker, Explain as every
@@ -43,7 +43,7 @@ export { fuzzyScore, rankCommands, keymapCommands, CommandPalette, bindPaletteKe
 export { DockModel, Dock, workspaceStore } from './drishti_dock.js';
 export { SelectionHistory, SelectionChip } from './drishti_selection-chip.js';
 export { openDialog, closeDialog, openDrawer, ToastTray, toast } from './drishti_overlay.js';
-export { configure, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
+export { configure, endpoint, register, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
 export { isBlank, compareValues, compareRows, cycleSort, passes, rowFilter, filterWords, FILTER_CHANNEL, filterRows, textSortKey,
   compareTextKeys } from './drishti_filters.js';
 export { h, placeAt, placeUnder, attrAllowed, safeUrl } from './drishti_dom.js';
@@ -54,7 +54,7 @@ export { DENSITIES, blend, alpha, visualTheme, toneColour, rampColour, formatter
 
 /**
  * Starts drishti-core in a page (the bundle calls it when it loads; nothing happens without a document): the resize component, and
- * the console's names for what moved here (window.Drishti.resize, window.Drishti.GridKeys) and window.Drishti.elements.load.
+ * the older global names for what lives here (window.Drishti.resize, window.Drishti.GridKeys) and window.Drishti.elements.load.
  * @param {Window} root
  * @returns {void}
  */

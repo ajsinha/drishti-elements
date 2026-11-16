@@ -1,27 +1,27 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The pivot's field handling under Node (PIVOT_GUIDE.md sections 2 and 4; docs/lenses/mockups/pivot-fields): a hierarchy is one item with
+/* The pivot's field handling under Node(docs/lenses/mockups/pivot-fields): a hierarchy is one item with
    its levels side by side and a level stepper, any number of row and column fields, the functions valid for each field (a rate never
    summed, a text counted, VaR computed per cell), a function's argument (wavg's weight, percentile's q), a custom formula, show-as, several
    values of one field, the field pickers' groups (hierarchies, folders, More fields) and one number format per column. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
-import * as C from '../../web/static/elements/drishti-core/src/drishti_index.js';
-import { fieldGroups } from '../../web/static/elements/drishti-grid/src/drishti_grid-fields.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
+import * as C from '../../elements/drishti-core/src/drishti_index.js';
+import { fieldGroups } from '../../elements/drishti-grid/src/drishti_grid-fields.js';
 
 const ALL = ['sum', 'count', 'count_distinct', 'avg', 'wavg', 'min', 'max', 'median', 'percentile', 'var_samp', 'stddev_samp'];
 const COLS = [

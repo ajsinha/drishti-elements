@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Check or insert the Drishti copyright header in every source file.
+"""Check or insert the Drishti Elements copyright header in every source file.
 
 Usage: python3 tools/license_headers.py [--fix]
 
 Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
-PROPRIETARY AND CONFIDENTIAL. See the LICENSE file in the root of this repository.
+PROPRIETARY. See the LICENSE file in the root of this repository.
 """
 import pathlib
 import sys
@@ -12,10 +12,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MARK = "Copyright (c) 2026 Ashutosh Sinha"
 TEXT = (ROOT / "config" / "license-header.txt").read_text().strip().splitlines()
-SKIP_DIRS = {"target", ".git", ".tmp", ".venv", "vendor", "recorded", "__pycache__", ".mvn", "node_modules", ".pytest_cache", "requirements",
-             "connector-upgrade",   # byte-exact copies of a past release's generated connector files (ConnectorUpgradeTest): a header would change them
-             "archetype-resources"}   # the Module SDK's templates: a generated module carries its own publisher's header
-SKIP_FILES = {"mvnw", "mvnw.cmd", "LICENSE"}
+SKIP_DIRS = {".git", "vendor", "node_modules", "__pycache__", "dist", ".pytest_cache", "_site"}
+SKIP_FILES = {"LICENSE"}
 
 
 def block(style):
@@ -87,7 +85,7 @@ def fix(p):
 
 def main():
     do_fix = "--fix" in sys.argv
-    missing = [p for p in files() if MARK not in p.read_text(encoding="utf-8", errors="ignore")[:2000]]
+    missing = [p for p in files() if not any(MARK in ln and ln.lstrip(" #/*{<!-").startswith(MARK) for ln in p.read_text(encoding="utf-8", errors="ignore")[:2000].splitlines())]
     for p in missing:
         if do_fix:
             fix(p)

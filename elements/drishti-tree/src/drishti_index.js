@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* drishti-tree: hierarchies in four modes of one component (g6, the product owner's choice: the tree grid, the default, on drishti-grid's
+/* drishti-tree: hierarchies in four modes of one component (the tree grid, the default, on drishti-grid's
    tree data; the org chart; the sunburst and the icicle), one engine under them (HierarchyModel: open state, search with breadcrumbs,
    measures with non-additive ones (◆) asked of the host and never summed, the edit mode's proposal for four eyes), the layouts and
    partitions as pure functions, export, keys and ARIA. Works without a Drishti server; a server gives the non-additive figures and

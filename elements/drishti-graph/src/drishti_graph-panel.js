@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The view's graph panel (a Sutra's kind: graph; VIEWMODEL.md section 4) drawn by drishti-graph: the panel's data (nodes with id, label,
+/* The view's graph panel (a Sutra's kind: graph) drawn by drishti-graph: the panel's data (nodes with id, label,
    group, link and focus; edges with from, to and label; layout tree or force; more) becomes a Graph in the table mode without its tables
    (the controls float on the canvas, the card at the node), its groups as types, tree as the layered layout top-down, the panel's own
    node (focus) outlined, and a click on a node that names an entity opens it through the host (the console opens it in place, the

@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The Playground page of an element (mock-up bi-depth/elements-playground, option A): one column, the live visual on top, its data and options
+/* The Playground page of an element : one column, the live visual on top, its data and options
    below, then the HTML and JavaScript that draw it, editable: every edit redraws, after a short pause, in a NEW frame with sandbox="allow-scripts"
    (no same origin) under a policy with no network (drishti_playground-frame.html); the frame is swapped in only if the code ran cleanly. An error
    names its line and keeps the last good drawing, greyed. Reset restores the example. */
@@ -23,7 +23,7 @@
   const GAL = (NS.gallery = NS.gallery || {});
   const PAUSE_MS = 300;
   const DATA_START = '// ---- data ----', DATA_END = '// ---- end of data ----';
-  const JS_LIB = { 'drishti-chart': 'chart', 'drishti-tree': 'tree', 'drishti-graph': 'graph', 'drishti-grid': 'grid', 'drishti-inputs': 'inputs', 'drishti-risk': 'risk' };
+  const JS_LIB = { 'drishti-chart': 'chart', 'drishti-tree': 'tree', 'drishti-graph': 'graph', 'drishti-grid': 'grid', 'drishti-inputs': 'inputs' };
 
   /** A deep copy with the functions and DOM nodes left out, so it can be written as text. */
   function plain(x, drop) {

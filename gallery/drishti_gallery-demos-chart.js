@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery's demos of drishti-chart (every kind, the studio, the maps in both modes, linked selection with a grid, live updates, the
-   Vega-Lite translator) and of drishti-risk's four kinds. Each spec is the chart harness's sample of its kind over the same synthetic
+   Vega-Lite translator). Each spec is the chart harness's sample of its kind over the same synthetic
    series (drishti_gallery-data.js); the options panel is made from ChartOptions' JSDoc. */
 (function (root) {
   'use strict';
@@ -71,10 +71,6 @@
           data: { rows: (() => { const rows = []; for (let i = 0; i < 12; i++) { for (let j = 0; j < 9; j++) { rows.push({ notional: i * 10, mtm: (j - 4) * 2 + (i % 2), count: Math.max(0, Math.round(40 * Math.exp(-(((i - 5) / 3) ** 2 + ((j - 4) / 2) ** 2)))) }); } } return rows.filter((r) => r.count > 0); })() } },
         candlestick: { kind: 'candlestick', title: 'Index, 60 days', data: { rows: S.prices }, x: 'date', open: 'open', close: 'close', low: 'low', high: 'high', y: { format: 'price2' } },
         layer: vegaStrip.spec,
-        'risk.pnl-distribution': { kind: 'risk.pnl-distribution', title: 'P&L distribution, 509 scenarios', data: { rows: S.scenarios }, value: { field: 'pnl', format: 'money' }, id: 'id' },
-        'risk.backtest': { kind: 'risk.backtest', title: 'Backtest, 250 days', data: { rows: S.backtest }, x: 'date', pnl: 'hypothetical', actual: 'actual', var: 'var99', id: 'date', zoom: true },
-        'risk.exposure-profile': { kind: 'risk.exposure-profile', title: 'Exposure profile · ACME Bank', data: { rows: S.exposure }, x: 'tenor', ee: 'ee', pfe: 'pfe', limit: 42e6, y: { format: 'money' } },
-        'risk.var-change': { kind: 'risk.var-change', title: 'What moved VaR', data: { rows: S.varSteps } },
         map: { kind: 'map', title: 'Exposure by country of risk', data: { rows: ctx.data.world }, place: 'code', id: 'code',
           metrics: [{ field: 'ead', title: 'Exposure (EAD)', format: 'money' }, { field: 'pfe', title: 'Peak PFE 95%', format: 'money' }, { field: 'cpty', title: 'Counterparties', format: 'integer' }],
           scale: { type: 'quantile', classes: 5 }, drill: 'regions' },
@@ -100,7 +96,7 @@
       [S.deskRegion, 'rows'], [S.scenarios, 'rows'], [S.exposure, 'rows'], [S.dv01, 'rows'], [S.flows, 'rows'], [S.prices, 'rows'], [S.varSteps, 'rows'], [ctx.data.world, 'rows']]);
     if (more && more.samples) { names.set(more.samples, 'samples'); }
     if (spec.data && spec.data.rows && !names.has(spec.data.rows)) { names.set(spec.data.rows, 'rows'); }
-    return { tag: 'drishti-chart', ctor: 'Chart', library: spec.kind && spec.kind.indexOf('risk.') === 0 ? 'drishti-risk' : 'drishti-chart',
+    return { tag: 'drishti-chart', ctor: 'Chart', library: 'drishti-chart',
       attrs: { mode: values.mode, density: values.density, 'map-mode': values.mapMode }, spec: spec, options: o, jsOptions: typed(values, ['mode', 'density', 'mapMode']),
       names: names, given: Array.from(new Set(names.values())) };
   }
@@ -141,7 +137,7 @@
     extra: [{ name: 'sample', control: { kind: 'select', values: GENERAL }, desc: 'The kind (the chart harness\'s sample of each).' }],
     values: { sample: 'bar', mode: 'card', density: 'compact', height: 300, asOf: '2026-11-06' },
     examples: [{ title: 'Bars, grouped', values: {} }, { title: 'A line with exceptions marked and zoom', values: { sample: 'line' } }, { title: 'A heatmap, diverging', values: { sample: 'heatmap' } },
-      { title: 'Sankey', values: { sample: 'sankey' } }, { title: 'The studio (g2 B)', values: { mode: 'studio', sample: 'histogram' } }],
+      { title: 'Sankey', values: { sample: 'sankey' } }, { title: 'The studio ', values: { mode: 'studio', sample: 'histogram' } }],
     build: function (values, ctx) {
       const all = specs(ctx), samples = ctx.memo('samples', () => { const o = {}; Object.keys(all).forEach((k) => { if (all[k].kind && !o[all[k].kind]) { o[all[k].kind] = all[k]; } }); return o; });
       return chartBuild(all[values.sample] || all.bar, values, ctx, values.mode === 'studio' ? { samples: samples } : null);
@@ -153,7 +149,7 @@
     id: 'map', title: 'Map', about: 'drishti_map-view.js', summary: 'The world to every country\'s first-level regions (Natural Earth, vendored, loaded per country): a choropleth with quantile classes, bubbles, drill by double-click, the breadcrumb back, two modes.',
     extra: [{ name: 'level', control: { kind: 'select', values: ['world', 'USA', 'CAN', 'FRA', 'IND', 'BRA', 'DEU', 'AUS'] }, desc: 'The level it opens at (a country\'s ISO alpha-3 opens its regions).' }],
     values: { level: 'world', mapMode: 'ranking', density: 'compact', height: 440 },
-    examples: [{ title: 'The world, ranking (g3 A)', values: {} }, { title: 'The United States over its table (g3 B)', values: { level: 'USA', mapMode: 'table' } }, { title: 'Canada: provinces and territories', values: { level: 'CAN' } }],
+    examples: [{ title: 'The world, ranking ', values: {} }, { title: 'The United States over its table ', values: { level: 'USA', mapMode: 'table' } }, { title: 'Canada: provinces and territories', values: { level: 'CAN' } }],
     build: function (values, ctx) {
       const base = specs(ctx).map, spec = values.level && values.level !== 'world' ? Object.assign({}, base, { level: values.level }) : base;
       return chartBuild(spec, values, ctx, { placeData: hooks(ctx).placeData });
@@ -252,7 +248,7 @@
   }));
 
   demos.push(chartDemo({
-    id: 'vega-lite', title: 'Vega-Lite translated', about: 'drishti_chart-vega.js', summary: 'fromVegaLite(vl, {rows}) gives a drishti-chart spec, with what it could not translate named (O1: Vega is retired as the screens move).',
+    id: 'vega-lite', title: 'Vega-Lite translated', about: 'drishti_chart-vega.js', summary: 'fromVegaLite(vl, {rows}) gives a drishti-chart spec, with what it could not translate named.',
     values: { density: 'compact' },
     examples: [{ title: 'A bar with a colour condition', values: {} }],
     build: function (values, ctx) { return chartBuild(specs(ctx).vega.spec, values, ctx); },
@@ -266,25 +262,11 @@
     },
     code: function (values, ctx) {
       const c = ctx.code.elementCode(this.build(values, ctx));
-      c.js = "import { Chart, fromVegaLite } from '/static/elements/drishti-chart/src/drishti_index.js';\n\nconst { spec, unsupported } = fromVegaLite({\n  mark: { type: 'bar', cornerRadiusEnd: 3 },\n  encoding: {\n    x: { field: 'DESK', type: 'nominal', sort: '-y' },\n    y: { field: 'MTM', type: 'quantitative' },\n    color: { condition: { test: 'datum.MTM < 0', value: '#b3261e' }, value: '#4f7cff' }\n  }\n}, { rows });\nnew Chart(document.getElementById('chart'), spec, { explain });";
+      c.js = "import { Chart, fromVegaLite } from '/elements/drishti-chart/src/drishti_index.js';\n\nconst { spec, unsupported } = fromVegaLite({\n  mark: { type: 'bar', cornerRadiusEnd: 3 },\n  encoding: {\n    x: { field: 'DESK', type: 'nominal', sort: '-y' },\n    y: { field: 'MTM', type: 'quantitative' },\n    color: { condition: { test: 'datum.MTM < 0', value: '#b3261e' }, value: '#4f7cff' }\n  }\n}, { rows });\nnew Chart(document.getElementById('chart'), spec, { explain });";
       return c;
     },
     sutra: () => null
   }));
-
-  /* ---------------- drishti-risk: the banking module's kinds ---------------- */
-  [['risk.pnl-distribution', 'P&L distribution', 'The histogram of scenario P&L with the VaR and ES lines and the tail beyond VaR in the bad tone; VaR and ES are the server\'s (computed here only without one, and the card says so).'],
-    ['risk.backtest', 'Backtest', 'P&L against minus the day-before VaR, exceptions marked, the Basel traffic light with its plus factor on the card (green 0 to 4, amber 5 to 9, red 10 and more over 250 days).'],
-    ['risk.exposure-profile', 'Exposure profile', 'EE and PFE on a log tenor axis, EEPE over the first year, the limit, a breach on the card.'],
-    ['risk.var-change', 'VaR change', 'A waterfall of what moved VaR, where an increase is bad.']].forEach((k) => {
-    demos.push(chartDemo({
-      id: k[0], library: 'drishti-risk', typesFrom: 'drishti-chart', title: k[1], summary: k[2], about: 'drishti_risk-kinds.js',
-      values: { density: 'compact', height: 300 },
-      examples: [{ title: k[1], values: {} }],
-      build: function (values, ctx) { return chartBuild(specs(ctx)[k[0]], values, ctx); },
-      sutra: () => null
-    }));
-  });
 
   /* ---------------- a module's own visual types (the custom-visual SDK) ----------------
      The console lists the visuals of the modules hosted now (/api/elements/visuals); the boot script loads each module's library (which

@@ -1,26 +1,26 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-grid's visual layer, the decisions without a page (drishti_grid-ui.js) under Node: heading spans and collapsible pivot column
-   groups from a real pivot answer, totals and their non-additive note, conditional formats, the phone's columns (O2), the menus' items,
+   groups from a real pivot answer, totals and their non-additive note, conditional formats, the phone's columns, the menus' items,
    the terminal's command line both ways, value filter conditions, the status bar's figures (no sum of VaR), the flash of a changed figure,
    and the bundle's new names. The drawn grid is tested in a browser against the fixture harness (test_elements_grid_browser.py). */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -82,7 +82,7 @@ test('conditional formats: a colour scale and data bars from the column\'s figur
   assert.equal(G.ruleFor(rules, { id: 'PNL' }), null);
 });
 
-test('a phone (O2): a grid pins its first column; a pivot keeps its row headings and one value column, the picked measure\'s grand total', () => {
+test('a phone: a grid pins its first column; a pivot keeps its row headings and one value column, the picked measure\'s grand total', () => {
   const grid = [{ col: { id: 'A' }, i: 0, pin: null }, { col: { id: 'B' }, i: 1, pin: null }];
   assert.equal(G.phoneColumns(grid, false)[0].pin, 'left');
   const piv = [{ col: { rowHeader: true }, i: 0, pin: 'left' }, { col: { measure: 'MTM', kind: 'node' }, i: 1 }, { col: { measure: 'VaR', kind: 'node' }, i: 2 },
@@ -182,7 +182,7 @@ test('the view\'s events are their own names; the bundle carries the visual laye
   assert.equal(G.ELEMENT_NAME, 'drishti-grid');
   assert.equal(G.defineGridElement(null, null), false);
   G.install({});
-  const B = require('../../web/static/elements/drishti-grid/drishti_grid.js');
+  const B = require('../../elements/drishti-grid/drishti_grid.js');
   assert.match(B.version, /^\d+\.\d+\.\d+$/);
   ['Grid', 'GridBase', 'defineGridElement', 'headerSpans', 'parseCommand', 'FlashTracker', 'renderExplain', 'Menu'].forEach((n) => assert.equal(typeof B[n], 'function', n));
   assert.throws(() => new B.Grid(null, {}), /needs an element/);

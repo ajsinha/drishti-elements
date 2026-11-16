@@ -1,20 +1,20 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The AG Grid-style adapter's map (ELEMENTS.md section 6): the one home of what the adapter takes and what it becomes. AG_MAPPING is the
-   table the gallery, ELEMENTS.md and the migration guide show (tools/docs/elements_api.py reads it; the guide's table is generated from
+/* The AG Grid-style adapter's map: the one home of what the adapter takes and what it becomes. AG_MAPPING is the
+   table the gallery, docs/DESIGN.md and the migration guide show (tools/docs/elements_api.py reads it; the guide's table is generated from
    it); the option lists below are what the adapter does at run time with each name (a test keeps the two in step); the filter models are
    translated both ways. Clean room: written from AG Grid's public documentation of option and model shapes only; no AG Grid code, types,
    styling or class names. Drishti never uses AG Grid: an application written for its option shapes is given a drishti-grid. */
@@ -44,7 +44,7 @@ export const AG_MAPPING = Object.freeze([
   row('`groupTotalRow`, `groupIncludeFooter`', 'mapped', 'the pivot\'s subtotals: `bottom` below the members, else on the group row (`subtotals: \'above\'`)'),
   row('`pivotRowTotals`, `pivotColumnGroupTotals`', 'mapped', '`grandColumn`, `columnGroupTotals` (drawn after the members; `before` is drawn after, with a warning)'),
   row('`suppressAggFuncInHeader`', 'mapped', 'the value\'s label is its column\'s heading alone'),
-  row('`sideBar` (columns and filters tool panels), `rowGroupPanelShow`, `pivotPanelShow`', 'mapped', '`layout: \'panel\'` (g1 B); the panels without a `sideBar` are the `wells` layout\'s ribbon'),
+  row('`sideBar` (columns and filters tool panels), `rowGroupPanelShow`, `pivotPanelShow`', 'mapped', '`layout: \'panel\'` ; the panels without a `sideBar` are the `wells` layout\'s ribbon'),
   row('`rowModelType: \'serverSide\'`, `serverSideDatasource.getRows(params)`, `cacheBlockSize`', 'mapped', 'drishti-grid\'s server-side row model (`ServerRowModel`) over the host\'s function; `blockSize`'),
   row('`params.request`: `startRow`, `endRow`, `rowGroupCols`, `valueCols`, `pivotCols`, `pivotMode`, `groupKeys`, `filterModel`, `sortModel`', 'mapped', 'translated from the block request (columns as `{id, displayName, field, aggFunc}`, the filter model in AG\'s shape)'),
   row('`params.success({ rowData, rowCount, pivotResultFields })`, `params.fail()`, `successCallback`, `failCallback`', 'mapped', 'the block answer; in pivot mode the rows and `pivotResultFields` become the pivot\'s answer (rows, result columns, cells)'),
@@ -68,7 +68,7 @@ export const AG_MAPPING = Object.freeze([
   row('`enableCharts` (integrated charts), `masterDetail`, `rowDragManaged`, `theme`, `rowModelType: \'viewport\'`', 'unsupported', 'drishti-chart on a range; Drishti\'s theme tokens; the rest is not covered in version 1')
 ]);
 
-/** What version 1 leaves out, in words (ELEMENTS.md section 6, the migration guide). */
+/** What version 1 leaves out, in words. */
 export const AG_NOT_COVERED = 'integrated charts (use drishti-chart on a range), AG Grid\'s master-detail options (use the grid\'s detail option), AG Grid\'s sparkline option (use sparklineCell, barCell and bulletCell as a column\'s cellRenderer), row dragging between grids, ' +
   'AG Grid\'s theming API and CSS classes (Drishti\'s theme applies), the viewport row model, pagination, custom cell renderers, editors and ' +
   'header components.';

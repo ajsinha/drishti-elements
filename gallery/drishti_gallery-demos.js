@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The gallery's demos of drishti-core and drishti-grid (the chart's, the maps' and drishti-risk's are in drishti_gallery-demos-chart.js).
+/* The gallery's demos of drishti-core and drishti-grid (the chart's and the maps' are in drishti_gallery-demos-chart.js).
    A demo names its library, the typedefs its options panel is made from (the JSDoc, through the catalogue), the frozen event lists it
    listens to, the modules whose opening words give its description and its keys, and its examples. An element demo's build(values) is
    the object the gallery mounts AND prints in the code tabs (the snippet is the example's source, not a copy); a function demo draws
@@ -354,7 +354,7 @@
     code: function (values, ctx) {
       const lit = ctx.code.literal(this.opts(values));
       const call = values.fn === 'formatCurrency' ? "formatCurrency(-30205543.218, '" + values.currency + "', " + lit + ')' : values.fn + '(-30205543.218, ' + lit + ')';
-      return { js: "import { " + values.fn + " } from '/static/elements/drishti-core/src/drishti_index.js';\n\n" + call + ';', element: '<script src="/static/elements/drishti-core/drishti_core.js"></script>\n<script>\n  Drishti.elements.core.' + call + ';\n</script>' };
+      return { js: "import { " + values.fn + " } from '/elements/drishti-core/src/drishti_index.js';\n\n" + call + ';', element: '<script src="/elements/drishti-core/drishti_core.js"></script>\n<script>\n  Drishti.elements.core.' + call + ';\n</script>' };
     }
   }));
 
@@ -377,7 +377,7 @@
       host.appendChild(el);
       return done(el);
     },
-    code: (values) => ({ js: "import { setTheme, tokens, contrastRatio } from '/static/elements/drishti-core/src/drishti_index.js';\n\nsetTheme('" + (values.theme || 'light') + "', { persist: false });\nconst t = tokens();\ncontrastRatio(t['--d-ink'], t['--d-bg']);   // WCAG ratio", element: '<html data-theme="' + (values.theme || 'light') + '">   <!-- the tokens are CSS custom properties: css/drishti_tokens.css -->' })
+    code: (values) => ({ js: "import { setTheme, tokens, contrastRatio } from '/elements/drishti-core/src/drishti_index.js';\n\nsetTheme('" + (values.theme || 'light') + "', { persist: false });\nconst t = tokens();\ncontrastRatio(t['--d-ink'], t['--d-bg']);   // WCAG ratio", element: '<html data-theme="' + (values.theme || 'light') + '">   <!-- the tokens are CSS custom properties: css/drishti_tokens.css -->' })
   }));
 
   demos.push(fnDemo({
@@ -398,7 +398,7 @@
       m.destroy = () => { offs.forEach((f) => f && f()); bus.clear(); el.remove(); };
       return m;
     },
-    code: () => ({ js: "import { createBus } from '/static/elements/drishti-core/src/drishti_index.js';\n\nconst bus = createBus();\nconst off = bus.on('trade.booked', (p) => console.log(p.id));\nbus.once('limit.breached', (p) => alert(p.desk));\nbus.emit('trade.booked', { id: 'T1' });\noff();" })
+    code: () => ({ js: "import { createBus } from '/elements/drishti-core/src/drishti_index.js';\n\nconst bus = createBus();\nconst off = bus.on('trade.booked', (p) => console.log(p.id));\nbus.once('limit.breached', (p) => alert(p.desk));\nbus.emit('trade.booked', { id: 'T1' });\noff();" })
   }));
 
   demos.push(fnDemo({
@@ -423,7 +423,7 @@
       return m;
     },
     opts: (values) => typed(values, ['text', 'href', 'className', 'timeout']),
-    code: function (values, ctx) { return { js: "import { toast, openDialog, openDrawer } from '/static/elements/drishti-core/src/drishti_index.js';\n\ntoast(" + ctx.code.literal(this.opts(values)) + ");\nopenDialog(document.querySelector('dialog'));\nconst close = openDrawer(document.querySelector('aside'), { onClose: () => {} });" }; }
+    code: function (values, ctx) { return { js: "import { toast, openDialog, openDrawer } from '/elements/drishti-core/src/drishti_index.js';\n\ntoast(" + ctx.code.literal(this.opts(values)) + ");\nopenDialog(document.querySelector('dialog'));\nconst close = openDrawer(document.querySelector('aside'), { onClose: () => {} });" }; }
   }));
 
   demos.push(fnDemo({
@@ -441,7 +441,7 @@
       ctx.E.core.renderExplain(el, { result: this.result(values) }, values.mode, { prefix: 'dg', onClose: () => ctx.log('close', '') });
       return done(el);
     },
-    code: function (values, ctx) { return { js: "import { renderExplain } from '/static/elements/drishti-core/src/drishti_index.js';\n\nrenderExplain(el, { result: " + ctx.code.literal(this.result(values)) + " }, '" + values.mode + "');" }; }
+    code: function (values, ctx) { return { js: "import { renderExplain } from '/elements/drishti-core/src/drishti_index.js';\n\nrenderExplain(el, { result: " + ctx.code.literal(this.result(values)) + " }, '" + values.mode + "');" }; }
   }));
 
   demos.push(fnDemo({
@@ -454,7 +454,7 @@
       let flaky = 0;
       const fakeFetch = (url) => new Promise((resolve) => setTimeout(() => {
         const json = (status, body) => resolve(new Response(JSON.stringify(body), { status: status, headers: { 'content-type': 'application/json' } }));
-        if (/ok/.test(url)) { json(200, { rows: [{ desk: 'Rates', var99: 9.42e6 }] }); } else if (/problem/.test(url)) { json(404, { code: 'DRS-4040', title: 'No such desk', detail: 'There is no desk RATESX.', fix: 'Pick a desk from DESK <GO>.' }); } else { json(++flaky % 3 ? 503 : 200, flaky % 3 ? { title: 'Busy' } : { rows: [] }); }
+        if (/ok/.test(url)) { json(200, { rows: [{ desk: 'Rates', var99: 9.42e6 }] }); } else if (/problem/.test(url)) { json(404, { code: 'E-4040', title: 'No such desk', detail: 'There is no desk RATESX.', fix: 'Pick a desk from DESK <GO>.' }); } else { json(++flaky % 3 ? 503 : 200, flaky % 3 ? { title: 'Busy' } : { rows: [] }); }
       }, 60));
       const client = ctx.E.core.createClient(Object.assign({ fetch: fakeFetch }, typed(values, ['base', 'credentials', 'retries', 'retryDelay', 'timeout', 'unreachable'])));
       const out = h(doc, 'pre', { cls: 'gx-out', attrs: { 'aria-live': 'polite' } });
@@ -465,7 +465,7 @@
       host.appendChild(el);
       return done(el);
     },
-    code: function (values, ctx) { return { js: "import { createClient } from '/static/elements/drishti-core/src/drishti_index.js';\n\nconst api = createClient(" + ctx.code.literal(typed(values, ['base', 'credentials', 'retries', 'retryDelay', 'timeout', 'unreachable'])) + ");\nconst desks = await api.get('/api/v1/desks');   // an ApiError with words, code and fix when it fails" }; }
+    code: function (values, ctx) { return { js: "import { createClient } from '/elements/drishti-core/src/drishti_index.js';\n\nconst api = createClient(" + ctx.code.literal(typed(values, ['base', 'credentials', 'retries', 'retryDelay', 'timeout', 'unreachable'])) + ");\nconst desks = await api.get('/api/v1/desks');   // an ApiError with words, code and fix when it fails" }; }
   }));
 
   demos.push(fnDemo({
@@ -483,6 +483,6 @@
       m.destroy = () => { roving.destroy(); el.remove(); };
       return m;
     },
-    code: () => ({ js: "import { rovingTabindex, announce } from '/static/elements/drishti-core/src/drishti_index.js';\n\nrovingTabindex(document.querySelector('[role=tablist]'), {\n  selector: '[role=tab]',\n  onMove: (el) => announce(el.textContent + ' selected')\n});" })
+    code: () => ({ js: "import { rovingTabindex, announce } from '/elements/drishti-core/src/drishti_index.js';\n\nrovingTabindex(document.querySelector('[role=tablist]'), {\n  selector: '[role=tab]',\n  onMove: (el) => announce(el.textContent + ' selected')\n});" })
   }));
 }(typeof window !== 'undefined' ? window : globalThis));

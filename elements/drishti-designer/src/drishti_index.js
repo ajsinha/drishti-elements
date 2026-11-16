@@ -1,24 +1,23 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* drishti-designer: the designer kit every Drishti designer and editor is built from (the product owner, 2026-11-07: "duplicated code
-   will make the system unmaintainable"). The layout canvas over a layout model (grid or flow; place, move, resize with snap,
+/* drishti-designer: the designer kit every Drishti designer and editor is built from. The layout canvas over a layout model (grid or flow; place, move, resize with snap,
    multi-select, align, distribute, z-order, groups, copy and paste, a phone's order, the keys, undo and redo on one command stack),
    the palette, the inspector (a drishti-inputs Form from a schema), the outline (drishti-tree's TreeOutline: drag to re-order or re-parent), the YAML pane
    (drishti-inputs' CodeEditor kept in step with the model both ways, the selected item highlighted, completion and lint from a JSON
-   Schema) and the designer shell of docs/architecture/SHARED_SCREENS.md (three panes, Visual / YAML / Both, the header with versions, Validate, Preview,
+   Schema) and the designer shell (three panes, Visual / YAML / Both, the header with versions, Validate, Preview,
    History, Impact, Propose for review). Depends on drishti-core, drishti-inputs and drishti-tree (the outline). */
 export { CommandStack, SnapshotHistory } from './drishti_commands.js';
 export { Selection } from './drishti_selection.js';

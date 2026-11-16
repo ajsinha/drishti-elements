@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery's demos of drishti-inputs (every input: the date and range pickers, the tree picker, the multi-select, the combobox, the
    form from a schema with four eyes, the filter bar with a grid following it, the code editor and the diff) and of drishti-data (a
@@ -195,28 +195,6 @@
       value: 'kind: view\ntitle: Desk risk and limits\npanels:\n  - grid: $positions\n  - chart: $pnl\n  - grid: $limits\n' })
   }));
 
-  /* ---------------- drishti-insight ---------------- */
-  demos.push({
-    id: 'workbook-export', title: 'Workbook export', about: 'drishti_insight-workbook.js', library: 'drishti-insight', kind: 'function', ag: false,
-    keys: [], events: [], sutra: () => null, types: [],
-    summary: 'A number\'s live-formula workbook, found through the one Explain\'s Workbook part and downloaded; the server writes it. Here the answer is a stand-in (the gallery has no server): Export logs the link it would open.',
-    values: { scope: 'BANK' }, examples: [{ title: 'VaR of the bank', values: {} }, { title: 'A desk', values: { scope: 'DESK:RATES' } }],
-    extra: [{ name: 'scope', control: { kind: 'select', values: ['BANK', 'DESK:RATES', 'DESK:FX'] }, desc: 'The number\'s scope.' }],
-    mount: function (host, values, ctx) {
-      const doc = host.ownerDocument, I = ctx.E.insight, h = ctx.h;
-      const answer = { workbook: { links: [{ label: 'VaR workbook (' + values.scope + ')', href: drishti_url('/api/var/workbook?scope=' + encodeURIComponent(values.scope)), note: 'live formulas, a Provenance sheet' }] } };
-      const win = { location: { assign: (u) => ctx.log('opened', { href: drishti_url(u) }) }, Drishti: { Explain: { ask: () => Promise.resolve(answer) } } };
-      const rows = I.workbookLinks(answer).map((l) => h(doc, 'li', { text: l.label + ' · ' + l.href + (l.note ? ' · ' + l.note : '') }));
-      const go = () => I.exportWorkbook({ kind: 'var', measure: 'var', scope: values.scope }, { win: win }).then((l) => ctx.log('exported', { label: l.label }));
-      const el = h(doc, 'div', { cls: 'gx-fn' }, [h(doc, 'ul', {}, rows),
-        h(doc, 'div', { cls: 'gx-demo-bar', attrs: { role: 'toolbar', 'aria-label': 'Workbook' } }, [h(doc, 'button', { cls: 'gx-btn', text: 'Export', attrs: { type: 'button', 'data-action': 'export' }, on: { click: go } })])]);
-      host.appendChild(el);
-      return { target: el, element: el, ready: Promise.resolve(), destroy: () => el.remove() };
-    },
-    code: (values) => ({ js: "import { exportWorkbook } from '/static/elements/drishti-insight/src/drishti_index.js';\n\n// on a console page (the one Explain installed): the number's workbook, downloaded\nexportWorkbook({ kind: 'var', measure: 'var', scope: '" + values.scope + "' });",
-      element: '<script src="/static/elements/drishti-core/drishti_core.js"></script>\n<script src="/static/elements/drishti-insight/drishti_insight.js"></script>\n<script>\n  Drishti.elements.insight.exportWorkbook({ kind: \'var\', measure: \'var\', scope: \'' + values.scope + '\' });\n</script>' })
-  });
-
   /* ---------------- drishti-data ---------------- */
   function dataDemo(spec) { return Object.assign({ library: 'drishti-data', kind: 'function', ag: false, keys: [], events: [], sutra: () => null }, spec); }
 
@@ -233,7 +211,7 @@
       g.options = { columns: ctx.data.COLUMNS, datasource: src, getRowId: ctx.getRowId, title: 'Trades (memorySource)', blockSize: 100 };
       return { target: g, element: g, ready: Promise.resolve(), destroy: () => { g.grid.destroy(); g.remove(); } };
     },
-    code: (values) => ({ js: "import { memorySource } from '/static/elements/drishti-data/src/drishti_index.js';\nimport { Grid } from '/static/elements/drishti-grid/src/drishti_index.js';\n\nconst datasource = memorySource(rows, { delay: " + values.delay + " });   // or restSource(url), serverSideSource(url), arrowSource(url)\nnew Grid(document.getElementById('grid'), { columns, datasource, getRowId, blockSize: 100 });" })
+    code: (values) => ({ js: "import { memorySource } from '/elements/drishti-data/src/drishti_index.js';\nimport { Grid } from '/elements/drishti-grid/src/drishti_index.js';\n\nconst datasource = memorySource(rows, { delay: " + values.delay + " });   // or restSource(url), serverSideSource(url), arrowSource(url)\nnew Grid(document.getElementById('grid'), { columns, datasource, getRowId, blockSize: 100 });" })
   }));
 
   demos.push(dataDemo({
@@ -265,7 +243,7 @@
       if (client.start) { client.start(); }
       return { target: host, element: g, push: push, ready: Promise.resolve(), destroy: () => { pipe.stop(); if (client.stop) { client.stop(); } g.grid.destroy(); g.remove(); bar.remove(); } };
     },
-    code: () => ({ js: "import { LiveClient, pipeToGrid } from '/static/elements/drishti-data/src/drishti_index.js';\n\nconst client = new LiveClient({ url: '/api/v1/live/trades' });   // SSE; ws:// or wss:// for a WebSocket\nclient.on('state', (s) => console.log(s.state));\npipeToGrid(client, grid, { getRowId: (r) => r.ID });" })
+    code: () => ({ js: "import { LiveClient, pipeToGrid } from '/elements/drishti-data/src/drishti_index.js';\n\nconst client = new LiveClient({ url: '/api/v1/live/trades' });   // SSE; ws:// or wss:// for a WebSocket\nclient.on('state', (s) => console.log(s.state));\npipeToGrid(client, grid, { getRowId: (r) => r.ID });" })
   }));
 
   demos.push(dataDemo({
@@ -283,6 +261,6 @@
       g.options = { columns: gg.columns, rows: gg.rows, getRowId: gg.getRowId, title: 'From a frame', checkboxes: false };
       return { target: g, element: g, ready: Promise.resolve(), destroy: () => { g.grid.destroy(); g.remove(); note.remove(); } };
     },
-    code: () => ({ js: "import { ArrowClient, fromJson } from '/static/elements/drishti-data/src/drishti_index.js';\n\nconst frame = await new ArrowClient({}).read({ url: '/api/v1/rows.arrow' });   // or fromJson(answer)\nconst { columns, rows, getRowId } = frame.toGrid({ id: 'ID' });" })
+    code: () => ({ js: "import { ArrowClient, fromJson } from '/elements/drishti-data/src/drishti_index.js';\n\nconst frame = await new ArrowClient({}).read({ url: '/api/v1/rows.arrow' });   // or fromJson(answer)\nconst { columns, rows, getRowId } = frame.toGrid({ id: 'ID' });" })
   }));
 }(typeof window !== 'undefined' ? window : globalThis));

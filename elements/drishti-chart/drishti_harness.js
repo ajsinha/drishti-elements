@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The chart harness (drishti_harness.html): synthetic data for every kind (a 250-day backtest, 509 scenarios, desks, tenors, an exposure
    profile, trades, flows, prices, exposure by country and by every region of a country), the board of cards, the studio, the map in its
@@ -120,10 +120,6 @@
     candlestick: { kind: 'candlestick', title: 'Index, 60 days', data: { rows: prices }, x: 'date', open: 'open', close: 'close', low: 'low', high: 'high', y: { format: 'price2' } },
     'vega-bar': vegaBar.spec,
     'vega-layer': vegaStrip.spec,
-    'risk.pnl-distribution': { kind: 'risk.pnl-distribution', title: 'P&L distribution, 509 scenarios', data: { rows: scenarios }, value: { field: 'pnl', format: 'money' }, id: 'id' },
-    'risk.backtest': { kind: 'risk.backtest', title: 'Backtest, 250 days', data: { rows: backtest }, x: 'date', pnl: 'hypothetical', actual: 'actual', var: 'var99', id: 'date', zoom: true },
-    'risk.exposure-profile': { kind: 'risk.exposure-profile', title: 'Exposure profile · ACME Bank', data: { rows: exposure }, x: 'tenor', ee: 'ee', pfe: 'pfe', limit: 42e6, y: { format: 'money' } },
-    'risk.var-change': { kind: 'risk.var-change', title: 'What moved VaR', data: { rows: varSteps } },
     map: { kind: 'map', title: 'Exposure by country of risk', data: { rows: world }, place: 'code', id: 'code',
       metrics: [{ field: 'ead', title: 'Exposure (EAD)', format: 'money' }, { field: 'pfe', title: 'Peak PFE 95%', format: 'money' }, { field: 'cpty', title: 'Counterparties', format: 'integer' }],
       scale: { type: 'quantile', classes: 5 }, drill: 'regions' }
@@ -151,14 +147,14 @@
     stage.className = 'hx-stage hx-board';
     Object.keys(S).forEach((k) => {
       const box = document.createElement('section');
-      if (k === 'line' || k === 'map' || k === 'risk.backtest') { box.className = 'hx-wide'; }
+      if (k === 'line' || k === 'map') { box.className = 'hx-wide'; }
       stage.appendChild(box);
       card(box, k, S[k]);
     });
   } else if (view === 'studio') {
     const box = document.createElement('section');
     stage.appendChild(box);
-    card(box, 'studio', S[q.get('kind') || 'risk.pnl-distribution'], { mode: 'studio', samples: samples });
+    card(box, 'studio', S[q.get('kind') || 'line'], { mode: 'studio', samples: samples });
   } else if (view === 'map') {
     const box = document.createElement('section');
     stage.appendChild(box);

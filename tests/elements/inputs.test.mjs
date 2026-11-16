@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-inputs without a page (node --test): the holiday calendars and business dates, the range presets, typed dates, the tree's
    compact selection with lazy children and search, forms from a schema (validation in words, conditions, arrays, the four-eyes diff),
@@ -20,8 +20,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as I from '../../web/static/elements/drishti-inputs/src/drishti_index.js';
-import * as C from '../../web/static/elements/drishti-core/src/drishti_index.js';
+import * as I from '../../elements/drishti-inputs/src/drishti_index.js';
+import * as C from '../../elements/drishti-core/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 0));
@@ -246,7 +246,7 @@ test('code: the Rachana and YAML modes, completion from a catalogue, the text pu
 });
 
 test('the bundle: drishti-inputs is a CommonJS module under Node, registered beside drishti-core, with every name', () => {
-  const B = require('../../web/static/elements/drishti-inputs/drishti_inputs.js');
+  const B = require('../../elements/drishti-inputs/drishti_inputs.js');
   assert.equal(B.library, 'drishti-inputs');
   ['DatePicker', 'DateRangePicker', 'TreePicker', 'MultiSelect', 'Combobox', 'Select', 'Form', 'FilterBar', 'CodeEditor', 'CodeDiff', 'HolidayCalendar', 'TypeAhead', 'defineInputElements', 'upgradeDateInput', 'upgradeCheckboxes', 'upgradeFields'].forEach((n) => assert.equal(typeof B[n], 'function', n));
   assert.equal(B.calendar('US').tMinus('2026-11-27', 1), '2026-11-25');

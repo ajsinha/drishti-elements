@@ -1,25 +1,25 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-grid's events and live data under Node: the typed events on the bus and as DOM events, transactions by row id (order stable
    under sort and filter, the changed cells and their flash), batching, the live feeds, the server-side model's refresh on a notice,
    group and pivot totals by difference, and the non-additive totals asked of the server again, debounced. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
-import * as D from '../../web/static/elements/drishti-data/src/drishti_index.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
+import * as D from '../../elements/drishti-data/src/drishti_index.js';
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms));
 function trades(n) {

@@ -1,26 +1,26 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The tree harness (drishti_harness.html): a synthetic VaR hierarchy (a bank, four divisions, their desks and books: drishti-risk's
+/* The tree harness (drishti_harness.html): a synthetic VaR hierarchy (a bank, four divisions, their desks and books: a risk system's
    preset) with a stand-in server that answers the non-additive figures (each parent's VaR under its children's sum: the
    diversification) and Explain, and a synthetic lineage (sources, tables, models, reports; a table with two parents) for the org
    chart's DAG. ?view=grid|org|sunburst|icicle, &data=lineage, &density=..., &theme=light, &edit=1. window.__harness is what the browser
    test drives. The figures are invented. */
 (function () {
   'use strict';
-  const D = window.Drishti.elements, T = D.tree, R = D.risk, core = D.core;
+  const D = window.Drishti.elements, T = D.tree, core = D.core;
   const q = new URLSearchParams(location.search);
   let seed = 11;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -80,13 +80,24 @@
     { id: 'M1', parent: 'T1', label: 'Positions model', kind: 'model', rows: 9000 }, { id: 'M2', parent: 'T2', label: 'Curves model', kind: 'model', rows: 2000 },
     { id: 'R1', parent: 'M1', label: 'Daily report', kind: 'report', rows: 300 }, { id: 'R2', parent: 'M2', label: 'Curve report', kind: 'report', rows: 120 }];
 
+
+  /* the options of a hierarchy with figures that are not additive (a parent's figure is the server's, never the sum of its children) */
+  const TONES = { within: 'good', near: 'warn', breach: 'bad' }, WORDS = { within: 'within the limit', near: 'near the limit', breach: 'over the limit' };
+  const MEASURES = [{ field: 'VAR', label: 'VaR 99% 1d', format: 'compact', additive: false, childSum: true }, { field: 'ES', label: 'ES 97.5%', format: 'compact', additive: false },
+    { field: 'LIMIT', label: 'Limit', format: 'compact', additive: false },
+    { field: 'LIMIT_USE', label: 'Limit use', format: 'percent', additive: false, bar: { max: 1, status: 'LIMIT_STATUS', tones: TONES, words: WORDS } },
+    { field: 'POSITIONS', label: 'Positions', format: 'integer' }, { field: 'NOTIONAL', label: 'Notional', format: 'compact' }];
+  const hierarchyOptions = (rowsIn, o) => Object.assign({ mode: 'grid', density: 'terminal', gridLayout: 'terminal', title: 'VaR hierarchy', openDepth: 2, colourBy: 'LIMIT_USE', shown: ['VAR', 'ES'],
+    sizeBy: 'POSITIONS', emptyText: 'Select a node to see its figures, its place in the hierarchy and Explain.' }, o,
+    { data: { rows: rowsIn, idField: 'ID', parentField: 'PARENT', labelField: 'LABEL', kindField: 'LEVEL', measures: MEASURES } });
+
   const view = q.get('view') || 'grid', density = q.get('density') || null;
   if (q.get('theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
   const host = document.getElementById('hx-tree');
   const download = (name, content, type) => { H.downloads.push({ name: name, type: type, size: String(content).length, head: String(content).slice(0, 120) }); };
   const opts = q.get('data') === 'lineage'
     ? { data: { rows: lineage, measures: [{ field: 'rows', label: 'Rows', format: 'integer' }] }, mode: view, title: 'Lineage', openDepth: -1, editable: true, download: download, explain: explain }
-    : R.varHierarchyTree(rows, { mode: view, serverMeasures: serverMeasures, explain: explain, link: { channel: 'harness-tree' }, editable: true, download: download,
+    : hierarchyOptions(rows, { mode: view, serverMeasures: serverMeasures, explain: explain, link: { channel: 'harness-tree' }, editable: true, download: download,
       proposalNote: 'Approver: any hierarchy approver but the proposer (four eyes)', status: ['business date 2026-11-06', '509 scenarios'] });
   if (density) { opts.density = density; }
   const t = H.tree = new T.Tree(host, opts);

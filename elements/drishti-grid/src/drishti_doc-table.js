@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The document table: the server's table drawn as a semantic <table>, every row in the DOM, with the console's table classes (tbl,
    num, tr-*, dr-*, pivot, heat-*). The grid speaks the server's table as it speaks the server's pivot: the data is the ViewModel's
@@ -19,7 +19,7 @@
    (children, opened to expand levels), a drill-down (levels: one level at a time), a table that offers Pivot, the pivot kind's table (heat
    buckets, totals), and the plain Data table under a chart. What a cell shows (an entity link, an outside link) is the host's: the hooks.
    The behaviours (sort, filter, pages, tree rows, drill levels) are drishti_doc-behave.js. Nothing here parses markup. */
-import { h, roundHalfUp, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
+import { h, roundHalfUp, endpoint } from '../../drishti-core/src/drishti_index.js';
 
 /**
  * What the host draws in a document table: a cell's content, its tone class, a row's extra attributes.
@@ -111,9 +111,10 @@ export function docTable(doc, d, hooks) {
 export function docPivotable(doc, panel, hooks) {
   const src = panel.data.pivot && panel.data.pivot.source;
   if (!src) { return docTable(doc, panel.data, hooks); }
-  const e = mk(doc), title = panel.title || panel.id;
-  return [docTable(doc, panel.data, hooks), e('p', { class: 'pv-open' }, e('a', { class: 'btn btn-sm btn-outline-secondary', href: drishtiUrl('/pivot?source=' + encodeURIComponent(src).replace(/%2F/g, '/')),
-    title: 'Pivot ' + title + ': rows, columns, values and filters, every total from its own rows (bi/PIVOT.md)' }, 'Pivot'))];
+  const e = mk(doc), title = panel.title || panel.id, page = endpoint('pivotPage');
+  if (!page) { return docTable(doc, panel.data, hooks); }
+  return [docTable(doc, panel.data, hooks), e('p', { class: 'pv-open' }, e('a', { class: 'btn btn-sm btn-outline-secondary', href: page + '?source=' + (encodeURIComponent(src).replace(/%2F/g, '/')),
+    title: 'Pivot ' + title + ': rows, columns, values and filters, every total from its own rows' }, 'Pivot'))];
 }
 
 // ---- drill-down -------------------------------------------------------------------------------------------------------------
@@ -145,7 +146,7 @@ function drLevels(k, pid, d, rows, prefix, depth, out) {
         ? k.e('div', { class: 'tbl-wrap' }, k.e('table', { class: 'tbl dr-tbl', 'aria-label': (lv.title || 'Rows') + ' of ' + str(r.crumb) },
           k.e('caption', { class: 'dr-cap' }, (lv.title || 'Rows') + ' ', k.e('span', { class: 'dr-count' }, String(kids.length))),
           head(k, lv.columns, lv.numeric), drRows(k, pid, kids, lv.numeric, path + '.', deeper, noun), drFoot(k, r.kidsTotal, lv.numeric)))
-        : k.e('p', { class: 'pnl-empty', role: 'status' }, k.e('i', { class: 'bi bi-inbox', 'aria-hidden': 'true' }), ' No ' + String(lv.title || 'rows').toLowerCase())));
+        : k.e('p', { class: 'pnl-empty', role: 'status' }, 'No ' + String(lv.title || 'rows').toLowerCase())));
     if (deeper && kids.length) { drLevels(k, pid, d, kids, path + '.', depth + 1, out); }
   });
   return out;

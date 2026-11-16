@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* Columns: what each column is (its field, type, format, width, pinning, what it may be used for in a pivot, whether its figures add
    up), their order, and the field list a person searches to build a view. Values are read the same way everywhere (getValue) and
@@ -45,7 +45,7 @@ export const ADDITIVE_FUNCS = Object.freeze(['sum', 'count']);
  * @property {string} [aggFunc] the aggregation of a value column (sum, count, min, max, avg, first, last, distinct, or a server measure)
  * @property {boolean} [additive] whether its figures may be summed: false for VaR, ES, ratios (a total is asked of the server);
  *   default: true for numbers
- * @property {string} [aggregate] 'server': the same as additive false (ELEMENTS.md's name)
+ * @property {string} [aggregate] 'server': the same as additive false
  * @property {string} [measure] the server's measure text when it is not func(field) (var(99, 1d))
  * @property {boolean} [enableRowGroup] may be a row group (default: text and date columns)
  * @property {boolean} [enablePivot] may be a column pivot (default: text and date columns)

@@ -1,26 +1,27 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The API client: one way to call a Drishti server (or any JSON API). The session is the browser's (cookies, same origin by default); an
-   error is an ApiError in words with its DRS code ("DRS-1001 No trade IRS-48213 here"), never a bare status; a GET that meets a
+/* The API client: one way to call a JSON server. The session is the browser's (cookies, same origin by default); an
+   error is an ApiError in words with its code ("E-1001 No trade IRS-48213 here"), never a bare status (the error contract: any `code`
+   string and a `detail`, see docs/CONTRACTS.md); a GET that meets a
    network failure or a busy server (502, 503, 504) is tried again with a growing pause; a call can be aborted (an AbortSignal) and has a
-   time limit; the as-of date of the page goes with every call as X-Drishti-As-Of. A root-absolute path is put under the console's URL
-   sub-path (drishti_base.js). */
+   time limit; the as-of date of the page goes with every call in the header asOfHeader (default X-Drishti-As-Of). A root-absolute path is put under
+   the page's URL sub-path (drishti_base.js). */
 import { url } from './drishti_base.js';
 
-/** The header that carries the page's as-of date (the console's core/asof.py reads it). */
+/** The default name of the header that carries the page's as-of date (option asOfHeader). */
 export const AS_OF_HEADER = 'X-Drishti-As-Of';
 
 /**
@@ -37,7 +38,7 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     /** @type {number} the HTTP status (0: the server was not reached) */
     this.status = info.status || 0;
-    /** @type {?string} the DRS code the server gave */
+    /** @type {?string} the code the server gave */
     this.code = info.code || null;
     /** @type {?string} the server's own words */
     this.detail = info.detail || null;
@@ -53,7 +54,7 @@ export class ApiError extends Error {
 }
 
 /**
- * The words of an error answer: its DRS code and the server's detail ("DRS-1001 ..."), else the fallback.
+ * The words of an error answer: its code and the server's detail ("E-1001 ..."), else the fallback.
  * @param {*} body the answer's JSON ({code, detail} or {error: {code, message}})
  * @param {number} status
  * @param {string} [fallback] words when the server gave none (default "The server answered <status>.")
@@ -73,6 +74,7 @@ export function errorWords(body, status, fallback) {
  * @typedef {Object} ClientOptions
  * @property {string} [base=''] put before every path that does not start with http(s):// or /
  * @property {(string|function(): ?string)} [asOf] the as-of date sent with every call (a function: asked at each call)
+ * @property {string} [asOfHeader='X-Drishti-As-Of'] the name of the header that carries the as-of date
  * @property {Object<string, string>} [headers] sent with every call
  * @property {string} [credentials='same-origin'] the fetch credentials: the browser's session
  * @property {number} [retries=2] how many more tries a GET gets after a network failure or 502, 503, 504
@@ -122,7 +124,7 @@ export class ApiClient {
     const h = Object.assign({ Accept: 'application/json' }, this.o.headers, c.headers);
     if (body !== undefined && !(typeof FormData !== 'undefined' && body instanceof FormData)) { h['Content-Type'] = h['Content-Type'] || 'application/json'; }
     const asOf = c.asOf !== undefined ? c.asOf : typeof this.o.asOf === 'function' ? this.o.asOf() : this.o.asOf;
-    if (asOf) { h[AS_OF_HEADER] = String(asOf); }
+    if (asOf) { h[this.o.asOfHeader || AS_OF_HEADER] = String(asOf); }
     return h;
   }
 

@@ -1,24 +1,23 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
-"""The gallery's catalogue of Drishti Elements (static/gallery/drishti_catalogue.js), written by tools/docs/elements_api.py from the
+# See the LICENSE file in the root of this repository.
+"""The gallery's catalogue of Drishti Elements (gallery/drishti_catalogue.js), written by tools/docs/elements_api.py from the
 same typed JSDoc as ELEMENTS_API.md: one home per fact, the gallery's options panel and API tab read it.
 
 What it holds, per library of the manifest: its version, title, requirements and licence, whether it needs a server, its bundle's size,
 its Node tests and browser file, each module's opening words, every public symbol (functions, classes with their methods, constants),
 every typedef with its properties (an option's name, type, default, whether optional, its words: the options panel is made from them),
-the string lists the code exports frozen (events, layouts, modes) and the library's lines of the product CHANGELOG. Besides: the
-libraries ELEMENTS.md section 2 plans that are not built yet, and the AG Grid-style adapter's mapping (its home: drishti_grid-ag-map.js) with whether the
+the string lists the code exports frozen (events, layouts, modes) and the library's lines of the product CHANGELOG. Besides: the AG Grid-style adapter's mapping (its home: drishti_grid-ag-map.js) with whether the
 adapter is built. The file is a classic script (it runs from file:// too) and a CommonJS module under Node."""
 from __future__ import annotations
 
@@ -86,17 +85,17 @@ def constants(src: Path) -> dict[str, list[str]]:
     return out
 
 
-def tests_of(console: Path) -> dict[str, dict]:
+def tests_of(root: Path) -> dict[str, dict]:
     """Each library's Node tests (a test file counts for every library it imports) and its browser file."""
     out: dict[str, dict] = {}
-    for f in sorted((console / "tests" / "elements").glob("*.test.mjs")):
+    for f in sorted((root / "tests" / "elements").glob("*.test.mjs")):
         text = f.read_text(encoding="utf-8")
         n = len(TEST_CALL.findall(text))
         for lib in sorted(set(LIB_IMPORT.findall(text))):
             t = out.setdefault(lib, {"node": 0, "files": [], "browser": []})
             t["node"] += n
             t["files"].append(f.name)
-    for f in sorted((console / "tests").glob("test_elements_*_browser.py")):
+    for f in sorted((root / "tests").glob("test_elements_*_browser.py")):
         lib = "drishti-" + f.name[len("test_elements_"):-len("_browser.py")]
         out.setdefault(lib, {"node": 0, "files": [], "browser": []})["browser"].append(f.name)
     return out
@@ -104,8 +103,7 @@ def tests_of(console: Path) -> dict[str, dict]:
 
 def changelog(root: Path, names: list[str]) -> dict[str, list[dict]]:
     """Each library's entries of the product CHANGELOG: a release's bullets whose bold lead names the library (one home: the CHANGELOG).
-    A release train lists the releases it ships under its own heading, each as a section that ends with its number
-    (``## 2.9.11.g`` > ``### Drishti Elements, ... (2.9.11.e)``): an entry there is that release's; a section without one is the train's."""
+    A release lists its entries under its own heading (``## 2.4.0``); an entry belongs to the release whose heading it is under."""
     out: dict[str, list[dict]] = {n: [] for n in names}
     release, base, bullet = None, None, None
 
@@ -139,33 +137,6 @@ def changelog(root: Path, names: list[str]) -> dict[str, list[dict]]:
     return out
 
 
-def section(md: str, number: str) -> str:
-    m = re.search(r"^## " + re.escape(number) + r"\..*?$(.*?)(?=^## \d)", md, re.M | re.S)
-    return m.group(1) if m else ""
-
-
-def table_rows(text: str) -> list[list[str]]:
-    rows = []
-    for ln in text.splitlines():
-        if ln.startswith("|") and not re.match(r"^\|[-| ]+\|$", ln):
-            cells = [c.strip() for c in re.split(r"(?<!\\)\|", ln.strip())[1:-1]]
-            rows.append([c.replace("\\|", "|") for c in cells])
-    return rows[1:]
-
-
-def planned(design: str, built: set[str]) -> list[dict]:
-    """The libraries section 2 of ELEMENTS.md designs that the manifest does not hold yet."""
-    out = []
-    for r in table_rows(section(design, "2")):
-        name = BOLD.sub(r"\1", r[1]).strip() if len(r) > 3 else ""
-        if not name.startswith("drishti-") or name in built:
-            continue
-        words = r[3].lower()
-        server = next((v for k, v in SERVER_WORDS if k in words), "none")
-        out.append({"name": name, "number": r[0], "what": plain(r[2]), "server": server, "serverText": plain(r[3])})
-    return out
-
-
 AG_ROW = re.compile(r"^\s*row\('((?:[^'\\]|\\.)*)',\s*'([\w-]+)',\s*'((?:[^'\\]|\\.)*)'\)", re.M)
 AG_LEFT = re.compile(r"^export\s+const\s+AG_NOT_COVERED\s*=\s*(.*?);\s*$", re.M | re.S)
 
@@ -183,7 +154,7 @@ def ag_mapping(grid_src: Path) -> dict:
     text = code.read_text(encoding="utf-8") if code.is_file() else ""
     rows = [{"ag": unquote(m.group(1)), "state": m.group(2), "drishti": unquote(m.group(3))} for m in AG_ROW.finditer(text)]
     left = AG_LEFT.search(text)
-    return {"built": built, "scope": "pivot, row grouping, the server-side row model and tree data (O5)", "mapping": rows,
+    return {"built": built, "scope": "pivot, row grouping, the server-side row model and tree data", "mapping": rows,
             "notCovered": "".join(unquote(s) for s in STRING.findall(left.group(1))) if left else ""}
 
 
@@ -197,10 +168,8 @@ def ag_guide_table(ag: dict) -> str:
 
 
 def catalogue(root: Path, manifest: dict, libs: list[tuple[str, dict, list[dict], list[dict]]]) -> dict:
-    console = root / "drishti-console"
-    elements = console / "web" / "static" / "elements"
-    design = (root / "docs" / "architecture" / "ELEMENTS.md").read_text(encoding="utf-8")
-    tests = tests_of(console)
+    elements = root / "elements"
+    tests = tests_of(root)
     logs = changelog(root, [n for n, *_ in libs])
     out = []
     for name, spec, syms, types in libs:
@@ -222,7 +191,7 @@ def catalogue(root: Path, manifest: dict, libs: list[tuple[str, dict, list[dict]
             "constants": constants(entry.parent),
             "changelog": logs.get(name, []),
         })
-    return {"elements": manifest.get("elements"), "libraries": out, "planned": planned(design, {n for n, *_ in libs}),
+    return {"elements": manifest.get("elements"), "libraries": out,
             "agGrid": ag_mapping(elements / "drishti-grid" / "src")}
 
 
@@ -237,7 +206,7 @@ def script(cat: dict, header: str) -> str:
         else:
             parts.append(one(k) + ":" + one(v))
     body = "{\n  " + ",\n  ".join(parts) + "\n  }"
-    return (lic + "/* Generated by python3 tools/docs/elements_api.py from the libraries' typed JSDoc, the manifest, ELEMENTS.md and the CHANGELOG:\n"
+    return (lic + "/* Generated by python3 tools/docs/elements_api.py from the libraries' typed JSDoc, the manifest and the CHANGELOG:\n"
             "   do not edit (--check refuses a stale copy). The gallery (drishti_gallery.html) reads it. */\n"
             "(function (root) {\n  'use strict';\n  const catalogue = " + body + ";\n"
             "  if (typeof module !== 'undefined' && module.exports) { module.exports = catalogue; }\n"

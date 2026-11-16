@@ -1,18 +1,18 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 
-"""The licence guard for what Drishti Elements (and the console) vendor (owner rule, 2026-11-16): every folder under static/vendor has a row
+"""The licence guard for what Drishti Elements vendors: every folder under vendor/ has a row
 in VENDOR.md with a licence from the allow list (MIT, Apache-2.0, BSD-2/3, ISC, SIL OFL 1.1, MPL-2.0 unmodified, public domain or CC0, PSF),
 its licence file beside it, and Apache-2.0's NOTICE where upstream ships one. Anything else (GPL, AGPL, LGPL, SSPL, CC-BY-NC/ND, the Commons
 Clause, BUSL, an unknown licence) fails the build before it ships."""
@@ -23,7 +23,7 @@ import pytest
 
 pytestmark = pytest.mark.static   # a quick file check: the drill's gate runs it
 
-VENDOR = Path(__file__).resolve().parent.parent / "web" / "static" / "vendor"
+VENDOR = Path(__file__).resolve().parent.parent / "vendor"
 ALLOWED = [r"\bMIT\b", r"Apache-2\.0", r"BSD-[23]", r"\bISC\b", r"SIL OFL 1\.1", r"MPL-2\.0", r"[Pp]ublic domain", r"\bCC0\b", r"\bPSF\b"]
 DENIED = [r"\bA?GPL", r"\bLGPL", r"\bSSPL", r"CC-BY-N[CD]", r"Commons Clause", r"\bBUSL", r"Business Source", r"[Uu]nknown", r"[Pp]roprietary"]
 NOTICE_FOLDERS = {"echarts", "apache-arrow"}          # Apache-2.0 upstreams that ship a NOTICE: kept beside the licence

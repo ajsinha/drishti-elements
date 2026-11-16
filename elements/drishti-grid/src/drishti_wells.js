@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The wells: where a person puts fields to build a pivot. One model drawn three ways (bi/PIVOT.md section 2): the compact line above the
+/* The wells: where a person puts fields to build a pivot. One model drawn three ways: the compact line above the
    grid (the trader view, B, with the View picker in front, C), the panes beside it (Fields and Build, A) and the terminal's lane. Four
    wells: Rows, Columns, Values (each value with its function, the function's arguments, a custom formula or a show-as) and Filters (each
    with its member filter); any number of fields in each. What may go where comes from the columns (enableRowGroup, enablePivot,
@@ -27,7 +27,7 @@ import { aggFunc } from './drishti_aggregate.js';
 export const WELLS = Object.freeze(['rows', 'columns', 'values', 'filters']);
 /** The aggregations a value can take in the browser (a non-additive column's value is the server's measure). */
 export const VALUE_FUNCS = Object.freeze(['sum', 'count', 'avg', 'min', 'max', 'count_distinct', 'first', 'last']);
-/** The functions in plain words, as the value pickers say them (bi/DISTRIBUTION_AND_ALERTS.md section 4); a name not here reads as itself. */
+/** The functions in plain words, as the value pickers say them; a name not here reads as itself. */
 export const FUNC_LABELS = Object.freeze({ sum: 'Sum', count: 'Count', count_distinct: 'Distinct count', distinct: 'Distinct count', avg: 'Average',
   wavg: 'Weighted average…', min: 'Min', max: 'Max', median: 'Median', percentile: 'Percentile…', var_samp: 'Variance', var_pop: 'Variance (population)',
   stddev_samp: 'Std dev', stddev_pop: 'Std dev (population)', first: 'First', last: 'Last', custom: 'Custom ƒ…' });

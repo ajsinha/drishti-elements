@@ -1,17 +1,17 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
-"""The Elements gallery in a real browser (static/gallery/drishti_gallery.html; ELEMENTS.md section 10, mock-up g4): no Drishti server,
+# See the LICENSE file in the root of this repository.
+"""The Elements gallery in a real browser (gallery/drishti_gallery.html): no Drishti server,
 the static files served under a strict CSP, the per-worker browser only. Each gallery example is a test:
 
 * the playground (mode A, the default): every component of every library in the manifest drawn with no page error and a clean
@@ -32,10 +32,10 @@ import pytest
 
 pytestmark = pytest.mark.spread
 
-STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
+STATIC = Path(__file__).resolve().parents[1]
 ORIGIN = "http://render.test"
-PAGE = "/static/gallery/drishti_gallery.html"
-#: the console lists the hosted modules' visuals here (routes/elements_routes.py): it always answers, an empty list when there are none
+PAGE = "/gallery/drishti_gallery.html"
+#: a host lists its modules' visuals here when the page is opened with ?visuals=; the stand-in answers an empty list
 VISUALS = "/api/elements/visuals"
 HEADERS = {"content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:"}
 TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "application/javascript", ".json": "application/json"}
@@ -47,8 +47,8 @@ READY = "() => window.__gallery && document.querySelector('.gx-stage') && !docum
 def router(fetched):
     async def route(r):
         path = r.request.url[len(ORIGIN):].split("?")[0].split("#")[0]
-        f = STATIC / path[len("/static/"):] if path.startswith("/static/") else None
-        if path == VISUALS:                                   # the console's answer when no hosted module brings a visual
+        f = STATIC / path[1:] if path.startswith("/") else None
+        if path == VISUALS:                                   # the host's answer when no module brings a visual
             fetched.append(path)
             return await r.fulfill(status=200, body='{"visuals": []}', headers={"content-type": "application/json"})
         if f and f.is_file():
@@ -119,8 +119,7 @@ def test_the_playground_draws_every_component_with_clean_aria_and_its_code(brows
             await pg.click(".gx-codebox [data-tab=js]")
             js = await pg.text_content("#gx-code-panel")
             assert "import {" in js or "Drishti.elements" in js, (d["id"], js[:200])
-            tag = {"drishti-grid": "drishti-grid", "drishti-chart": "drishti-chart", "drishti-graph": "drishti-graph", "drishti-tree": "drishti-tree",
-                   "drishti-risk": "drishti-chart, .gx-stage drishti-graph, .gx-stage drishti-tree"}.get(d["library"])
+            tag = {"drishti-grid": "drishti-grid", "drishti-chart": "drishti-chart", "drishti-graph": "drishti-graph", "drishti-tree": "drishti-tree"}.get(d["library"])
             tag = ".gx-ag-grid.dg" if d["id"] == "ag-adapter" else tag                       # the adapter draws into a plain element
             if tag and d["kind"] == "element":
                 assert await pg.locator(".gx-stage " + tag).count() >= 1, d["id"]

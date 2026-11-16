@@ -1,22 +1,22 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-chart's spec: one engine-neutral description of a chart (what a page, a Sutra panel, a BI visual and a generator all write;
    nothing in it names ECharts), its checks, and the registry of kinds. A kind is a module that turns the spec and its rows into the
    drawing engine's option, the data table (the accessible alternative and the CSV), the legend and a one-line description; a domain
-   library registers its own (drishti-risk: risk.pnl-distribution, risk.backtest, risk.exposure-profile) and they appear in the studio
+   library registers its own (registerKind) and they appear in the studio
    and in Sutras like the general ones.
 
      { "kind": "line", "title": "Daily P&L", "data": { "rows": [...] } or { "source": "/api/..." },

@@ -1,25 +1,25 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* drishti-grid's AG Grid-style adapter without a page (ELEMENTS.md section 6): the option mapping, a pivot made from AG-shaped options
+/* drishti-grid's AG Grid-style adapter without a page: the option mapping, a pivot made from AG-shaped options
    equal to drishti-grid's own pivot of the same data, custom and non-additive aggregations, the totals and open levels, the server-side
    request translated (and a server pivot built from rows and pivotResultFields), tree data, the AG-named events, the grid API calls, the
    filter models both ways, and every option not covered named in a warning and in reportUnsupported(). The data is invented. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
 
 const DESKS = ['Rates', 'FX', 'Credit'], REGIONS = ['EMEA', 'APAC', 'Americas'], BOOKS = ['A', 'B'];
 const DATA = () => {

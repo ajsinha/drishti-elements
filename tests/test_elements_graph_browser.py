@@ -1,21 +1,21 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 """drishti-graph in a real browser, against its static fixture harness (static/elements/drishti-graph/drishti_harness.html): no Drishti
 server, the files served from the folder under a strict CSP (nothing inline), the per-worker browser only. The component is tested here
-once and deeply; the screens that draw a graph test only their wiring (ELEMENTS.md 10).
+once and deeply; the screens that draw a graph test only their wiring.
 
-* every mode (g5: inspector A, table B, terminal C) drawn with no error, in both themes and the three densities;
+* every mode (inspector A, table B, terminal C) drawn with no error, in both themes and the three densities;
 * the canvas: zoom at the pointer, pan, fit, the minimap, a click selecting (Shift adds), the lasso, a node dragged and pinned, the
   tooltip; the keyboard moving between neighbours with announcements; the adjacency table (the text alternative);
 * the inspector: Explain through the hook, expand on demand (lazy), collapse, hide, the path between two nodes, group by an attribute
@@ -23,7 +23,7 @@ once and deeply; the screens that draw a graph test only their wiring (ELEMENTS.
 * the table mode's Nodes, Edges and Path tables linked both ways; the terminal's commands, Tab completion, history and function keys;
 * export (PNG, SVG, CSV, JSON), live changes throttled into one redraw, the layouts switched (animated and with reduced motion);
 * a drishti-grid and the graph linked through drishti-core's bus, both ways; the lineage preset; a view's graph panel;
-* 5,000 nodes and 20,000 edges: the layout and frame times (printed for ELEMENTS.md 8.8).
+* 5,000 nodes and 20,000 edges: the layout and frame times (printed).
 
 DRISHTI_GRAPH_SHOTS names a folder for screenshots (none are taken otherwise)."""
 import os
@@ -33,9 +33,9 @@ import pytest
 
 pytestmark = pytest.mark.spread
 
-STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
+STATIC = Path(__file__).resolve().parents[1]
 ORIGIN = "http://render.test"
-PAGE = "/static/elements/drishti-graph/drishti_harness.html"
+PAGE = "/elements/drishti-graph/drishti_harness.html"
 HEADERS = {"content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:"}
 TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "application/javascript", ".json": "application/json"}
 SHOTS = os.environ.get("DRISHTI_GRAPH_SHOTS")
@@ -45,7 +45,7 @@ READY = "() => window.__harness && window.__harness.ready"
 def router(fetched):
     async def route(r):
         path = r.request.url[len(ORIGIN):].split("?")[0]
-        f = STATIC / path[len("/static/"):] if path.startswith("/static/") else None
+        f = STATIC / path[1:] if path.startswith("/") else None
         if f and f.is_file():
             fetched.append(path)
             headers = {"content-type": TYPES.get(f.suffix, "application/octet-stream")}

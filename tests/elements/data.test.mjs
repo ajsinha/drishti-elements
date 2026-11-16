@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-data under Node: the back-off and the heartbeat, backpressure (a grid never queues more than it draws, the last state of each
    row reaches it), the live client over stand-in EventSource and WebSocket classes (reconnect with back-off, resume from the last event
@@ -20,11 +20,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as D from '../../web/static/elements/drishti-data/src/drishti_index.js';
-import * as G from '../../web/static/elements/drishti-grid/src/drishti_index.js';
+import * as D from '../../elements/drishti-data/src/drishti_index.js';
+import * as G from '../../elements/drishti-grid/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
-const Arrow = require('../../web/static/vendor/apache-arrow/21.1.0/Arrow.es2015.min.js');
+const Arrow = require('../../vendor/apache-arrow/21.1.0/Arrow.es2015.min.js');
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 0));
 
 test('back-off: doubling up to the cap, jittered between half the base and the cap, reset; the heartbeat fires once per silence', () => {
@@ -202,8 +202,8 @@ test('data sources: in memory (filter, sort, groups, windows), REST by POST and 
   assert.equal(calls[0].url, '/api/rows?offset=20&limit=20&sort=mtm%3Adesc&q=fx');
   await D.serverSideSource('/api/pivot/rows', { fetch: fakeFetch }).getRows({ startRow: 0, endRow: 100, rowGroupCols: ['desk'] });
   assert.equal(JSON.parse(calls[1].init.body).rowGroupCols[0], 'desk');
-  const failing = (url) => Promise.resolve({ ok: false, status: 403, statusText: 'Forbidden', text: () => Promise.resolve('{"code":"DRS-1403","detail":"not yours"}') });
-  await assert.rejects(D.restSource('/x', { fetch: failing }).getRows({}), /DRS-1403 not yours/);
+  const failing = (url) => Promise.resolve({ ok: false, status: 403, statusText: 'Forbidden', text: () => Promise.resolve('{"code":"E-1403","detail":"not yours"}') });
+  await assert.rejects(D.restSource('/x', { fetch: failing }).getRows({}), /E-1403 not yours/);
   const live = D.liveSource(s, { subscribe: () => () => {} });
   assert.equal(live.capabilities.live, true);
   const grid = G.createGridModel({ columns: [{ field: 'id' }, { field: 'desk' }, { field: 'mtm', type: 'number' }], datasource: s, blockSize: 50 });
@@ -261,7 +261,7 @@ test('Arrow: columns without a copy, types for a grid, row views, plain copies, 
 });
 
 test('the bundle: drishti-data is a CommonJS module under Node with every name', () => {
-  const B = require('../../web/static/elements/drishti-data/drishti_data.js');
+  const B = require('../../elements/drishti-data/drishti_data.js');
   assert.equal(B.library, 'drishti-data');
   ['LiveClient', 'TransactionSink', 'pipeToGrid', 'ArrowClient', 'DataFrame', 'memorySource', 'restSource', 'serverSideSource', 'arrowSource', 'liveSource', 'readAll', 'live'].forEach((n) => assert.equal(typeof B[n], 'function', n));
 });

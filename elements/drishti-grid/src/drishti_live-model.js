@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The grid's live mode, the model (tested in Node): a live result set's rows as the server sends them ({id, version, seq, doc}), held by
    key and merged by version (an older or equal version never replaces a newer one: a replayed or reordered event is harmless), turned into
@@ -19,7 +19,7 @@
    the same kind, filters and grouping. The server's rules (rights, masks, versions, four eyes) are never decided here; this only draws them.
    The connection is not here either: any object with subscribe(handlers) is a channel (the console's live channel, a test's manual one),
    and httpLiveApi is the one way a page reaches the server's /live endpoints. */
-import { MASK, hasFormat, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
+import { MASK, hasFormat, endpoint, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
 import { nestedText } from './drishti_columns.js';
 
 /** The grid row's key and version properties (the record's own fields keep their names). */
@@ -222,13 +222,16 @@ export function pivotLayout(spec, o) {
 }
 
 /**
- * The address of the Pivot for a layout: the kind, the layout and live refresh when the kind is live.
+ * The address of the Pivot for a layout: the kind, the layout and live refresh when the kind is live. The empty string when the host has
+ * configured no pivot page (configure({ endpoints: { pivotPage } })).
  * @param {{source: string, view: Object}} layout
  * @param {boolean} live
  * @returns {string}
  */
 export function pivotHref(layout, live) {
-  return drishtiUrl('/pivot?source=') + encodeURIComponent(layout.source) + '&lay=' + encodeURIComponent(JSON.stringify(layout.view)) + (live ? '&live=1' : '');
+  const page = endpoint('pivotPage');
+  if (!page) { return ''; }
+  return page + '?source=' + encodeURIComponent(layout.source) + '&lay=' + encodeURIComponent(JSON.stringify(layout.view)) + (live ? '&live=1' : '');
 }
 
 /**
@@ -270,12 +273,15 @@ export function changedFields(then, now) {
 /**
  * The one way a page reaches a live set on the server (the console's /api/live): methods answer promises of JSON and reject with an Error
  * that carries the server's code, status and words.
- * @param {{base?: string, id: string, fetch?: Function}} o base default "/api/live"
+ * @param {{base?: string, changesUrl?: string, id: string, fetch?: Function}} o base: the live-set API (default: the configured endpoint
+ *   `live`); changesUrl: the change history (default: the endpoint `changes`). With none the calls reject and say which is missing.
  * @returns {{rows: Function, row: Function, edit: Function, window: Function, history: Function, mine: Function}}
  */
 export function httpLiveApi(o) {
-  const base = (o.base || drishtiUrl('/api/live')).replace(/\/$/, ''), id = encodeURIComponent(o.id);
+  const base = (o.base || endpoint('live')).replace(/\/$/, ''), id = encodeURIComponent(o.id);
+  const changes = () => o.changesUrl || endpoint('changes');
   const f = o.fetch || ((typeof fetch === 'function') ? fetch.bind(globalThis) : null);
+  const missing = (what) => Promise.reject(new Error('live set: no address configured (option ' + what + ' or configure({ endpoints }))'));
   const call = (method, path, body) => f(path, { method: method, credentials: 'same-origin', headers: body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
     body: body ? JSON.stringify(body) : undefined }).then((r) => r.json().catch(() => ({})).then((j) => {
     if (!r.ok) { const e = new Error(j.detail || ('HTTP ' + r.status)); e.code = j.code; e.status = r.status; throw e; }
@@ -283,12 +289,12 @@ export function httpLiveApi(o) {
   }));
   const q = (p) => Object.keys(p).filter((k) => p[k] !== undefined && p[k] !== null && p[k] !== '').map((k) => k + '=' + encodeURIComponent(p[k])).join('&');
   return {
-    rows: (p) => call('GET', base + '/' + id + '/rows?' + q(p || {})),
-    row: (entity) => call('GET', base + '/' + id + '/rows/' + encodeURIComponent(entity)),
-    edit: (body) => call('POST', base + '/' + id + '/edit', body),
-    window: (stream, body) => call('POST', base + '/' + id + '/stream/' + encodeURIComponent(stream) + '/window', body),
-    history: (kind, entity) => call('GET', drishtiUrl('/api/changes?') + q({ kind: kind, entity: entity, limit: 50 })),
-    mine: (kind) => call('GET', drishtiUrl('/api/changes?') + q({ mine: 'true', kind: kind, limit: 100 }))
+    rows: (p) => !base ? missing('base') : call('GET', base + '/' + id + '/rows?' + q(p || {})),
+    row: (entity) => !base ? missing('base') : call('GET', base + '/' + id + '/rows/' + encodeURIComponent(entity)),
+    edit: (body) => !base ? missing('base') : call('POST', base + '/' + id + '/edit', body),
+    window: (stream, body) => !base ? missing('base') : call('POST', base + '/' + id + '/stream/' + encodeURIComponent(stream) + '/window', body),
+    history: (kind, entity) => !changes() ? missing('changesUrl') : call('GET', changes() + '?' + q({ kind: kind, entity: entity, limit: 50 })),
+    mine: (kind) => !changes() ? missing('changesUrl') : call('GET', changes() + '?' + q({ mine: 'true', kind: kind, limit: 100 }))
   };
 }
 

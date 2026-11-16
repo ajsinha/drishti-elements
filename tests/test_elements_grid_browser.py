@@ -1,20 +1,20 @@
-# Project Drishti · Any data. Any domain. One grammar.
+# Drishti Elements
 #
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
 # All rights reserved.
 #
-# PROPRIETARY AND CONFIDENTIAL.
+# PROPRIETARY.
 #
-# This file is the confidential and proprietary property of Ashutosh Sinha.
-# Unauthorised copying, use, modification, distribution or disclosure of this
-# file, via any medium, is strictly prohibited except with the express prior
-# written permission of the copyright holder.
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
 #
-# See the LICENSE file in the root of this repository for the full terms.
+# See the LICENSE file in the root of this repository.
 
 """drishti-grid's visual layer in a real browser, against its static fixture harness (static/elements/drishti-grid/drishti_harness.html):
 no Drishti server, the files served from the folder under a strict CSP (nothing inline), the per-worker browser only. The component is
-tested here once and deeply; screens test only their wiring (ELEMENTS.md section 10).
+tested here once and deeply; screens test only their wiring.
 
 * each layout (wells, panel, terminal) and density, light and dark, the nine at once, and the web component's attributes;
 * the wells: a drag between wells, a refused drop and its reason, a field from the list, removal, the chip's menu by the keyboard;
@@ -34,9 +34,9 @@ import pytest
 
 pytestmark = pytest.mark.spread
 
-STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
+STATIC = Path(__file__).resolve().parents[1]
 ORIGIN = "http://render.test"
-PAGE = "/static/elements/drishti-grid/drishti_harness.html"
+PAGE = "/elements/drishti-grid/drishti_harness.html"
 HEADERS = {"content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'"}
 TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "application/javascript", ".json": "application/json"}
 SHOTS = os.environ.get("DRISHTI_GRID_SHOTS")
@@ -44,7 +44,7 @@ SHOTS = os.environ.get("DRISHTI_GRID_SHOTS")
 
 async def route(r):
     path = r.request.url[len(ORIGIN):].split("?")[0]
-    f = STATIC / path[len("/static/"):] if path.startswith("/static/") else None
+    f = STATIC / path[1:] if path.startswith("/") else None
     if f and f.is_file():
         headers = {"content-type": TYPES.get(f.suffix, "application/octet-stream")}
         if f.suffix == ".html":
@@ -132,7 +132,7 @@ def test_each_layout_and_density_draws_the_pivot_in_both_themes(browsers):
 
 
 def test_the_grid_says_it_is_drawing_until_its_frame_has_drawn(browsers):
-    """The drawn signal (TEST_HARNESS.md 3.20): from a change until the frame that draws it, the scroller carries data-dg-drawing, which
+    """The drawn signal: from a change until the frame that draws it, the scroller carries data-dg-drawing, which
     Drishti.settled waits on, so a capture or a test never reads a grid half drawn."""
     async def body(pg):
         assert await pg.locator("[data-dg-drawing]").count() == 0                       # drawn: nothing pending
@@ -483,7 +483,7 @@ def test_a_phone_pins_the_first_column_and_switches_the_pivot_measure(browsers):
     browsers.run(go(), timeout=120)
 
 
-AG_PAGE = "/static/elements/drishti-grid/drishti_ag-harness.html"
+AG_PAGE = "/elements/drishti-grid/drishti_ag-harness.html"
 AG_READY = ("() => window.__ag && window.__ag.ready && document.querySelector('.dg-row') && !document.querySelector('.dg-pending')"
             " && !document.querySelector('.dg-loading')")
 

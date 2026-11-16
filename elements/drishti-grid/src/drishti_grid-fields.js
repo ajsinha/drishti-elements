@@ -1,19 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The pivot's fields as a person meets them (bi/PIVOT.md section 2): grouped like Power BI's field list, one catalogue for the compact
+/* The pivot's fields as a person meets them: grouped like Power BI's field list, one catalogue for the compact
    line's pickers (B, drishti-inputs' FieldPicker) and the Fields pane (A). Hierarchies first, each one item with its levels (MGMT ›
    Division › Desk › Book); then the fields by display folder; the measures by folder (Σ); then "More fields", collapsed: the columns a
    hierarchy's levels are built from and the long tail. What a pick does to the wells (a level on or off, a field in or out, another value)

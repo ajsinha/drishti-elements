@@ -1,20 +1,19 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
-/* The chart's studio mode (g2 B): the kinds in a rail (general, maps, then each domain library's, drishti-risk's for the banking
-   module), the chart large with its data table under it, and the engine-neutral spec on the right, what a developer writes (or a Sutra,
+/* The chart's studio mode : the kinds in a rail (general, maps, then each domain library's), the chart large with its data table under it, and the engine-neutral spec on the right, what a developer writes (or a Sutra,
    a report or a generator produces), with options that change both. Picking a kind draws the studio's sample of it (options.samples, the
    gallery's), or the same spec under the other kind. */
 import { h } from '../../drishti-core/src/drishti_index.js';
@@ -76,7 +75,7 @@ export class Studio {
   update(built) {
     const c = this.c, doc = c.doc, kinds = kindList(), groups = {};
     kinds.forEach((k) => { (groups[k.family] = groups[k.family] || []).push(k); });
-    const words = { general: 'General · drishti-chart', map: 'Maps · drishti-chart', risk: 'Risk · drishti-risk' };
+    const words = { general: 'General · drishti-chart', map: 'Maps · drishti-chart' };
     this.rail.textContent = '';
     ['general', 'map'].filter((f) => groups[f]).concat(Object.keys(groups).filter((f) => f !== 'general' && f !== 'map')).forEach((f) => {
       this.rail.appendChild(h(doc, 'div', { cls: 'dc-rail-g', text: words[f] || f }));

@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The graph component's engine room (GraphBase; Graph adds the actions): the options, the state of the view, the pipeline from the model
    to the picture (what is visible, the encodings, the layout, the hit index), the layout run a few steps a frame and the move between two
@@ -37,7 +37,7 @@ export const GRAPH_EVENTS = Object.freeze(['nodeClicked', 'nodeDoubleClicked', '
  * The graph's options.
  * @typedef {Object} GraphOptions
  * @property {import('./drishti_graph-model.js').GraphData} data the nodes and edges
- * @property {('inspector'|'table'|'terminal')} [mode='inspector'] g5 A (the default), B or C
+ * @property {('inspector'|'table'|'terminal')} [mode='inspector'] A (the default), B or C
  * @property {('comfortable'|'compact'|'terminal')} [density='compact']
  * @property {('force'|'layered'|'radial'|'circular'|'grouped'|'preset')} [layout='force']
  * @property {import('./drishti_graph-layout.js').LayoutOptions} [layoutOptions] seed, direction, root, rank, groupBy, spacing
@@ -50,7 +50,7 @@ export const GRAPH_EVENTS = Object.freeze(['nodeClicked', 'nodeDoubleClicked', '
  * @property {string[]} [typesOff] types not drawn at first
  * @property {{channel: string}} [link] linked selection on drishti-core's bus (a drishti-grid joins with linkGrid, a chart with its link)
  * @property {function(Object): Promise<*>} [explain] the Explain hook: a node's context ({kind: 'node', id, label, type, node, members}) to an
- *   explanation (drishti-core's ExplainResult); drishti-insight's hook in the console
+ *   explanation (drishti-core's ExplainResult); a host's hook
  * @property {function(Object): Promise<{nodes: Object[], edges: Object[]}>} [expand] the neighbours of a node, asked on demand (lazy)
  * @property {function(Object, Object): void} [onLink] a node that names an entity ({kind, id}) was opened
  * @property {{throttleMs: number}} [live] changes by applyTransaction are drawn at most once a window (default 200 ms)

@@ -1,24 +1,24 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-core under Node (node --test): formats by the server's rules, dates, theme tokens and contrast, the API client, the bus, the
    keys, roving index arithmetic, the loader's manifest, and the bundle giving the same API as the modules. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as C from '../../web/static/elements/drishti-core/src/drishti_index.js';
+import * as C from '../../elements/drishti-core/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
 const M = '−';
@@ -112,8 +112,8 @@ test('the API client: errors in words with the DRS code, retries a GET on 503, n
   assert.equal(calls.length, 2);
   assert.equal(calls[0].url, '/api/things');
   assert.equal(calls[0].init.headers['X-Drishti-As-Of'], '2026-11-06');
-  const bad = C.createClient({ fetch: () => Promise.resolve(new Response(JSON.stringify({ code: 'DRS-4005', detail: 'The table has no column X' }), { status: 400 })) });
-  await assert.rejects(bad.post('/x', { a: 1 }), (e) => e instanceof C.ApiError && e.message === 'DRS-4005 The table has no column X' && e.code === 'DRS-4005' && e.status === 400);
+  const bad = C.createClient({ fetch: () => Promise.resolve(new Response(JSON.stringify({ code: 'E-4005', detail: 'The table has no column X' }), { status: 400 })) });
+  await assert.rejects(bad.post('/x', { a: 1 }), (e) => e instanceof C.ApiError && e.message === 'E-4005 The table has no column X' && e.code === 'E-4005' && e.status === 400);
   let n = 0;
   const down = C.createClient({ fetch: () => { n++; return Promise.reject(new TypeError('fetch failed')); }, retryDelay: 1 });
   await assert.rejects(down.post('/x', {}), (e) => e.status === 0 && /could not be reached/.test(e.message));
@@ -175,24 +175,33 @@ test('the loader: versions and requirements from the manifest; under Node it say
   await assert.rejects(C.load('drishti-grid'), /no page to load it into|is not loaded/);
 });
 
-test('the loader: a library ships with its module and is refused where that module is not on for the person', async () => {
-  assert.equal(C.manifest().libraries['drishti-risk'].module, 'banking');
+test('the loader: a registered library ships with its module and is refused where that module is not on for the person', async () => {
+  C.register('drishti-extra', { bundle: 'drishti-extra/drishti_extra.js', requires: ['drishti-grid'], module: 'finance' });
   assert.equal(C.manifest().libraries['drishti-grid'].module, 'core');
-  assert.equal(C.refused('drishti-risk'), null);                               // nothing said (no Drishti page): every library loads
+  assert.deepEqual(C.requirements('drishti-extra'), ['drishti-core', 'drishti-inputs', 'drishti-chart', 'drishti-grid', 'drishti-extra']);
+  assert.throws(() => C.register('drishti-bad', {}), /bundle .* is required/);
+  assert.equal(C.refused('drishti-extra'), null);                              // nothing said (no host page): every library loads
   try {
     C.configure({ modules: ['economy'] });
-    assert.match(C.refused('drishti-risk'), /drishti-risk belongs to the module 'banking', which is not available here/);
+    assert.match(C.refused('drishti-extra'), /drishti-extra belongs to the module 'finance', which is not available here/);
     assert.equal(C.refused('drishti-chart'), null);                            // the core's libraries load everywhere
-    await assert.rejects(C.load('drishti-risk'), /module 'banking'/);          // refused before any file is asked for
-    C.configure({ modules: ['banking'] });
-    assert.equal(C.refused('drishti-risk'), null);
+    await assert.rejects(C.load('drishti-extra'), /module 'finance'/);         // refused before any file is asked for
+    C.configure({ modules: ['finance'] });
+    assert.equal(C.refused('drishti-extra'), null);
   } finally {
     C.configure({ modules: null });
   }
 });
 
+test('the loader: the host says where its server is, and a component without an address says so', () => {
+  assert.equal(C.endpoint('live'), '');
+  C.configure({ endpoints: { live: '/x/live' } });
+  assert.equal(C.endpoint('live'), '/x/live');
+  assert.equal(C.endpoint('changes'), '');
+});
+
 test('the bundle is the modules: the same names, the version from the manifest, registered on Drishti.elements', () => {
-  const b = require('../../web/static/elements/drishti-core/drishti_core.js');
+  const b = require('../../elements/drishti-core/drishti_core.js');
   const names = Object.keys(C).sort();
   assert.deepEqual(Object.keys(b).filter((k) => k !== 'library' && k !== 'version').sort(), names);
   assert.equal(b.version, C.libraryVersion('drishti-core'));

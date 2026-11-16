@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* Keys: one way to name a key press ("Ctrl+Shift+ArrowLeft"), a key map from such names to actions, and the panel keys of the 12-column
    grid shared by layout mode (drishti_layout.js: the arrows move the panel) and the workbench canvas (build/drishti_canvas.js: the arrows
@@ -63,7 +63,7 @@ export function interpretPanelKey(e, scheme) {
   return null;
 }
 
-/** The panel keys as the console's pages know them (window.Drishti.GridKeys). */
+/** The panel keys as a page knows them (window.Drishti.GridKeys). */
 export const GridKeys = Object.freeze({ interpret: interpretPanelKey, WORKBENCH: WORKBENCH, LAYOUT: LAYOUT });
 
 const ALIAS = { Esc: 'Escape', Spacebar: ' ', Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown', Del: 'Delete' };

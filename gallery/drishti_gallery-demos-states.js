@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The gallery's demos of the state kit, the command palette, the bullet bar and the grid's cell drawings (sparkline, bar, bullet). */
 (function (root) {
@@ -32,7 +32,7 @@
       { title: 'Empty', values: { state: 'empty', text: 'No trades match this filter.' } }],
     mount: function (host, values, ctx) {
       const C = ctx.E.core, doc = host.ownerDocument;
-      const el = C.stateBlock(doc, values.state, { text: values.state === 'loading' ? undefined : values.text, compact: !!values.compact, since: '12:04', detail: values.state === 'error' ? 'DRS-5003' : undefined,
+      const el = C.stateBlock(doc, values.state, { text: values.state === 'loading' ? undefined : values.text, compact: !!values.compact, since: '12:04', detail: values.state === 'error' ? 'E-5003' : undefined,
         fix: values.state === 'error' || values.state === 'stale' ? { label: values.state === 'error' ? 'Retry' : 'Refresh', run: () => ctx.log('fix', values.state) } : undefined });
       host.appendChild(el);
       return done(el);

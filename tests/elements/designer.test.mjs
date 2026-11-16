@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* drishti-designer without a page (node --test): the command stack and snapshot undo, the selection, the layout model (snap, settle,
    moves and resizes inside the grid, multi-select, align, distribute, z-order, groups, copy and paste, flow areas, a phone's order),
@@ -21,7 +21,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import * as K from '../../web/static/elements/drishti-designer/src/drishti_index.js';
+import * as K from '../../elements/drishti-designer/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -258,7 +258,7 @@ test('the palette\'s search and categories; the shell\'s status words', () => {
 });
 
 test('the bundle loads under Node as CommonJS', () => {
-  const lib = require('../../web/static/elements/drishti-designer/drishti_designer.js');
+  const lib = require('../../elements/drishti-designer/drishti_designer.js');
   assert.equal(typeof lib.LayoutModel, 'function');
   assert.equal(typeof lib.YamlPane, 'function');
 });

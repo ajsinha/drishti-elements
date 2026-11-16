@@ -1,17 +1,17 @@
 /*
- * Project Drishti · Any data. Any domain. One grammar.
+ * Drishti Elements
  *
  * Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
  * All rights reserved.
  *
- * PROPRIETARY AND CONFIDENTIAL.
+ * PROPRIETARY.
  *
- * This file is the confidential and proprietary property of Ashutosh Sinha.
- * Unauthorised copying, use, modification, distribution or disclosure of this
- * file, via any medium, is strictly prohibited except with the express prior
- * written permission of the copyright holder.
+ * This file is the proprietary property of Ashutosh Sinha.
+ * Copying, use, modification or distribution of this file, via any medium,
+ * is not permitted except with the express prior written permission of the
+ * copyright holder.
  *
- * See the LICENSE file in the root of this repository for the full terms.
+ * See the LICENSE file in the root of this repository.
  */
 /* The console's tables (moved here from the console's drishti_tables.js): every server-drawn table sorts, filters, pages and can be walked
    with the keyboard, in place, and keeps its sort, filters, page and selection when a live update draws it again.
@@ -252,7 +252,10 @@ export function consoleTables(root, options) {
     if (chartable) {
       chartBtn = button('', 'Chart this table (K)', chart);
       chartBtn.classList.add('tbl-chart-b'); chartBtn.setAttribute('aria-keyshortcuts', 'K'); chartBtn.setAttribute('data-table-chart', '');
-      var ci = el('i', 'bi bi-bar-chart-line'); ci.setAttribute('aria-hidden', 'true'); chartBtn.appendChild(ci);
+      var ns = 'http://www.w3.org/2000/svg', ci = t.ownerDocument.createElementNS(ns, 'svg');     // three bars: the chart icon, drawn here (no icon font)
+      ci.setAttribute('viewBox', '0 0 16 16'); ci.setAttribute('width', '1em'); ci.setAttribute('height', '1em'); ci.setAttribute('aria-hidden', 'true'); ci.setAttribute('fill', 'currentColor');
+      [[2, 9, 3, 5], [6.5, 5, 3, 9], [11, 2, 3, 12]].forEach(function (r) { var b = t.ownerDocument.createElementNS(ns, 'rect'); b.setAttribute('x', r[0]); b.setAttribute('y', r[1]); b.setAttribute('width', r[2]); b.setAttribute('height', r[3]); ci.appendChild(b); });
+      chartBtn.appendChild(ci);
       bar.appendChild(chartBtn);
     }
     var wrap = t.closest('.tbl-wrap') || t;
