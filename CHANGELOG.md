@@ -17,6 +17,16 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
+## Unreleased
+
+- **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
+  its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
+- **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script
+  tag: the resize and chips sheets), and knows a sheet the page links by a relative address as the same sheet.
+- **drishti-chart**: the map shapes are not asked for from a page opened from the file system (the browser refuses it); the map says so.
+- **Gallery**: the States entry draws again (its compact switch); the documentation's Playground page works from the file system too.
+- **Brand**: a light logo for dark backgrounds (`brand/drishti_elements-logo-light.svg`), used by the README in dark mode.
+
 ## 2.4.0
 
 The first version of Drishti Elements as its own project: the libraries, the gallery, the build and the tests in one repository, one release

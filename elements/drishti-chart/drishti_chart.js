@@ -1703,7 +1703,13 @@
       o = o || {};
       if (!o.base) { throw new Error('createGeoLoader: the maps folder is required (option base, e.g. "/vendor/echarts/maps/")'); }
       const base = o.base.replace(/\/?$/, '/');
-      const get = o.fetchJson || ((url) => fetch(drishtiUrl(url), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error('map ' + url + ': ' + r.status); } return r.json(); }));
+      const get = o.fetchJson || ((url) => {
+        const here = typeof location !== 'undefined' ? location.href : '';
+        if (/^file:/i.test(here ? new URL(drishtiUrl(url), here).href : String(url))) {
+          return Promise.reject(new Error('map ' + url + ': the shapes cannot be read from the file system; open the page from a web server'));
+        }
+        return fetch(drishtiUrl(url), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error('map ' + url + ': ' + r.status); } return r.json(); });
+      });
       const cache = { world: null, regions: {}, levels: {} }, loads = [];
       const fetched = (file) => { loads.push(file); return Promise.resolve().then(() => get(base + file)); };
       return {

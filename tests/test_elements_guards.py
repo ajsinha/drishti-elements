@@ -93,3 +93,20 @@ def test_only_the_owning_library_keeps_the_implementation(rule):
         code = COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), p.read_text(encoding="utf-8"))
         bad += [f"{p.relative_to(ROOT)}: {line.strip()[:120]}" for line in code.splitlines() if pattern.search(line)]
     assert not bad, "\n".join(bad)
+
+
+# ---- every library's look is in its style sheet ------------------------------------------------------------------------------
+# A library draws its parts with class names of its own prefix; nearly all of them are styled by the shipped sheets (css/ and the
+# library's own). A sheet cut short or overwritten (the grid's once lost all but its last block) leaves the component drawn bare: the
+# share of its class names with no rule falls far below this floor. Class names that only mark a part for code are allowed under it.
+PREFIXES = {"drishti-grid": "dg", "drishti-chart": "dc", "drishti-tree": "dt", "drishti-graph": "dn", "drishti-inputs": "di", "drishti-designer": "dd"}
+
+
+@pytest.mark.parametrize("library", sorted(PREFIXES))
+def test_a_library_styles_the_class_names_it_draws_with(library):
+    sheets = list((ROOT / "css").glob("*.css")) + [p for p in (ROOT / "elements").glob("*/drishti_*.css") if "harness" not in p.name]
+    defined = set(re.findall(r"\.([a-z][a-z0-9_-]*)", "".join(p.read_text(encoding="utf-8") for p in sheets)))
+    src = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "elements" / library / "src").glob("*.js"))
+    used = set(re.findall(r"cls: '(%s(?:-[a-z0-9-]+)?)['\s]" % PREFIXES[library], src))
+    missing = sorted(used - defined)
+    assert used and len(missing) <= 0.2 * len(used), f"{library}: {len(missing)} of {len(used)} class names have no rule: {missing[:20]}"
