@@ -1,0 +1,36 @@
+# Drishti Elements
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY.
+#
+# This file is the proprietary property of Ashutosh Sinha.
+# Copying, use, modification or distribution of this file, via any medium,
+# is not permitted except with the express prior written permission of the
+# copyright holder.
+#
+# See the LICENSE file in the root of this repository.
+
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install -r tests/requirements.txt
+      - run: playwright install --with-deps chromium
+      - run: python3 tools/elements/build.py --check && python3 tools/docs/elements_api.py --check && python3 tools/license_headers.py
+      - run: node --test tests/elements/*.test.mjs
+      - run: python3 -m pytest -q tests -n 8
+      - run: python3 tools/elements/cli.py dist --out dist
