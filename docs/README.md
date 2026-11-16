@@ -23,5 +23,6 @@
 | [CONTRACTS.md](CONTRACTS.md) | the shapes a host's server answers in: errors, live sets, data capabilities, Explain, pivots |
 | [THEMING.md](THEMING.md) | the design tokens, the themes and your own |
 | [MOVING_FROM_AG_GRID.md](MOVING_FROM_AG_GRID.md) | moving an AG Grid Enterprise pivot application |
+| [EVENTING_DESIGN.md](EVENTING_DESIGN.md) | a design, not yet built: drishti-events (events in the page, across tabs and with a server) and its wire protocol |
 
 The gallery (`gallery/drishti_gallery.html`) shows every component live.
