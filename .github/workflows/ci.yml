@@ -32,5 +32,5 @@ jobs:
       - run: playwright install --with-deps chromium
       - run: python3 tools/elements/build.py --check && python3 tools/docs/elements_api.py --check && python3 tools/license_headers.py
       - run: node --test tests/elements/*.test.mjs
-      - run: python3 -m pytest -q tests -n 8
+      - run: python3 -m pytest -q tests -n 4      # one worker per core of the hosted runner: the browser budgets (frame time, the 5,000-node layout) hold
       - run: python3 tools/elements/cli.py dist --out dist

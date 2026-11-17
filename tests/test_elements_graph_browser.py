@@ -169,6 +169,8 @@ def test_canvas_zoom_pan_fit_minimap_click_lasso_drag_pin_tooltip_keys_and_the_t
         assert "2 selected" in await pg.locator(".dn-insp .dn-ttl").text_content()
         assert await pg.evaluate("() => window.__harness.graphs.inspector.tables.grid.model.rowCount()") == 2   # the selection table follows
         # drag a node: it moves and is pinned (towards the canvas's middle, so the move never leaves the canvas whatever the layout drew)
+        await pg.evaluate(f"() => {G}.P.canvas.scrollIntoView({{ block: 'center' }})")   # a focus that scrolls the page mid-drag would move the reading
+        x, y = await node_xy(pg, "inspector", "GRP-1")
         mid = await pg.evaluate(f"() => {{ const r = {G}.P.canvas.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }}")
         dx, dy = (60 if x < mid[0] else -60), (30 if y < mid[1] else -30)
         await pg.mouse.move(x, y)
@@ -391,7 +393,7 @@ def test_five_thousand_nodes_and_twenty_thousand_edges(browsers):
     async def body(pg):
         big = await pg.evaluate("() => { const g = window.__harness.graphs.big, t0 = performance.now(); g.zoomBy(1.1); g.drawNow(); return Object.assign({}, window.__harness.big, { redrawMs: Math.round(performance.now() - t0), stats: g.stats() }); }")
         assert big["stats"]["nodes"] == 5000 and big["stats"]["edges"] > 19000
-        assert big["layoutMs"] < 20000 and big["redrawMs"] < 1000, big
+        assert big["layoutMs"] is not None and big["layoutMs"] < 20000 and big["redrawMs"] < 1000, big      # None: the layout did not end in 20 s
         print("\n# drishti-graph, 5,000 nodes / 20,000 edges in the browser:", big)
         await shot(pg, "drishti-graph-5000.png")
     run(browsers, body, "view=big")
