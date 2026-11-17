@@ -31,6 +31,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -242,7 +244,7 @@ def test_inspector_explain_expand_collapse_hide_path_groups_encodings_and_types(
         await pg.click("#g-inspector [data-act='clearpath']")
         assert await pg.evaluate(f"() => {G}.pathNow()") is None
         # group by country, open a group
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='group']", "country")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='group']", "country")
         await pg.wait_for_function(f"() => {G}.groupCount() >= 6")
         groups = await pg.evaluate(f"() => {G}.groupCount()")
         grp = await pg.evaluate(f"() => {G}.visibleNodes().find((n) => n.members).id")
@@ -250,11 +252,11 @@ def test_inspector_explain_expand_collapse_hide_path_groups_encodings_and_types(
         assert "a group of" in await pg.locator(".dn-insp .dn-sub").text_content()
         await pg.click(".dn-insp [data-act='open']")
         assert await pg.evaluate(f"() => {G}.groupCount()") == groups - 1
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='group']", "")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='group']", "")
         # colour by a measure: a ramp in the legend; size off
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='colour']", "mtm")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='colour']", "mtm")
         assert await pg.locator(".dn-rail .dn-ramp").count() == 1
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='size']", "")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='size']", "")
         assert await pg.locator(".dn-rail .dn-sizes").count() == 0
         # types filtered from the rail
         t0 = await pg.evaluate(f"() => {G}.visibleNodes().length")

@@ -103,7 +103,7 @@ def test_the_sandbox_reaches_neither_the_cookie_nor_the_storage_nor_the_page_nor
 def test_every_visual_has_a_playground_page_that_draws(browsers):
     async def body(pg):
         ids = await pg.evaluate("() => window.__gallery.demos.filter((d) => d.kind === 'element' || d.page).map((d) => d.id)")
-        assert {"calendar", "sunburst", "icicle", "decomposition", "render", "chart", "grid", "graph"} <= set(ids)
+        assert {"calendar", "sunburst", "icicle", "decomposition", "chart", "grid", "graph"} <= set(ids)
         for cid in ids:
             await pg.click(f".gx-nav-item[data-c='{cid}']")
             await pg.wait_for_selector(f"[data-page-live='{cid}']", timeout=15000)

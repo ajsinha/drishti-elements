@@ -30,6 +30,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -224,7 +226,7 @@ def test_the_partitions_sized_by_an_additive_measure_with_their_table_and_zoom(b
         await settle(pg)
         assert await slices.count() == 13
         assert (await pg.eval_on_selector_all("#hx-tree .dt-crumb", "els => els.map((e) => e.textContent)"))[-1] == "Equities"
-        await pg.select_option("#hx-tree .dt-sizebox drishti-select", "NOTIONAL")
+        await choose(pg, "#hx-tree .dt-sizebox drishti-select", "NOTIONAL")
         await settle(pg)
         assert await slices.count() == 13
         await pg.focus("#hx-tree .dt-slice[data-id='EQD']")

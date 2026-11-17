@@ -25,7 +25,8 @@
 import { registerKind } from './drishti_chart-spec.js';
 import { fieldOf, num, quantileBreaks, classOf } from './drishti_chart-data.js';
 import { rampColour, alpha, formatterFor, textStyle, blend } from './drishti_chart-theme.js';
-import { findPlace, bounds, fitView } from './drishti_chart-geo.js';
+import { findPlace, fitView } from './drishti_chart-geo.js';
+import { bounds } from './drishti_chart-regions.js';
 import { rowId } from './drishti_chart-kinds.js';
 
 /**

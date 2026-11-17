@@ -227,3 +227,30 @@ def run_dir(tmp_path_factory) -> Path:
     """The folder every pytest-xdist worker of this run shares: the parent of the worker's basetemp (the basetemp itself alone)."""
     base = tmp_path_factory.getbasetemp()
     return (base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base) / "shared"
+
+
+_CHOOSE = """([sel, value, label, index]) => {
+  const el = document.querySelector(sel);
+  if (!el) { throw new Error('no element ' + sel); }
+  const host = el.tagName === 'DRISHTI-SELECT' ? el : (el.closest('drishti-select') || el.querySelector('drishti-select'));
+  if (el.tagName === 'SELECT' || !host) {
+    const s = el.tagName === 'SELECT' ? el : el.querySelector('select');
+    const opts = Array.from(s.options);
+    const o = index !== null ? opts[index] : opts.find((x) => (label !== null ? x.label === label : x.value === value));
+    s.value = o.value;
+    ['input', 'change'].forEach((t) => s.dispatchEvent(new Event(t, { bubbles: true })));
+    return o.value;
+  }
+  const c = host.component, opts = c.options;
+  const o = index !== null ? opts[index] : opts.find((x) => (label !== null ? String(x.label) === label : String(x.value) === String(value)));
+  if (!o) { throw new Error('no option ' + (label !== null ? label : index !== null ? index : value) + ' in ' + sel); }
+  c.setValue(o.value, true);
+  return o.value;
+}"""
+
+
+async def choose(page, selector: str, value=None, *, label=None, index=None):
+    """Picks an option of a select by value, label or index, as a person's pick does: a native <select> or drishti-inputs'
+    <drishti-select> (at the selector, around it or inside it), whose pick emits its change event."""
+    await page.wait_for_selector(selector, state="attached")
+    return await page.evaluate(_CHOOSE, [selector, value, label, index])

@@ -277,7 +277,7 @@ export class Dock {
     const doc = this.doc, box = h(doc, 'section', { cls: 'drishti-dock-group' });
     const tabs = h(doc, 'div', { cls: 'drishti-dock-tabs', attrs: { role: 'tablist', 'aria-label': 'Panels' } });
     n.panels.forEach((id) => {
-      tabs.appendChild(h(doc, 'button', { cls: 'drishti-dock-tab', text: this.o.title(id), attrs: { type: 'button', role: 'tab', 'aria-selected': String(id === n.active), id: 'dock-tab-' + id, 'aria-controls': 'dock-panel-' + id },
+      tabs.appendChild(h(doc, 'button', { cls: 'drishti-dock-tab', text: this.o.title(id), attrs: { type: 'button', role: 'tab', 'aria-selected': String(id === n.active), id: 'dock-tab-' + id, 'aria-controls': id === n.active ? 'dock-panel-' + id : null },
         data: { panel: id }, on: { click: () => this.model.activate(id), keydown: (e) => this.tabKey(e, id) } }));
     });
     const act = (label, fn) => h(doc, 'button', { cls: 'drishti-dock-act', text: label, attrs: { type: 'button', 'aria-label': label + ': ' + this.o.title(n.active || '') }, on: { click: fn } });

@@ -33,6 +33,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -143,8 +145,8 @@ def test_the_pickers_dates_ranges_tree_multiselect_and_combobox(browsers):
         assert await pg.get_attribute(".di-tree-pop .di-node[data-id='Rates']", "aria-checked") == "mixed"
         await pg.click(".di-tree-pop .di-node[data-id='FX'] [data-twist]")
         await pg.click(".di-tree-pop .di-node[data-id='FX/EM Forwards'] [data-twist]")
-        await pg.wait_for_selector(".di-tree-pop .di-error-row")
-        assert "the server is busy" in await pg.text_content(".di-tree-pop .di-error-row")
+        await pg.wait_for_selector(".di-tree-pop .drishti-state-error")
+        assert "the server is busy" in await pg.text_content(".di-tree-pop .drishti-state-error")
         await pg.click(".di-tree-pop [data-retry]")
         await pg.wait_for_selector(".di-tree-pop .di-node[data-id='FX/EM Forwards/A. Rao']")
         await pg.fill(".di-tree-pop .di-search", "duval")
@@ -265,9 +267,9 @@ def test_a_form_from_a_schema_with_conditions_arrays_the_servers_check_and_four_
         assert "Book code must look like a book code such as RT-123" in summary and "Notional must be at least 1,000" in summary
         assert await pg.evaluate("() => document.activeElement.classList.contains('di-form-summary')")
         assert await pg.locator(f"{f} [data-path='strike']").is_hidden()
-        await pg.select_option(f"{f} [data-path='product'] drishti-select", label="Option")
+        await choose(pg, f"{f} [data-path='product'] drishti-select", label="Option")
         assert await pg.locator(f"{f} [data-path='strike']").is_visible() and await pg.locator(f"{f} [data-path='legs']").is_hidden()
-        await pg.select_option(f"{f} [data-path='product'] drishti-select", label="Swap")
+        await choose(pg, f"{f} [data-path='product'] drishti-select", label="Swap")
         await pg.click(f"{f} [data-path='legs'] [data-act='add']")
         assert await pg.locator(f"{f} .di-repeat-item").count() == 2
         await pg.check(f"{f} [data-path='legs[1].pay'] input[type=radio] >> nth=1")
@@ -340,7 +342,7 @@ def test_the_filter_bar_drives_an_editable_grid_and_every_editor_undo_paste_and_
         await pg.wait_for_function("() => window.__harness.writes.length === 1")
         assert (await row_of(pg, "T1003"))["NOTIONAL"] == 2500000
         assert await h(pg, "window.__harness.grid.model.navigator.focus.row") == await pg.evaluate("(s) => +document.querySelector(s).dataset.r + 1", sel)
-        assert "dg-edited" in await pg.get_attribute(sel, "class")
+        await pg.wait_for_function("(s) => document.querySelector(s).classList.contains('dg-edited')", arg=sel)   # marked on the next frame
         # a value that is not valid: the problem in words, the editor stays; Escape cancels
         await cell(pg, "T1004", "NOTIONAL")
         await pg.keyboard.press("F2")

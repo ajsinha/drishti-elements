@@ -240,6 +240,6 @@
       el.options = { mapsBase: ctx.mapsBase, placeData: (level) => Promise.resolve(rowsFor(level)), height: 440 };
       return { target: el, element: el, ready: Promise.resolve(), destroy: () => { if (el.chart) { el.chart.destroy(); } el.remove(); } };
     },
-    code: () => ({ js: "const spec = { kind: 'map', level: 'continents', place: 'code', data: { rows: byContinent },   // rows from the server, grouped by the same world-regions.yaml\n  metrics: [{ field: 'ead', format: 'money' }] };\nchart.spec = spec;\nchart.options = { placeData: (level) => fetch('/api/exposure?by=' + level).then((r) => r.json()) };", element: '<drishti-chart id="chart"></drishti-chart>' })
+    code: () => ({ js: "import { Chart } from '/elements/drishti-chart/src/drishti_index.js';   // the library (new Chart(el, spec)); it registers <drishti-chart> too\nconst chart = document.getElementById('chart');\nconst spec = { kind: 'map', level: 'continents', place: 'code', data: { rows: byContinent },   // rows from the server, grouped by the same world-regions.yaml\n  metrics: [{ field: 'ead', format: 'money' }] };\nchart.spec = spec;\nchart.options = { placeData: (level) => fetch('/api/exposure?by=' + level).then((r) => r.json()) };", element: '<drishti-chart id="chart"></drishti-chart>' })
   }));
 }(typeof window !== 'undefined' ? window : null));
