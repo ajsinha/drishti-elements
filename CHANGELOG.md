@@ -39,6 +39,8 @@ Also in 2.4.0:
 - **drishti-core**: `Tour`, a page walked in steps (marks for what each step says and shows, back, at and next controls).
 - **drishti-grid**: Escape closes Explain whatever came before it (a pending focus follow never reopens a closed Explain).
 - **drishti-inputs**: the query builder's choices on drishti-inputs' Select; the selection chip's history as buttons.
+- **Build**: a host's own libraries (`build.py --root --manifest`) require this project's bundles under Node by their path from the
+  library's folder, and a host's manifest may leave the version out (this project's is used).
 - **Vendor**: ECharts GL 2.1.0 (BSD-3-Clause, one local change without eval, `vendor/echarts-gl/PATCHED.md`).
 - **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
   its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
