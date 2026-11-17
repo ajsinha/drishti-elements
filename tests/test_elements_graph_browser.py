@@ -173,13 +173,14 @@ def test_canvas_zoom_pan_fit_minimap_click_lasso_drag_pin_tooltip_keys_and_the_t
         x, y = await node_xy(pg, "inspector", "GRP-1")
         mid = await pg.evaluate(f"() => {{ const r = {G}.P.canvas.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }}")
         dx, dy = (60 if x < mid[0] else -60), (30 if y < mid[1] else -30)
+        s0 = await pg.evaluate(f"() => {G}.toScreen('GRP-1')")
         await pg.mouse.move(x, y)
         await pg.mouse.down()
         await pg.mouse.move(x + dx, y + dy, steps=4)
         await pg.mouse.up()
         assert await pg.evaluate(f"() => {G}.model.node('GRP-1').pinned") is True
-        p = await node_xy(pg, "inspector", "GRP-1")
-        assert abs(p[0] - x - dx) < 2 and abs(p[1] - y - dy) < 2
+        s1 = await pg.evaluate(f"() => {G}.toScreen('GRP-1')")                                  # on the canvas: a line above it that changes
+        assert abs(s1["x"] - s0["x"] - dx) < 2 and abs(s1["y"] - s0["y"] - dy) < 2, (s0, s1, dx, dy)   # height moves the canvas, not the node
         await pg.click("#g-inspector .dn-seg-b[data-layout='circular']")
         await pg.wait_for_function(f"() => {G}.state().layout === 'circular' && {G}.layoutMs !== null")
         await pg.wait_for_timeout(500)                                                            # wait-ok: the layout's animation runs; a pinned node must not move through it
