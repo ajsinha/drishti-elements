@@ -15,7 +15,7 @@
  */
 /* The gallery's demos of drishti-inputs (every input: the date and range pickers, the tree picker, the multi-select, the combobox, the
    form from a schema with four eyes, the filter bar with a grid following it, the code editor and the diff) and of drishti-data (a
-   memory source paged into a grid, a drishti-events connection fed by hand through a stand-in EventSource, a JSON frame as grid columns). The gallery
+   memory source paged into a grid, a JSON frame as grid columns). The gallery
    shows a demo only when its library is in the manifest, so these appear with the libraries (drishti-inputs and drishti-data). */
 (function (root) {
   'use strict';
@@ -212,39 +212,6 @@
       return { target: g, element: g, ready: Promise.resolve(), destroy: () => { g.grid.destroy(); g.remove(); } };
     },
     code: (values) => ({ js: "import { memorySource } from '/elements/drishti-data/src/drishti_index.js';\nimport { Grid } from '/elements/drishti-grid/src/drishti_index.js';\n\nconst datasource = memorySource(rows, { delay: " + values.delay + " });   // or restSource(url), serverSideSource(url), arrowSource(url)\nnew Grid(document.getElementById('grid'), { columns, datasource, getRowId, blockSize: 100 });" })
-  }));
-
-  demos.push(dataDemo({
-    id: 'connection', library: 'drishti-events', title: 'Connection (a live feed)', about: 'drishti_connection.js', types: [],
-    summary: 'drishti-events\' connection to a server over Server-Sent Events or a WebSocket: reconnect with back-off, a heartbeat, resume from the last event id; a subscription is a feed, with backpressure into the grid. Here a server\'s own JSON (raw mode) by hand: Push sends a message, Drop cuts the line.',
-    extra: [{ name: 'heartbeatMs', control: { kind: 'select', values: ['0', '2000'] }, desc: 'Silence allowed before the connection is taken as dead (0: no watch).' }],
-    values: { heartbeatMs: '0' }, examples: [{ title: 'A manual feed into a grid', values: {} }],
-    mount: function (host, values, ctx) {
-      const doc = host.ownerDocument, EV = ctx.E.events, h = ctx.h;
-      let es = null, n = 0;
-      class ManualEventSource extends root.EventTarget {
-        constructor(url) { super(); this.url = url; this.readyState = 0; es = this; setTimeout(() => { if (this.readyState !== 2) { this.readyState = 1; this.dispatchEvent(new root.Event('open')); } }, 5); }
-        close() { this.readyState = 2; }
-      }
-      const rows = ctx.memo('live-rows', () => ctx.data.trades(30).map((r) => ({ ID: r.ID, DESK: r.DESK, CCY: r.CCY, MTM: r.MTM })));
-      const state = h(doc, 'span', { cls: 'gx-note', attrs: { 'aria-live': 'polite' } });
-      const push = () => { if (!es || es.readyState !== 1) { ctx.log('note', 'the line is down: the connection is reconnecting'); return; } const r = rows[(n++) % rows.length]; const up = { type: 'transaction', update: [Object.assign({}, r, { MTM: Math.round(r.MTM + (Math.random() - 0.5) * 4e5) })] };
-        es.dispatchEvent(new root.MessageEvent('message', { data: JSON.stringify(up), lastEventId: String(n) })); ctx.log('push', { id: n, row: r.ID }); };
-      const bar = h(doc, 'div', { cls: 'gx-demo-bar', attrs: { role: 'toolbar', 'aria-label': 'Feed' } }, [h(doc, 'button', { cls: 'gx-btn', text: 'Push', attrs: { type: 'button', 'data-action': 'push' }, on: { click: push } }),
-        h(doc, 'button', { cls: 'gx-btn', text: 'Drop the line', attrs: { type: 'button', 'data-action': 'drop' }, on: { click: () => { if (es) { es.readyState = 2; es.dispatchEvent(new root.Event('error')); } } } }), state]);
-      host.appendChild(bar);
-      const g = doc.createElement('drishti-grid');
-      g.setAttribute('density', 'terminal');
-      host.appendChild(g);
-      g.options = { columns: [{ field: 'ID', header: 'Trade', width: 80 }, { field: 'DESK', header: 'Desk' }, { field: 'CCY', header: 'Currency' }, { field: 'MTM', header: 'MTM', type: 'number', format: 'amount0' }],
-        rows: rows.map((r) => Object.assign({}, r)), getRowId: (r) => r.ID, title: 'Live (a manual feed)', checkboxes: false, live: { asyncWaitMs: 20, flashMs: 600 } };
-      const client = EV.connect('/gallery/live/rows', { protocol: 'raw', transport: 'sse', env: { EventSource: ManualEventSource }, heartbeatMs: Number(values.heartbeatMs) || 0,
-        backoff: { baseMs: 200, maxMs: 1000, jitter: false } });
-      client.on('$events.state', (m) => { state.textContent = 'state: ' + m.data.state + (m.data.waitMs ? ' (again in ' + m.data.waitMs + ' ms)' : ''); ctx.log('state', m.data.state); });
-      const pipe = client.subscribe('feed', null, { deliver: 'frame' }).toGrid(g.grid, { getRowId: (r) => r.ID });
-      return { target: host, element: g, push: push, ready: Promise.resolve(), destroy: () => { pipe.stop(); client.destroy(); g.grid.destroy(); g.remove(); bar.remove(); } };
-    },
-    code: () => ({ js: "import { connect } from '/elements/drishti-events/src/drishti_index.js';\n\nconst events = connect('https://example.org/feed', { protocol: 'raw' });   // a server's own JSON over SSE; wss:// for a WebSocket\nevents.on('$events.state', (m) => console.log(m.data.state));\nevents.subscribe('feed', null, { deliver: 'frame' }).toGrid(grid, { getRowId: (r) => r.ID });   // at most one batch in the grid at a time" })
   }));
 
   demos.push(dataDemo({
