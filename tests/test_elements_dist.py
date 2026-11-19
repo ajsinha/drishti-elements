@@ -60,7 +60,7 @@ def zip_files(path: Path) -> dict[str, bytes]:
 def test_the_zip_holds_every_library_with_matching_hashes(built):
     files = zip_files(built / f"drishti-elements-{TRAIN.version}.zip")
     man = json.loads(files["drishti-elements.json"])
-    assert man["version"] == TRAIN.version and list(man["libraries"]) == ALL
+    assert man["version"] == TRAIN.version and sorted(man["libraries"]) == sorted(ALL)
     assert set(man["files"]) == set(files) - {"drishti-elements.json"}                 # nothing unlisted, nothing missing
     for p, rec in man["files"].items():
         assert rec["bytes"] == len(files[p]) and rec["integrity"] == sri(files[p]), p
@@ -118,7 +118,7 @@ def test_the_pack_names_what_it_holds_and_carries_one_theme(tmp_path, capsys):
     rec = json.loads((tmp_path / pack.RECORD).read_text(encoding="utf-8"))
     assert rec["libraries"] == {n: TRAIN.version for n in ("drishti-core", "drishti-inputs", "drishti-chart", "drishti-grid")}
     assert rec["files"][pack.JS_NAME]["integrity"] == sri((tmp_path / pack.JS_NAME).read_bytes())
-    assert sorted(p.name for p in (tmp_path / "vendor").iterdir()) == ["codemirror"]                       # only drishti-inputs' code editor engine
+    assert sorted(p.name for p in (tmp_path / "vendor").iterdir()) == ["codemirror", "echarts-gl"]         # the assets: the code editor's engine, the 3D trace's
 
 
 def test_themes_aliases_and_a_theme_sheet_carries_every_token():

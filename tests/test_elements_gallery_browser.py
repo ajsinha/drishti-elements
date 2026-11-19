@@ -30,6 +30,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -133,21 +135,21 @@ def test_options_from_the_jsdoc_change_the_component_and_its_code_and_the_addres
         for n in ("rows", "layout", "density", "title", "pinTotals", "checkboxes", "phoneWidth", "clientAggregation", "rowSelection"):
             assert n in names, n
         assert await pg.locator(".gx-options .gx-opt-code").count() >= 5                   # objects and functions: set in code
-        await pg.select_option("[data-opt=layout]", "terminal")
+        await choose(pg, "[data-opt=layout]", "terminal")
         await pg.wait_for_selector(".gx-stage drishti-grid[layout=terminal].dg")
         assert 'layout="terminal"' in await pg.text_content("#gx-code-panel")
         assert "layout" in await pg.evaluate("decodeURIComponent(location.hash)")
         log = await pg.text_content(".gx-evlog")
         assert "option" in log and "terminal" in log
         for density, row in (("comfortable", 36), ("compact", 28), ("terminal", 22)):
-            await pg.select_option("[data-opt=density]", density)
+            await choose(pg, "[data-opt=density]", density)
             await pg.wait_for_selector(f".gx-stage drishti-grid[density={density}].dg")
             assert await pg.evaluate("() => document.querySelector('.gx-stage drishti-grid').grid.model.viewport.rowHeight") == row
             assert (await audited(pg, "grid"))["problems"] == []
         await pg.click("[data-action=theme]")                                               # light, then the same checks
         await frames(pg)
         assert await pg.evaluate("document.documentElement.getAttribute('data-theme')") == "light"
-        await pg.select_option("[data-opt=layout]", "panel")
+        await choose(pg, "[data-opt=layout]", "panel")
         assert (await audited(pg, "grid"))["problems"] == []
         await shot(pg, "drishti-gallery-grid-light.png")
         await pg.click("[data-opt=checkboxes]")                                             # a switch: off
@@ -232,7 +234,7 @@ def test_the_keys_reach_the_grid_and_the_chart(browsers):
         await pg.keyboard.press("ArrowRight")
         await pg.keyboard.press("t")
         await pg.wait_for_selector(".gx-stage .dc-table:not([hidden])")
-        await pg.select_option("[data-opt=sample]", "heatmap")
+        await choose(pg, "[data-opt=sample]", "heatmap")
         await pg.wait_for_function("() => document.querySelector('.gx-stage drishti-chart').chart.spec.kind === 'heatmap'")
         assert "kind: 'heatmap'" in await pg.text_content("#gx-code-panel")
         await pg.click(".gx-nav-item[data-c=map]")
@@ -271,9 +273,9 @@ def test_the_documentation_pages_run_every_example(browsers):
         assert "Ctrl+Home" in await pg.text_content(".gx-keys")
         assert await pg.locator(".gx-docpanel kbd:text('F2')").count() == 1
         await pg.wait_for_function("() => /No problems in \\d+ elements/.test(document.querySelector('.gx-audit').textContent)")
-        # changelog: the library's lines of the product CHANGELOG
+        # changelog: the library's lines of the CHANGELOG
         await pg.click("[role=tab][data-tab=changelog]")
-        assert "0.2.0" in await pg.text_content(".gx-changelog")
+        assert "2.4.0" in await pg.text_content(".gx-changelog")
         # Open in playground takes the example's options
         await pg.click("[role=tab][data-tab=examples]")
         await pg.click(".gx-example:nth-of-type(2) [data-action=open-playground]")
@@ -281,7 +283,7 @@ def test_the_documentation_pages_run_every_example(browsers):
         h = json.loads(await pg.evaluate("() => JSON.stringify(Object.fromEntries(new URLSearchParams(location.hash.slice(1))))"))
         assert h["mode"] == "playground" and h["c"] == "pivot" and "terminal" in h["o"]
         # a library that is not built yet has its page
-        planned = await pg.evaluate("() => window.__gallery.cat.planned.map((p) => p.name)")
+        planned = await pg.evaluate("() => (window.__gallery.cat.planned || []).map((p) => p.name)")
         if planned:
             await pg.click(f".gx-nav-item[data-c='{planned[0]}']")
             assert "Not in this build" in await pg.text_content(".gx-main")

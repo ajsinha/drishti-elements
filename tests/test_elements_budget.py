@@ -23,9 +23,10 @@ pytestmark = pytest.mark.static
 
 ELEMENTS = Path(__file__).resolve().parent.parent / "elements"
 CSS = Path(__file__).resolve().parent.parent / "css"
-# bytes; about 15% over the size when written (2026-11-16); raised the same day for the chart (more kinds, the world regions) and data (worker, feed monitor)
+# bytes; about 15% over the size when written (2026-11-16); raised the same day for the chart (more kinds, the world regions) and data (worker, feed monitor);
+# the chart again for the generic kinds (segmented scatter, matrix, lollipop, 3D trace, heatmap tracks)
 BUNDLES = {"drishti-core": 180_000, "drishti-inputs": 290_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
-           "drishti-data": 42_000, "drishti-chart": 275_000, "drishti-graph": 165_000,
+           "drishti-data": 42_000, "drishti-chart": 320_000, "drishti-graph": 165_000,
            "drishti-events": 150_000}  # drishti-events: E2, E3 and E5 measured 108,000 with typed JSDoc (the design's 110,000 assumed
 #                                     less); raised for E4 and E6 (about 130,000); step 12 settles it (the mock may become its own file)
 SHEETS = {"drishti_states.css": 4_000, "drishti_command-palette.css": 5_000, "drishti_dock.css": 5_000, "drishti_chips.css": 5_000}

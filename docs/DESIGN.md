@@ -128,7 +128,7 @@ from AG Grid's public documentation of its option and API shapes only. Every opt
 Every chart gets the theme and density, drishti-core's formats on axes and tooltips, a crosshair tooltip, legend toggles, click to Explain, export (PNG at
 2x, SVG, CSV, the spec), a **data-table alternative** and the grid's card chrome and status line. **Kinds**: line, area, bar (grouped, stacked,
 horizontal), scatter, bubble, heatmap (sequential and diverging), waterfall, candlestick, histogram, box plot, treemap, sankey, graph, gauge,
-sparkline, calendar, map. A kind is a module that turns the spec into engine options; a domain library registers its own (`registerKind`) and it appears
+sparkline, calendar, map, segmented, matrix, lollipop, 3D trace. A kind is a module that turns the spec into engine options; a domain library registers its own (`registerKind`) and it appears
 in the gallery like the general ones.
 
 **Maps.** `kind: "map"`: the world, then a country's first-level regions (US states and DC, Canadian provinces and territories, and every country with a
@@ -139,6 +139,25 @@ insets) and Canada, a conic fitted to the country otherwise. The grouping of cou
 `data/world-regions.yaml`, which a host's server may read too.
 
 **Vega-Lite** is translated into the spec (`fromVegaLite`) and drawn by drishti-chart; Vega itself is not drawn: one drawing engine.
+
+**More kinds and options**, each with its gallery page and Node tests; a domain library builds on them and draws nothing itself:
+
+| Capability | Spec | For example |
+|---|---|---|
+| Heatmap **tracks** | `tracks: [{axis: 'x'\|'y', title, values \| field, type, tones, scale}]`, `trackSize` | a limit's status over desks, a region beside each row |
+| Heatmap **category cells** | `value: {field, type: 'category', tones, order}`; `x.domain` (every column, an empty one too), `x.labels: false` | a status matrix (within, warning, breach) |
+| Heatmap **overview strip** | `zoom: true` or `{window: [first, last]}`: a window over the columns, the tracks move with it | a wide date-by-row matrix on a phone |
+| Scatter **segments** | `segments: {values: [{name, from, to}], tones}`: one value axis of named segments, alternate bands and tones | sessions of a trading day |
+| Scatter **top labels** | `labelTop: {field, n}`: the tallest point of the top members named | the largest moves of the day |
+| Scatter **surface** | `surface: {rows: [{x, y, value}], cell, scale}`: the server's grid of values under the points | a cost surface under the points |
+| **Rectangle brush** | `brush: 'rect'`: the points inside are selected, told to the link's channel; event `brushed` {box, ids} | picking points on a scatter, a linked grid follows |
+| **Frames** | `frames: {field, play, interval, mode: 'only'\|'upto', at, label, playText}`: a slider and Play (none with reduced motion); `setFrame`, `frame`, `play`, `pause`; event `frameChanged` | stepping the dates of a history |
+| Box plot from the server's figures | `boxes: {low, q1, median, q3, high, n}` (field names; nothing computed in the page) | quantiles computed by a server |
+| `segmented` kind | `x`, `y`, `segments: [{name, from, to}]`, `thresholds: [{value, label, tone}]` (the first colours the points past it), `labelTop` | moves through a day by session |
+| `matrix` kind | `x: {field, domain}`, `y: {field, domain}`, `value: {field, tones, order}`, `tracks`: category cells in the given order, every column kept, the overview strip past 150 columns | a status matrix by row and day |
+| `lollipop` kind | `x`, `y`, `colour` (a category's tones or a number's ramp with `legend` words), `length`, `bands` | events along a year |
+| `trace3d` kind | `x`, `y`, `z`, `order`, `colour`, `selected`, `turn` (none with reduced motion), `fallback: 'flat'\|'table'`: points joined in order on the vendored ECharts GL, loaded on first use; where WebGL is off, drawn flat or its table shown | a path or a trajectory |
+| drishti-core **`Tour`** | marks `data-tour-say`, `data-tour-steps`, controls `data-tour="back\|at\|next"`; `go`, `next`, `back`, `destroy` | a guided first visit of any board |
 
 ## 8. Packaging and versions
 

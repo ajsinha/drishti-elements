@@ -27,6 +27,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -194,7 +196,7 @@ def test_the_side_by_side_and_terminal_layouts(browsers):
         card = await pg.locator(".dd-insp-side").bounding_box()
         item = await pg.locator("#hx-canvas [data-dd-id='v2']").bounding_box()
         assert abs(card["x"] - (item["x"] + item["width"] + 8)) < 2 or card["x"] + card["width"] <= item["x"], "the inspector is a card by the selection"
-        await pg.select_option("[data-dd-layout-pick]", "studio")
+        await choose(pg, "[data-dd-layout-pick]", "studio")
         assert await h(pg, "window.__harness.layouts") == ["studio"]
     run(browsers, side, "layout=side-by-side")
 
