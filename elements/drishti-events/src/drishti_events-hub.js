@@ -587,6 +587,7 @@ export class Events {
   metrics() {
     const out = { state: this.state, subscriptions: this._subs.size, pendingRequests: this._pending.size, counters: JSON.parse(JSON.stringify(this.counters)) };
     this._adapters.forEach((a, name) => { if (a.metrics) { out[name] = a.metrics(); } });
+    if (out.server && out.server.outbox) { out.outbox = out.server.outbox; }
     return out;
   }
 

@@ -36,6 +36,7 @@ import { EventError, makeMessage } from './drishti_envelope.js';
 import { Backoff, Heartbeat } from './drishti_timing.js';
 import { PROTOCOL_VERSION, SUBPROTOCOL, CLOSE_CODES, decodeFrames, checkFrame, messageOf, rawMessage, encodeFrames } from './drishti_protocol.js';
 import { websocketTransport } from './drishti_transport-ws.js';
+import { Outbox } from './drishti_outbox.js';
 import { eventSourceTransport, fetchTransport } from './drishti_transport-sse.js';
 
 /** The connection's states. */
@@ -65,6 +66,8 @@ export const BUFFERED_LIMIT = 1048576;
  *   from welcome, else 45,000; EventSource cannot see comment lines, so its watch is on only when this is given
  * @property {{baseMs: number, maxMs: number, factor: number, jitter: boolean}} [backoff]
  * @property {string} [subprotocol='events.v1'] the WebSocket sub-protocol's name
+ * @property {import('./drishti_outbox.js').OutboxOptions} [outbox] the offline queue (persist, bounds, overflow, store)
+ * @property {string} [namespace] differs per application and signed-in person: the queue's database and the tabs' channel carry it
  * @property {number} [idleCloseMs] a page hidden for longer than this gives its connection back and takes it again when shown (off by
  *   default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume)
  * @property {string[]} [events] raw SSE: the event names that carry values (default every name for fetch, message for EventSource)
@@ -128,8 +131,10 @@ export class Connection {
     this.subs = new Map();
     this.bySub = new Map();
     this.nextSub = 1;
-    this.acks = new Map();
-    this.queue = [];
+    /** @type {Outbox} every publish until the server acknowledges it */
+    this.outbox = new Outbox({ clock: this.clock, options: Object.assign({ max: events.limits.outboxMessages, maxBytes: events.limits.outboxBytes,
+      maxAgeMs: events.limits.outboxAgeMs }, this.o.outbox), namespace: this.o.namespace, env: this.env,
+      onDrop: (f, why, words) => events._drop(why, { id: f.id, topic: f.topic }, null, words) });
     this.reqs = new Map();
     this.token = null;
     this.tokenExpiresAt = 0;
@@ -383,8 +388,7 @@ export class Connection {
       }
       case 'msg': this._deliver(messageOf(f, this.clock.now())); break;
       case 'ok': {
-        const a = this.acks.get(String(f.id));
-        if (a) { this.acks.delete(String(f.id)); this.stats.acked++; a.resolve({ acked: true }); }
+        if (this.outbox.done(String(f.id), true)) { this.stats.acked++; }
         break;
       }
       case 'res': {
@@ -459,15 +463,29 @@ export class Connection {
     }
   }
 
-  /** @private publishes and requests that wait: in order */
+  /** @private the connection opened: what an earlier page left is taken back (one tab at a time), then everything not acknowledged is sent
+   again, in order, and the requests that wait */
   _resend() {
-    const frames = [];
-    this.acks.forEach((a) => { if (a.sent) { this.stats.retried++; frames.push(a.frame); } });
-    const q = this.queue;
-    this.queue = [];
-    q.forEach((x) => { frames.push(x.frame); if (x.ack) { x.ack.sent = true; } else { x.resolve({ acked: false }); } });
-    this.reqs.forEach((r) => { if (!r.sent) { r.sent = true; frames.push(r.frame); } });
-    if (frames.length) { this._send(frames); }
+    this.stats.retried += this.outbox.resend();
+    const reqs = [];
+    this.reqs.forEach((r) => { if (!r.sent) { r.sent = true; reqs.push(r.frame); } });
+    if (reqs.length) { this._send(reqs); }
+    if (this.outbox.wantsRestore()) { this.outbox.restore(() => this._pumpOut()).catch(() => this._pumpOut()); } else { this._pumpOut(); }
+  }
+
+  /** @private sends what waits in the queue, in order, while the connection is open and the socket has room */
+  _pumpOut() {
+    if (this.state !== 'open' || !this.transport) { return 0; }
+    if (this._congested()) { this._schedulePump(); return 0; }
+    const list = this.outbox.takeUnsent();
+    if (!list.length) { return 0; }
+    this._send(list.map((e) => e.frame)).then((ok) => {
+      list.forEach((e) => {
+        if (!ok) { e.sent = false; return; }
+        if (!e.ack) { this.outbox.done(e.id, false); }
+      });
+    });
+    return list.length;
   }
 
   /** @private */
@@ -476,9 +494,8 @@ export class Connection {
     if (f.id !== undefined && f.id !== null) {
       const s = this.subs.get(Number(f.id)) || this.subs.get(f.id);
       if (s) { s.sub._setState('refused', f.code + ': ' + words); this._forgetSub(s.sub); return; }
-      const a = this.acks.get(String(f.id));
-      if (a) {
-        if (f.retry === false || !retryable(f.code)) { this.acks.delete(String(f.id)); this.stats.failed++; a.reject(new EventError(f.code, words, { retry: false })); }
+      if (this.outbox.has(String(f.id))) {
+        if (f.retry === false || !retryable(f.code)) { this.stats.failed++; this.outbox.remove(String(f.id), new EventError(f.code, words, { retry: false })); }
         return;
       }
       const r = this.reqs.get(String(f.id));
@@ -689,24 +706,20 @@ export class Connection {
     if (size > (this.serverLimits.frameBytes || this.events.limits.frameBytes)) {
       return Promise.reject(new EventError('limit.size', 'the message is ' + size + ' bytes; a frame is at most ' + (this.serverLimits.frameBytes || this.events.limits.frameBytes)));
     }
+    if (o && o.queue === false && this.state !== 'open') { return Promise.reject(new EventError('not.connected', 'not connected (' + this.state + '), and the publish asked not to wait')); }
+    if ((this.state === 'refused' || this.state === 'closed') && !this.suspended) { return Promise.reject(new EventError('not.connected', 'the connection is ' + this.state)); }
     this.stats.published++;
     return new Promise((resolve, reject) => {
-      const entry = { frame: frame, resolve: resolve, reject: reject, sent: false };
-      if (this.state === 'open' && !this.queue.length && !this._congested()) {
-        if (ack) { entry.sent = true; this.acks.set(m.id, entry); }
-        this._send([frame]).then((ok) => { if (!ack) { if (ok) { resolve({ acked: false }); } else { reject(new EventError('not.connected', 'the message could not be sent')); } } });
-        return;
+      try {
+        this.outbox.add(frame, { persist: !!(o && o.queue === 'persist'), ttlMs: o && o.ttlMs, ack: ack, resolve: resolve, reject: reject });
+      } catch (e) { reject(e); return; }
+      if (o && o.signal) {
+        o.signal.addEventListener('abort', () => {
+          const e = this.outbox.entries.get(m.id);
+          if (e && !e.sent) { this.outbox.remove(m.id, new EventError('aborted', 'the publish was given up before it was sent')); }
+        }, { once: true });
       }
-      if (o && o.queue === false) { reject(new EventError('not.connected', 'not connected (' + this.state + '), and the publish asked not to wait')); return; }
-      if ((this.state === 'refused' || this.state === 'closed') && !this.suspended) { reject(new EventError('not.connected', 'the connection is ' + this.state)); return; }
-      if (this.queue.length + this.acks.size >= this.events.limits.outboxMessages) {
-        reject(new EventError('limit.outbox', this.events.limits.outboxMessages + ' messages wait already (the limit)'));
-        return;
-      }
-      if (ack) { this.acks.set(m.id, entry); }
-      this.queue.push({ frame: frame, ack: ack ? entry : null, resolve: resolve });
-      if (this.state === 'open') { this._schedulePump(); }
-      if (o && o.signal) { o.signal.addEventListener('abort', () => this._unqueue(m.id, reject), { once: true }); }
+      this._pumpOut();
     });
   }
 
@@ -719,18 +732,8 @@ export class Connection {
     this.timers.pump = this.clock.setTimeout(() => {
       this.timers.pump = null;
       if (this.state !== 'open') { return; }
-      if (this._congested()) { this._schedulePump(); return; }
-      this._resend();
+      this._pumpOut();
     }, 50);
-  }
-
-  /** @private a publish given up before it was sent */
-  _unqueue(id, reject) {
-    const i = this.queue.findIndex((x) => x.frame.id === id);
-    if (i < 0) { return; }
-    this.queue.splice(i, 1);
-    this.acks.delete(id);
-    reject(new EventError('aborted', 'the publish was given up before it was sent'));
   }
 
   /**
@@ -765,21 +768,14 @@ export class Connection {
    */
   flush() {
     if (this.state !== 'open') { return Promise.resolve(0); }
-    const n = this.queue.length;
-    this._resend();
-    return Promise.resolve(n);
+    return Promise.resolve(this._pumpOut());
   }
 
   /**
    * Empties the queue: what waits is not sent (each publish rejects).
    * @returns {Promise<number>} how many were dropped
    */
-  clearOutbox() {
-    const q = this.queue;
-    this.queue = [];
-    q.forEach((x) => { this.acks.delete(x.frame.id); (x.ack ? x.ack.reject : x.resolve)(new EventError('cleared', 'the queue was emptied before it was sent')); });
-    return Promise.resolve(q.length);
-  }
+  clearOutbox() { return this.outbox.clear(); }
 
   /**
    * The person signs out: the queue emptied, the stream positions forgotten.
@@ -827,10 +823,7 @@ export class Connection {
   destroy() {
     this.close();
     const gone = new EventError('closed', 'the connection was destroyed');
-    this.acks.forEach((a) => a.reject(gone));
-    this.acks.clear();
-    this.queue.forEach((x) => { if (!x.ack) { x.resolve({ acked: false }); } });
-    this.queue = [];
+    this.outbox.destroy(gone);
     this.reqs.forEach((r) => r.reject(gone));
     this.reqs.clear();
     if (this.timers.idle !== null) { this.clock.clearTimeout(this.timers.idle); this.timers.idle = null; }
@@ -858,7 +851,8 @@ export class Connection {
       reconnects: this.stats.reconnects, connectedMs: this.stats.connectedMs + (this.stats.openedAt ? this.clock.now() - this.stats.openedAt : 0),
       rtt: { last: this.stats.rtt, p50: q(0.5), p99: q(0.99) }, offset: this.stats.offset, framesIn: this.stats.framesIn, framesOut: this.stats.framesOut,
       bytesIn: this.stats.bytesIn, unknownFrames: this.stats.unknown, badFrames: this.stats.bad,
-      out: { published: this.stats.published, acked: this.stats.acked, retried: this.stats.retried, failed: this.stats.failed, waiting: this.queue.length, unacked: this.acks.size },
+      out: { published: this.stats.published, acked: this.stats.acked, retried: this.stats.retried, failed: this.stats.failed, waiting: this.outbox.size },
+      outbox: this.outbox.metrics(),
       requests: { pending: this.reqs.size } };
   }
 }

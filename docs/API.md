@@ -19446,6 +19446,139 @@ Resolves when everything received has reached the grid.
 
 Returns `Promise&lt;void&gt;`.
 
+### drishti_outbox.js
+
+#### `OUTBOX_DEFAULTS`
+
+The queue's bounds by default.
+
+#### class `Outbox`
+
+The publishes not yet acknowledged, in the order they were made.
+
+##### `new Outbox(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{clock: Object, options: OutboxOptions, namespace: string, env: Object, onDrop: function(Object, string, string): void}` |  |
+
+##### `Outbox.has(id)`
+
+Whether a message waits.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `boolean`.
+
+##### `Outbox.add(frame, o)`
+
+Holds a publish (refused in words past a bound, unless the oldest may go).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `frame` | `Object` | the pub frame |
+| `o` | `{persist: boolean, ttlMs: number, ack: boolean, resolve: Function, reject: Function}` |  |
+
+Returns `Object`: the entry.
+
+##### `Outbox.takeUnsent()`
+
+What waits to be sent, in order (expired messages dropped first); each is marked sent.
+
+Returns `Object[]`: the entries.
+
+##### `Outbox.resend()`
+
+After a reconnect every message not acknowledged is to be sent again.
+
+Returns `number`: how many were sent before.
+
+##### `Outbox.done(id, acked)`
+
+A message was sent and wants no acknowledgement, or it was acknowledged: it leaves the queue (and the disk).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `acked` | `boolean` |  |
+
+Returns `boolean`: whether it was waiting.
+
+##### `Outbox.remove(id, err, reason)`
+
+A message is given up (refused, dropped, aborted, expired): it leaves the queue and its publish is rejected.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `err` | `Error` |  |
+| `[reason]` | `string` | counted as a drop with this reason |
+
+Returns `boolean`.
+
+##### `Outbox.sweep()`
+
+Drops what is older than its age or ttl.
+
+Returns `number`: how many.
+
+##### `Outbox.wantsRestore()`
+
+Whether the connection's first opening takes back what an earlier page left (once).
+
+Returns `boolean`.
+
+##### `Outbox.restore(send, holdMs)`
+
+What an earlier page left on disk, taken back (under a Web Lock, so one tab at a time): those messages are sent with the rest. The lock is held until they are acknowledged (or for at most holdMs).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `send` | `function(): void` | called when the restored messages are in the queue |
+| `[holdMs=10000]` | `number` |  |
+
+Returns `Promise&lt;number&gt;`: how many were restored.
+
+##### `Outbox.clear()`
+
+Empties the queue (and the disk): every waiting publish is rejected.
+
+Returns `Promise&lt;number&gt;`: how many were dropped.
+
+##### `Outbox.metrics()`
+
+The queue's figures.
+
+Returns `{count: number, bytes: number, unsent: number, persisted: boolean, oldestMs: ?number}`.
+
+##### `Outbox.destroy(err)`
+
+Stops the expiry timer and rejects what waits (the connection is destroyed); the disk keeps persisted messages for the next page.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `err` | `Error` |  |
+
+Returns `void`.
+
+#### `memoryStore()`
+
+A store in memory, with the calls of the IndexedDB one (tests; a page that wants none on disk). Kept across connections it stands for a reload.
+
+Returns `OutboxStore`.
+
+#### `indexedDbStore(o)`
+
+The IndexedDB store of an application (and a signed-in person: the namespace), or null where there is no IndexedDB.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{namespace: string, indexedDB: Object}` | namespace: part of the database's name; indexedDB: a stand-in |
+
+Returns `?OutboxStore`.
+
 ### drishti_index.js
 
 #### `segment(text)`
@@ -19486,6 +19619,8 @@ The options of connect (with those of an Events: routes, clock, limits, signal, 
 | `[heartbeatMs]` | `number` | silence allowed before the connection is taken as dead (1.5 times this); default the server's figure from welcome, else 45,000; EventSource cannot see comment lines, so its watch is on only when this is given |
 | `[backoff]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean}` |  |
 | `[subprotocol='events.v1']` | `string` | the WebSocket sub-protocol's name |
+| `[outbox]` | `import('./drishti_outbox.js').OutboxOptions` | the offline queue (persist, bounds, overflow, store) |
+| `[namespace]` | `string` | differs per application and signed-in person: the queue's database and the tabs' channel carry it |
 | `[idleCloseMs]` | `number` | a page hidden for longer than this gives its connection back and takes it again when shown (off by default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume) |
 | `[events]` | `string[]` | raw SSE: the event names that carry values (default every name for fetch, message for EventSource) |
 | `[topicOf]` | `function(*, Object): string` | raw: the topic of a value (default 'feed') |
@@ -19611,6 +19746,32 @@ The options of a grid sink.
 | `[maxInFlight=1]` | `number` | batches in the grid's applyTransactionAsync at once |
 | `[highWater=10000]` | `number` | pending rows past which the sink says it is behind |
 | `[onStats]` | `function(Object): void` | the counts after each batch (received, applied, coalesced, batches, maxQueue, behind, pending) |
+
+#### `OutboxStore` : `Object`
+
+Where persisted publishes rest: IndexedDB, or a stand-in with the same calls.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `kind` | `string` | 'indexeddb' or 'memory' |
+| `put` | `function(Object): Promise&lt;void&gt;` |  |
+| `delete` | `function(string): Promise&lt;void&gt;` |  |
+| `all` | `function(): Promise&lt;Object[]&gt;` |  |
+| `clear` | `function(): Promise&lt;void&gt;` |  |
+
+#### `OutboxOptions` : `Object`
+
+The options of the queue (connect's outbox option).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[persist=false]` | `boolean` | every publish kept in IndexedDB until acknowledged |
+| `[max=1000]` | `number` | messages |
+| `[maxBytes=1048576]` | `number` | bytes |
+| `[maxAgeMs=86400000]` | `number` | a message older than this is dropped (expired) |
+| `[overflow='reject']` | `('reject'\|'drop-oldest')` | past a bound: the publish is refused, or the oldest message goes |
+| `[store]` | `OutboxStore` | where persisted messages rest (default IndexedDB; memoryStore() in tests) |
+| `[restore]` | `boolean` | take back, when the connection first opens, what an earlier page left on disk (before this page's own publishes); default true when persist is on or a store is given (a page that never persists opens no database) |
 
 #### `RawMapping` : `Object`
 

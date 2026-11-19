@@ -799,6 +799,10 @@ Where the build had to choose, or the API above changed, the choice and its reas
 | E5 | `deliver: 'frame'` also arms a one-second timer: whichever comes first delivers | a page hidden after asking for a frame gets none |
 | E5 | Server-side conflation is asked with `conflate: { server: true }` (and `deliver.everyMs` as its pace), only when `welcome.can` has `conflate` | the design named the frame's field but not the option |
 | E5 | A page put away (or idle past `idleCloseMs`) is the state `closed` with `suspended: true`; publishes and requests wait for it to be shown again | one state list; a reload-free return sends what was made meanwhile |
+| E6 | Every publish to a server waits in the queue until acknowledged, not only those made while down (one list in publish order) | one home for "not yet acknowledged": the order across a reconnect follows from it |
+| E6 | A page takes back a reload's leftovers when its connect says `outbox: { persist: true }`, gives a `store`, or `outbox: { restore: true }`; they go before the page's own | a page that never persists opens no database; a reload's messages were made first |
+| E6 | The Web Lock is held while the leftovers wait for their acknowledgements (at most 10 s) | a second tab that takes the lock next finds them gone from the disk |
+| E6 | `signOut()` tells the other tabs through the tabs scope's own `signOut` (step 7 gives it) | the tabs scope does not exist before step 7 |
 
 ---
 

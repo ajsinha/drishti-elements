@@ -60,6 +60,14 @@ Each release lists what changed, by library. One version for every library: the 
   asks a server whose welcome offers `conflate` to conflate before the wire. The bundle's budget is 150,000 bytes for now (step 12
   settles it).
 - **drishti-data** (breaking): `TransactionSink` and `pipeToGrid` removed: `subscription.toGrid(grid)` (drishti-events) is the one way.
+- **drishti-events** (eventing step E6, the offline queue): every publish to a server waits in `Outbox` until acknowledged (sent again
+  after a reconnect, in order); bounded (`outbox: { max, maxBytes, maxAgeMs }`, defaults 1,000 messages, 1 MB, 24 hours; past a bound
+  the publish is refused in words, or `overflow: 'drop-oldest'`), aged (a publish's `ttlMs`, dropped as `expired` even while nothing
+  else happens); `queue: false` fails at once when not connected; an abort takes back a publish not yet sent. Persistence by choice
+  (`queue: 'persist'`, `outbox: { persist: true }`): IndexedDB (`indexedDbStore`, named by the `namespace`), or `memoryStore()`;
+  without IndexedDB the queue is memory and `metrics().outbox.persisted` says `false`. What a reload left is sent first, by one tab at
+  a time (a Web Lock). `events.flush()`, `events.clearOutbox()` and `events.signOut()` (the queue and the disk emptied, stream positions
+  and the session forgotten).
 - **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
   its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
 - **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script
