@@ -348,10 +348,12 @@ def build() -> tuple[str, list[str], str, str, str]:
     for name, spec in manifest["libraries"].items():
         entry = (ELEMENTS / name / spec["entry"]).resolve()
         syms = []
-        for sym_name, module in exports_of(entry):
-            s = symbol(sym_name, module, problems)
-            if s:
-                syms.append(s)
+        entries = [entry] + [(ELEMENTS / name / p["entry"]).resolve() for p in (spec.get("parts") or {}).values()]   # its parts' too
+        for e in entries:
+            for sym_name, module in exports_of(e):
+                s = symbol(sym_name, module, problems)
+                if s:
+                    syms.append(s)
         libs.append((name, spec, syms, typedefs(entry.parent)))
     cat_data = elements_catalogue.catalogue(ROOT, manifest, libs)
     cat = elements_catalogue.script(cat_data, HEADER)

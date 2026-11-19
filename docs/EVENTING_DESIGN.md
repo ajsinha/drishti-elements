@@ -810,6 +810,11 @@ Where the build had to choose, or the API above changed, the choice and its reas
 | E7 | Each tab keeps its own pipeline (conflation, frames, buffers) and its own unacknowledged publishes (sent again with the same id when the hub changes); the hub holds one subscription per pattern and the retained values | one pipeline per listener, as without the hub; a server takes an id once |
 | E7 | A new hub resumes from the positions the tabs report when they join (`Sequencer.seed`); a `sub` the server has not answered yet carries the positions of the streams its pattern names | the leader that closed took its positions with it |
 | E7 | The worker file is a build **part** (`parts` in the manifest): a classic script beside the bundle that reaches the library through its entry and, in a worker, loads the bundles with `importScripts` | one build, no second tool; the inspector is the next part |
+| E8 | The mock server and `MockTabs` are a part of their own (`drishti_events-mock.js`, `Drishti.elements.events_mock`), not in the bundle; `connect('mock:name')` finds a server that registered that address (`registerMock`), and says in words when none did | demos and tests load it; a page in production never carries it |
+| E8 | A retained value bypasses the numbering (it is a snapshot from before the stream's position, delivered once by id) | its seq is at or below the position `subd` names |
+| E8 | A client that has heard no epoch for a stream sends `epoch: null` in `after` and `replay`; a server takes that as its current epoch only when the stream began in it | a stream born after the subscription is named first by a `msg`, which carries no epoch |
+| E8 | `recovered: false` without a stream the client asked about: the client forgets that stream's position and resyncs it | a restarted server that lost the log names no such stream, and its numbering starts again |
+| E8 | The conformance runner (`tools/events/conformance.mjs`) uses raw WebSocket clients, never the library's client; `requires` skips a vector whose capability the server's `welcome.can` lacks | a pass then says the server keeps the contract |
 
 ---
 

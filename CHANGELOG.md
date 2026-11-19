@@ -17,6 +17,16 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
+## Unreleased
+
+- **drishti-events** (eventing step E8, the mock server): `MockServer` speaks the protocol through an in-memory transport (`connect(server)`
+  or `connect('mock:')`): numbered streams, retained values, a replay log, acknowledged and deduplicated publishes, `reply(pattern, fn)`,
+  `every(ms, fn)`, and faults on purpose (`drop`, `partition(ms)`, `lose(n)`, `duplicate(n)`, `delay(ms)`, `reorder(n)`, `refuse(what)`,
+  `restart()` with a new epoch, `slow(n)` with a gap). The mock and `MockTabs` are their own file, `drishti_events-mock.js`
+  (`Drishti.elements.events_mock`), not in the bundle. The conformance vectors (`tests/events/protocol-v1.json`) and their runner
+  (`node tools/events/conformance.mjs --url <address>` or `--mock`). The client: a retained value bypasses the numbering; streams a server
+  no longer names after `recovered: false` start again with a resync; `after` carries the positions of streams the pattern names.
+
 ## 3.0.0-rc.1
 
 The first release candidate of 3.0.0: drishti-events steps E1 to E7 (the kernel, the connection, order and gaps, flow, the offline queue, the tabs and the shared hub). Breaking: see drishti-core and drishti-data below.

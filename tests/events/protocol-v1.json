@@ -1,0 +1,124 @@
+{
+  "about": "The conformance vectors of the events protocol, version 1 (CONTRACTS.md, 'The events contract'). Each vector is a script: clients (a, b, c, ...) send frames and expect frames. In a frame, '<run>' is this run's unique word; '<save:name>' keeps the value found there and '<name>' uses it (in keys too); '<any>', '<number>', '<string>' match any value of that kind; '<one-of:x,y>' matches either. 'expect' waits for the next frame of that type (others are kept for later steps); 'silent' asserts no frame of that type arrives within ms; 'close' ends a client. A vector whose 'requires' a server does not offer in welcome's can is skipped. Run them against any server: node tools/events/conformance.mjs --url <address>.",
+  "version": 1,
+  "vectors": [
+    {
+      "name": "hello is answered by welcome",
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome", "v": 1, "session": "<string>", "time": "<number>", "heartbeatMs": "<number>", "can": "<any>", "resumed": false } }
+      ]
+    },
+    {
+      "name": "a subscription hears another client's publish; the publisher is acknowledged",
+      "requires": ["publish"],
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "b": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome" } },
+        { "b": "expect", "frame": { "t": "welcome" } },
+        { "a": "send", "frame": { "t": "sub", "id": 1, "topic": "conformance.<run>.>" } },
+        { "a": "expect", "frame": { "t": "subd", "id": 1 } },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-p1", "topic": "conformance.<run>.x", "data": { "n": 1 }, "time": 1794000000000 } },
+        { "b": "expect", "frame": { "t": "ok", "id": "<run>-p1" } },
+        { "a": "expect", "frame": { "t": "msg", "topic": "conformance.<run>.x", "data": { "n": 1 }, "id": "<string>", "time": "<number>" } }
+      ]
+    },
+    {
+      "name": "a publish sent twice with one id is acknowledged twice and published once",
+      "requires": ["publish"],
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "b": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome" } },
+        { "b": "expect", "frame": { "t": "welcome" } },
+        { "a": "send", "frame": { "t": "sub", "id": 1, "topic": "conformance.<run>.>" } },
+        { "a": "expect", "frame": { "t": "subd", "id": 1 } },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-p2", "topic": "conformance.<run>.y", "data": 2, "time": 1794000000000 } },
+        { "b": "expect", "frame": { "t": "ok", "id": "<run>-p2" } },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-p2", "topic": "conformance.<run>.y", "data": 2, "time": 1794000000000 } },
+        { "b": "expect", "frame": { "t": "ok", "id": "<run>-p2" } },
+        { "a": "expect", "frame": { "t": "msg", "topic": "conformance.<run>.y", "data": 2 } },
+        { "a": "silent", "t": "msg", "ms": 300 }
+      ]
+    },
+    {
+      "name": "after unsub nothing more arrives",
+      "requires": ["publish"],
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "b": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome" } },
+        { "b": "expect", "frame": { "t": "welcome" } },
+        { "a": "send", "frame": { "t": "sub", "id": 7, "topic": "conformance.<run>.*" } },
+        { "a": "expect", "frame": { "t": "subd", "id": 7 } },
+        { "a": "send", "frame": { "t": "unsub", "id": 7 } },
+        { "a": "send", "frame": { "t": "ping", "ts": 1 } },
+        { "a": "expect", "frame": { "t": "pong", "ts": 1 } },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-p3", "topic": "conformance.<run>.z", "data": 3, "time": 1794000000000 } },
+        { "b": "expect", "frame": { "t": "ok", "id": "<run>-p3" } },
+        { "a": "silent", "t": "msg", "ms": 300 }
+      ]
+    },
+    {
+      "name": "ping is answered by pong with the client's ts and the server's time",
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome" } },
+        { "a": "send", "frame": { "t": "ping", "ts": 1794000000123 } },
+        { "a": "expect", "frame": { "t": "pong", "ts": 1794000000123, "time": "<number>" } }
+      ]
+    },
+    {
+      "name": "a request nobody answers fails in words",
+      "requires": ["request"],
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome" } },
+        { "a": "send", "frame": { "t": "req", "id": "<run>-r1", "topic": "conformance.<run>.nobody", "data": null, "ttl": 1000 } },
+        { "a": "expect", "frame": { "t": "res", "re": "<run>-r1", "error": { "code": "<one-of:no.responder,timeout>", "detail": "<string>" } }, "ms": 3000 }
+      ]
+    },
+    {
+      "name": "a late subscriber asking for retained values gets the last one, marked retained",
+      "requires": ["publish", "retained"],
+      "steps": [
+        { "b": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "b": "expect", "frame": { "t": "welcome" } },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-p4", "topic": "conformance.<run>.kept", "key": "k", "data": 4, "time": 1794000000000 } },
+        { "b": "expect", "frame": { "t": "ok", "id": "<run>-p4" } },
+        { "c": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "c": "expect", "frame": { "t": "welcome" } },
+        { "c": "send", "frame": { "t": "sub", "id": 1, "topic": "conformance.<run>.kept", "retained": true } },
+        { "c": "expect", "frame": { "t": "subd", "id": 1 } },
+        { "c": "expect", "frame": { "t": "msg", "topic": "conformance.<run>.kept", "data": 4, "retained": true } }
+      ]
+    },
+    {
+      "name": "a subscription with after gets what was missed, replayed, and recovered is true",
+      "requires": ["publish", "replay"],
+      "steps": [
+        { "a": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "b": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "a": "expect", "frame": { "t": "welcome" } },
+        { "b": "expect", "frame": { "t": "welcome" } },
+        { "a": "send", "frame": { "t": "sub", "id": 1, "topic": "conformance.<run>.feed" } },
+        { "a": "expect", "frame": { "t": "subd", "id": 1 } },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-q1", "topic": "conformance.<run>.feed", "data": 1, "time": 1794000000000 } },
+        { "a": "expect", "frame": { "t": "msg", "data": 1, "stream": "<save:stream>", "seq": "<save:seq1>" } },
+        { "a": "close" },
+        { "b": "send", "frame": { "t": "pub", "id": "<run>-q2", "topic": "conformance.<run>.feed", "data": 2, "time": 1794000000000 } },
+        { "b": "expect", "frame": { "t": "ok", "id": "<run>-q2" } },
+        { "c": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "c": "expect", "frame": { "t": "welcome" } },
+        { "c": "send", "frame": { "t": "sub", "id": 1, "topic": "conformance.<run>.feed" } },
+        { "c": "expect", "frame": { "t": "subd", "id": 1, "streams": { "<stream>": { "epoch": "<save:epoch>", "seq": "<number>" } } } },
+        { "d": "send", "frame": { "t": "hello", "v": 1, "client": "conformance/1" } },
+        { "d": "expect", "frame": { "t": "welcome" } },
+        { "d": "send", "frame": { "t": "sub", "id": 1, "topic": "conformance.<run>.feed", "after": { "<stream>": { "epoch": "<epoch>", "seq": "<seq1>" } } } },
+        { "d": "expect", "frame": { "t": "subd", "id": 1, "recovered": true } },
+        { "d": "expect", "frame": { "t": "msg", "data": 2, "replayed": true } }
+      ]
+    }
+  ]
+}

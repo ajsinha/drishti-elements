@@ -19,7 +19,9 @@
    the next tab resuming by sequence) and in a SharedWorker (auth asked of a tab); the fallbacks. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as E from '../../elements/drishti-events/src/drishti_index.js';
+import * as E0 from '../../elements/drishti-events/src/drishti_index.js';
+import * as M from '../../elements/drishti-events/src/drishti_mock.js';
+const E = Object.assign({}, E0, M);
 import { EventBus } from '../../elements/drishti-core/src/drishti_index.js';
 
 const flush = async (n) => { for (let i = 0; i < (n || 12); i++) { await new Promise((r) => setImmediate(r)); } };

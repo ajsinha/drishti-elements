@@ -21,6 +21,7 @@ import { segment as coreSegment } from '../../drishti-core/src/drishti_index.js'
 import { createEvents as create } from './drishti_events-hub.js';
 import { Connection, eventsEndpoint } from './drishti_connection.js';
 import { shareConnection } from './drishti_shared-hub.js';
+import { EventError } from './drishti_envelope.js';
 
 export { SCOPES, OWN_TOPICS, DEFAULT_LIMITS, Events, ScopedEvents, Topic, createEvents, covers } from './drishti_events-hub.js';
 export { SUBSCRIPTION_STATES, Subscription } from './drishti_subscription.js';
@@ -34,7 +35,21 @@ export { OVERFLOW_RULES, HIDDEN_DELIVERY_MS, Conflater, GridSink } from './drish
 export { OUTBOX_DEFAULTS, Outbox, memoryStore, indexedDbStore } from './drishti_outbox.js';
 export { TABS_VERSION, TabsScope, Leader } from './drishti_tabs.js';
 export { HUB_TIMING, HubHost, HubClient, serveSharedWorker, workerAddress } from './drishti_shared-hub.js';
-export { MockTabs } from './drishti_mock.js';
+
+/** @private the mock servers of this page by address (connect('mock:') finds one) */
+const MOCKS = new Map();
+
+/**
+ * Registers (or, with null, forgets) the mock server answering an address such as 'mock:' (the mock part calls this).
+ * @param {string} address
+ * @param {?Object} server a MockServer, or null
+ * @param {Object} [only] with null: forget the address only while it still names this server
+ * @returns {void}
+ */
+export function registerMock(address, server, only) {
+  if (server) { MOCKS.set(address, server); return; }
+  if (!only || MOCKS.get(address) === only) { MOCKS.delete(address); }
+}
 
 /**
  * Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.
@@ -57,6 +72,12 @@ export function connect(url, options) {
   let address = url, o = options;
   if (url && typeof url === 'object' && typeof url.transport !== 'function' && options === undefined) { o = url; address = undefined; }
   if (address === undefined || address === null || address === '') { address = eventsEndpoint() || null; }
+  if (typeof address === 'string' && address.slice(0, 5) === 'mock:') {
+    const server = MOCKS.get(address);
+    if (!server) { throw new EventError('mock.missing', 'no mock server answers ' + address + ': load drishti_events-mock.js and make one (new MockServer())'); }
+    o = Object.assign({ hubKey: address }, o);
+    address = server;
+  }
   const events = create(o);
   if (address) {
     try {

@@ -129,6 +129,10 @@
           "file": "drishti_events-worker.js",
           "entry": "src/drishti_events-worker.js",
           "worker": true
+        },
+        "mock": {
+          "file": "drishti_events-mock.js",
+          "entry": "src/drishti_mock.js"
         }
       }
     }

@@ -152,7 +152,12 @@ class ConnectionSequencer {
   subscribed(sub, f) {
     const s = this.conn.subs.get(Number(f.id)) || this.conn.subs.get(f.id);
     if (s && !s.streams) { s.streams = f.streams || {}; }
+    const gone = [];
+    if (f.recovered === false && s && s.after) {                     // streams asked for that the server no longer names: start again
+      Object.keys(s.after).forEach((k) => { if (!f.streams || !Object.prototype.hasOwnProperty.call(f.streams, k)) { this.seq.forgetStream(k); gone.push(k); } });
+    }
     this.seq.resumed(f.streams || {}, f.recovered !== false);
+    if (gone.length) { this._resync(gone, 'unrecovered'); }
   }
 
   gap(f) {
@@ -697,7 +702,8 @@ export class Connection {
       if (every) { f.conflate.everyMs = every; }
     }
     const after = this.sequencer && o.from !== 'now' ? this.sequencer.after(s.sub, s) : undefined;
-    if (after && Object.keys(after).length) { f.after = after; }
+    s.after = after && Object.keys(after).length ? after : null;
+    if (s.after) { f.after = after; }
     return f;
   }
 

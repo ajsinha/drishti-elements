@@ -19730,6 +19730,16 @@ Takes positions heard elsewhere (the tabs of a shared hub that took over): a str
 
 Returns `number`: how many streams were taken.
 
+##### `Sequencer.forgetStream(name)`
+
+Forgets one stream (the server no longer knows it: a restart that lost the log); its next message starts it again.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `void`.
+
 ##### `Sequencer.reset()`
 
 Forgets the numbering (a new session with no resume): positions are empty, held messages are dropped.
@@ -20249,6 +20259,47 @@ The address of the hub's worker file: the option, else beside the loaded bundle.
 
 Returns `?string`.
 
+### drishti_index.js
+
+#### `registerMock(address, server, only)`
+
+Registers (or, with null, forgets) the mock server answering an address such as 'mock:' (the mock part calls this).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `address` | `string` |  |
+| `server` | `?Object` | a MockServer, or null |
+| `[only]` | `Object` | with null: forget the address only while it still names this server |
+
+Returns `void`.
+
+#### `segment(text)`
+
+Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+#### `connect(url, options)`
+
+An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no configured events endpoint, the page and its tabs only. With share: true (and a namespace) the application's tabs share one connection: a SharedWorker holds it, else the leader tab, else each tab connects for itself. Nothing has to be awaited: subscriptions are sent when the connection opens, publishes wait for it, and every reconnect restores both.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[url]` | `(string\|function(): string\|Object)` | the server's address, a function asked at every connect, or a provider with transport(context) (the mock server); default the endpoint configure({ endpoints: { events } }) names |
+| `[options]` | `(import('./drishti_events-hub.js').EventsOptions\|import('./drishti_connection.js').ConnectOptions)` |  |
+
+Returns `import('./drishti_events-hub.js').Events`.
+
+### drishti_events-worker.js
+
+#### `IN_SHARED_WORKER`
+
+Whether this script runs as a SharedWorker (it has onconnect and no document).
+
 ### drishti_mock.js
 
 #### class `MockTabs`
@@ -20291,28 +20342,152 @@ Closes a tab: its channels and ports close, its locks are released (the next tab
 
 Returns `void`.
 
-### drishti_index.js
+#### `MOCK_CAN`
 
-#### `segment(text)`
+What a MockServer offers in its welcome.
 
-Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.
+#### class `MockServer`
 
-| Parameter | Type | Meaning |
-|---|---|---|
-| `text` | `string` |  |
+An in-page server that speaks the events protocol, version 1, for tests and demos.
 
-Returns `string`.
-
-#### `connect(url, options)`
-
-An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no configured events endpoint, the page and its tabs only. With share: true (and a namespace) the application's tabs share one connection: a SharedWorker holds it, else the leader tab, else each tab connects for itself. Nothing has to be awaited: subscriptions are sent when the connection opens, publishes wait for it, and every reconnect restores both.
+##### `new MockServer(o)`
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `[url]` | `(string\|function(): string\|Object)` | the server's address, a function asked at every connect, or a provider with transport(context) (the mock server); default the endpoint configure({ endpoints: { events } }) names |
-| `[options]` | `(import('./drishti_events-hub.js').EventsOptions\|import('./drishti_connection.js').ConnectOptions)` |  |
+| `[o]` | `MockServerOptions` |  |
 
-Returns `import('./drishti_events-hub.js').Events`.
+##### `MockServer.transport(ctx)`
+
+The transport the client's connection uses (connect(server) calls it for every attempt).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ctx` | `Object` | the connection's transport context (onOpen, onText, onClose) |
+
+Returns `{kind: string, send: function(Object[]): Promise&lt;void&gt;, close: function(number): void, bufferedAmount: function(): number}`.
+
+##### `MockServer.publish(topic, data, o)`
+
+Publishes a message to every connection subscribed to a matching pattern (numbered in its stream, retained, logged).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[o]` | `{key: string, kind: string, stream: string, meta: Object, id: string, source: string, retain: boolean}` |  |
+
+Returns `Object`: the msg frame.
+
+##### `MockServer.reply(pattern, fn)`
+
+Answers requests on a topic or pattern.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `fn` | `function({topic: string, data: *, id: string, signal: AbortSignal}): *` | what it returns is the answer; what it throws, the error |
+
+Returns `function(): void`: stops answering.
+
+##### `MockServer.every(ms, fn)`
+
+Runs fn every ms on the server's clock (a ticker).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+| `fn` | `function(): void` |  |
+
+Returns `function(): void`: stops it.
+
+##### `MockServer.drop()`
+
+Drops every connection (as a network would: close 1006).
+
+Returns `void`.
+
+##### `MockServer.partition(ms)`
+
+Drops every connection and refuses new ones for ms.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.lose(n)`
+
+The next n messages published are not sent (their numbers are used: the clients see a gap).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.duplicate(n)`
+
+The next n messages are sent twice.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.delay(ms)`
+
+Every frame, both ways, takes ms (0 to stop).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.reorder(n)`
+
+The next n messages are held and sent in reverse order.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.refuse(what, pattern)`
+
+Refuses connections: 'auth' (close 4401: the client asks auth once more), 'forbidden' (4403: it stops), or null to accept again; a pattern for 'subscribe' refuses subscriptions it covers; 'publish' makes the server read only.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `what` | `(?string)` | 'auth', 'forbidden', 'publish', null |
+| `[pattern]` | `string` | with 'subscribe': which patterns |
+
+Returns `void`.
+
+##### `MockServer.restart()`
+
+Restarts: a new epoch (the numbering starts again), the log, the retained values and the sessions forgotten, every connection dropped.
+
+Returns `void`.
+
+##### `MockServer.slow(n)`
+
+The next n messages are dropped for every client as a slow client's would be; then a gap frame says so.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[n=5]` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.close()`
+
+Stops every timer and connection; the address is free again.
+
+Returns `void`.
 
 ### Types of drishti-events
 
@@ -20463,6 +20638,21 @@ The options of a grid sink.
 | `[maxInFlight=1]` | `number` | batches in the grid's applyTransactionAsync at once |
 | `[highWater=10000]` | `number` | pending rows past which the sink says it is behind |
 | `[onStats]` | `function(Object): void` | the counts after each batch (received, applied, coalesced, batches, maxQueue, behind, pending) |
+
+#### `MockServerOptions` : `Object`
+
+The options of a MockServer.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[clock]` | `Object` | its timers (testClock in tests; default the system's) |
+| `[address='mock:']` | `string` | connect(address) finds it; null: not registered |
+| `[heartbeatMs=15000]` | `number` | said in welcome |
+| `[logSize=10000]` | `number` | the messages kept per stream for replay |
+| `[dedupeMs=120000]` | `number` | how long a publish's id is remembered |
+| `[auth]` | `function(?string): (boolean\|string)` | checks hello's token: true, or why not (closed with 4401) |
+| `[can]` | `string[]` | what welcome offers (default MOCK_CAN) |
+| `[name='mock']` | `string` | the source named on its messages |
 
 #### `OutboxStore` : `Object`
 

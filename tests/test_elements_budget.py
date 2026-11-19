@@ -50,7 +50,7 @@ def test_every_library_has_a_budget():
 
 
 # a library's parts (files beside its bundle, loaded only when needed): bytes
-PARTS = {"drishti-events/drishti_events-worker.js": 8_000}
+PARTS = {"drishti-events/drishti_events-worker.js": 8_000, "drishti-events/drishti_events-mock.js": 26_000}
 
 
 @pytest.mark.parametrize("part,budget", sorted(PARTS.items()))

@@ -89,7 +89,7 @@ export class Sequencer {
     this.stats.received++;
     this.touch(m);
     const stream = m.stream || m.topic;
-    if (typeof m.seq !== 'number') { return this.noSeq(m); }
+    if (typeof m.seq !== 'number' || m.retained) { return this.noSeq(m); }        // a retained value is a snapshot from before the position
     const s = this.state(stream);
     s.at = this.clock.now();
     if (s.last === null) { s.last = m.seq; return [m]; }                                         // the first heard: where the stream begins for us
@@ -231,6 +231,18 @@ export class Sequencer {
       n++;
     });
     return n;
+  }
+
+  /**
+   * Forgets one stream (the server no longer knows it: a restart that lost the log); its next message starts it again.
+   * @param {string} name
+   * @returns {void}
+   */
+  forgetStream(name) {
+    const s = this.streams.get(name);
+    if (!s) { return; }
+    this.stopTimer(s);
+    this.streams.delete(name);
   }
 
   /**
