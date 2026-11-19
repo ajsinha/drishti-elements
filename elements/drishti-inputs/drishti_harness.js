@@ -174,7 +174,7 @@
     backoff: { baseMs: 40, maxMs: 200, jitter: false } });
   const state = document.getElementById('hx-live-state'), stats = document.getElementById('hx-live-stats');
   H.client.on('$events.state', (m) => { const s = m.data; state.textContent = s.state + (s.waitMs ? ' (again in ' + s.waitMs + ' ms)' : ''); H.live.states = (H.live.states || []).concat([s.state]); });
-  H.pipe = D.pipeToGrid(H.client.subscribe('feed'), H.liveGrid, { getRowId: (r) => r.ID, onStats: (s) => { H.live.stats = s; stats.textContent = s.received + ' received · ' + s.applied + ' applied · ' + s.coalesced + ' folded · ' + s.batches + ' batches'; } });
+  H.pipe = H.client.subscribe('feed').toGrid(H.liveGrid, { getRowId: (r) => r.ID, onStats: (s) => { H.live.stats = s; stats.textContent = s.received + ' received · ' + s.applied + ' applied · ' + s.coalesced + ' folded · ' + s.batches + ' batches'; } });
 
   /* ---- Arrow: the fixture the test serves (Flight over HTTP when the stand-in capabilities say so) -------------------------------- */
   H.readArrow = (flight) => {

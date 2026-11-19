@@ -14,10 +14,9 @@
  * See the LICENSE file in the root of this repository.
  */
 /* drishti-data: data for grids and charts, with no Drishti server needed (it talks to any). One data-source contract both share (in
-   memory, REST pages, server-side rows, Arrow, live: a live source takes any feed, a drishti-events subscription among them);
-   backpressure into the grid's applyTransactionAsync; the Arrow client (Flight over HTTP where a server offers it, else Arrow over HTTP,
-   else JSON) with rows as views over the columns. Connections to a server (WebSocket, Server-Sent Events) are drishti-events'. */
-export { TransactionSink, pipeToGrid } from './drishti_backpressure.js';
+   memory, REST pages, server-side rows, Arrow, live: a live source takes any feed, a drishti-events subscription among them); the
+   Arrow client (Flight over HTTP where a server offers it, else Arrow over HTTP,
+   else JSON) with rows as views over the columns. Connections to a server (WebSocket, Server-Sent Events) and backpressure into a grid are drishti-events'. */
 export { ARROW_MEDIA, ARROW_VENDOR, arrowLib, readColumn, DataFrame, fromArrow, fromArrowTable, fromJson, readResponse, fetchFrame, ArrowClient } from './drishti_arrow.js';
 export { binCounts } from './drishti_data-compute.js';
 export { DATA_WORKER, frameFromWorker, DataWorker } from './drishti_data-worker-client.js';

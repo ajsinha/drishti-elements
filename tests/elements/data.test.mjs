@@ -13,8 +13,7 @@
  *
  * See the LICENSE file in the root of this repository.
  */
-/* drishti-data under Node: backpressure (a grid never queues more than it draws, the last state of each row reaches it), the data
-   sources (in memory, REST, readAll for a chart) and the Arrow client against the vendored Arrow JS
+/* drishti-data under Node: the data sources (in memory, REST, readAll for a chart) and the Arrow client against the vendored Arrow JS
    (columns read without a copy, types, JSON the same, Flight over HTTP when offered). */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,53 +24,6 @@ import * as G from '../../elements/drishti-grid/src/drishti_index.js';
 const require = createRequire(import.meta.url);
 const Arrow = require('../../vendor/apache-arrow/21.1.0/Arrow.es2015.min.js');
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 0));
-
-test('backpressure: one batch in the grid at a time, the rest folded by row id; adds, updates and removes fold right; rows replace', async () => {
-  const applied = [];
-  let release = null;
-  const target = { applyTransactionAsync: (tx) => { applied.push(JSON.parse(JSON.stringify(tx))); return new Promise((r) => { release = r; }); }, setRows: (rows) => applied.push({ rows: rows.length }), dataChanged: (n) => applied.push({ notice: n.purge }) };
-  const sink = new D.TransactionSink(target, { getRowId: (r) => r.id });
-  sink.push({ type: 'transaction', update: [{ id: 'A', v: 1 }] });
-  assert.equal(applied.length, 1);
-  for (let i = 2; i <= 1000; i++) { sink.push({ type: 'transaction', update: [{ id: 'A', v: i }, { id: 'B', v: i }] }); }
-  sink.push({ type: 'transaction', add: [{ id: 'C', v: 1 }] });
-  sink.push({ type: 'transaction', remove: ['C'] });                          // added and removed while waiting: nothing
-  sink.push({ type: 'transaction', remove: ['B'] });                          // updated then removed: a remove
-  sink.push({ type: 'dataChanged', purge: true });
-  assert.equal(applied.length, 1);                                            // the grid is still busy
-  release();
-  await tick(5);
-  assert.deepEqual(applied[1], { add: [], update: [{ id: 'A', v: 1000 }], remove: ['B'] });
-  release();
-  await tick(5);
-  assert.deepEqual(applied[2], { notice: true });                             // the notice after the rows
-  assert.equal(sink.stats.received, 2002);
-  assert.ok(sink.stats.coalesced >= 1998);
-  assert.equal(sink.stats.batches, 2);
-  sink.push({ type: 'rows', rows: [{ id: 'Z' }] });
-  assert.deepEqual(applied[3], { rows: 1 });
-  assert.throws(() => new D.TransactionSink({}), /applyTransactionAsync/);
-});
-
-test('backpressure into a real grid model: a burst of ticks arrives as the last value of each row', async () => {
-  const g = G.createGridModel({ columns: [{ field: 'id' }, { field: 'px', type: 'number' }], rows: [{ id: 'A', px: 0 }, { id: 'B', px: 0 }], live: { asyncWaitMs: 2 } });
-  const feed = { subs: [], subscribe(fn) { this.subs.push(fn); return () => {}; }, push(m) { this.subs.forEach((f) => f(m)); } };
-  const p = D.pipeToGrid(feed, g, { getRowId: (r) => r.id });
-  for (let i = 1; i <= 5000; i++) { feed.push({ type: 'transaction', update: [{ id: i % 2 ? 'A' : 'B', px: i }] }); }
-  await p.sink.drained();
-  assert.equal(g.rowModel.getRowById('A').px, 4999);
-  assert.equal(g.rowModel.getRowById('B').px, 5000);
-  assert.ok(p.sink.stats.batches <= 3, 'batches ' + p.sink.stats.batches);
-});
-
-class FakeES extends EventTarget {
-  constructor(url) { super(); this.url = url; this.readyState = 0; FakeES.all.push(this); }
-  open() { this.readyState = 1; this.dispatchEvent(new Event('open')); }
-  push(data, id) { const e = new Event('message'); e.data = JSON.stringify(data); e.lastEventId = id === undefined ? '' : String(id); this.dispatchEvent(e); }
-  fail() { this.readyState = 2; this.dispatchEvent(new Event('error')); }
-  close() { this.readyState = 2; this.closed = true; }
-}
-FakeES.all = [];
 
 test('data sources: in memory (filter, sort, groups, windows), REST by POST and by GET, readAll for a chart, a live source', async () => {
   const rows = Array.from({ length: 250 }, (_, i) => ({ id: 'T' + i, desk: ['Rates', 'FX', 'Credit'][i % 3], mtm: (i % 7) - 3 }));
@@ -154,5 +106,5 @@ test('Arrow: columns without a copy, types for a grid, row views, plain copies, 
 test('the bundle: drishti-data is a CommonJS module under Node with every name', () => {
   const B = require('../../elements/drishti-data/drishti_data.js');
   assert.equal(B.library, 'drishti-data');
-  ['TransactionSink', 'pipeToGrid', 'ArrowClient', 'DataFrame', 'memorySource', 'restSource', 'serverSideSource', 'arrowSource', 'liveSource', 'readAll'].forEach((n) => assert.equal(typeof B[n], 'function', n));
+  ['ArrowClient', 'DataFrame', 'memorySource', 'restSource', 'serverSideSource', 'arrowSource', 'liveSource', 'readAll'].forEach((n) => assert.equal(typeof B[n], 'function', n));
 });

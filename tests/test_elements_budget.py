@@ -26,7 +26,8 @@ CSS = Path(__file__).resolve().parent.parent / "css"
 # bytes; about 15% over the size when written (2026-11-16); raised the same day for the chart (more kinds, the world regions) and data (worker, feed monitor)
 BUNDLES = {"drishti-core": 180_000, "drishti-inputs": 290_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
            "drishti-data": 42_000, "drishti-chart": 275_000, "drishti-graph": 165_000,
-           "drishti-events": 110_000}  # drishti-events: the design's budget (EVENTING_DESIGN.md 9.1)
+           "drishti-events": 150_000}  # drishti-events: E2, E3 and E5 measured 108,000 with typed JSDoc (the design's 110,000 assumed
+#                                     less); raised for E4 and E6 (about 130,000); step 12 settles it (the mock may become its own file)
 SHEETS = {"drishti_states.css": 4_000, "drishti_command-palette.css": 5_000, "drishti_dock.css": 5_000, "drishti_chips.css": 5_000}
 
 

@@ -227,85 +227,6 @@
     }
     return { "ARROW_MEDIA": ARROW_MEDIA, "ARROW_VENDOR": ARROW_VENDOR, "arrowLib": arrowLib, "readColumn": readColumn, "DataFrame": DataFrame, "fromArrow": fromArrow, "fromArrowTable": fromArrowTable, "fromJson": fromJson, "readResponse": readResponse, "fetchFrame": fetchFrame, "ArrowClient": ArrowClient };
   })();
-  /* ---- src/drishti_backpressure.js ---- */
-  __m["src/drishti_backpressure.js"] = (function () {
-    class Pending {
-      constructor(getRowId) { this.getRowId = getRowId; this.map = new Map(); }
-      get size() { return this.map.size; }
-      add(row) { const id = this.getRowId(row), cur = this.map.get(id); this.map.set(id, { op: cur && cur.op === 'remove' ? 'update' : 'add', row: row }); return !!cur; }
-      update(row) { const id = this.getRowId(row), cur = this.map.get(id); this.map.set(id, { op: cur && cur.op === 'add' ? 'add' : 'update', row: row }); return !!cur; }
-      remove(id) { const cur = this.map.get(id); if (cur && cur.op === 'add') { this.map.delete(id); return true; } this.map.set(id, { op: 'remove', id: id }); return !!cur; }
-      take() {
-        const tx = { add: [], update: [], remove: [] };
-        this.map.forEach((x, id) => { if (x.op === 'remove') { tx.remove.push(id); } else { tx[x.op].push(x.row); } });
-        this.map.clear();
-        return tx;
-      }
-      clear() { this.map.clear(); }
-    }
-    class TransactionSink {
-      constructor(target, o) {
-        if (!target || typeof target.applyTransactionAsync !== 'function') { throw new Error('a transaction sink needs a target with applyTransactionAsync (a drishti-grid Grid)'); }
-        this.target = target;
-        this.o = Object.assign({ getRowId: (r) => String(r.id), maxInFlight: 1, highWater: 10000 }, o);
-        this.pending = new Pending((r) => String(this.o.getRowId(r)));
-        this.inFlight = 0;
-        this.after = [];
-        this.stats = { received: 0, applied: 0, coalesced: 0, batches: 0, maxQueue: 0, behind: false };
-        this.idle = [];
-      }
-      push(msg) {
-        if (!msg) { return; }
-        const t = msg.type || 'transaction';
-        if (t === 'rows') {
-          this.pending.clear();
-          this.after = [];
-          if (this.target.setRows) { this.target.setRows(msg.rows || []); }
-          this.report();
-          return;
-        }
-        if (t === 'dataChanged') { this.after.push(msg); this.pump(); return; }
-        if (t !== 'transaction') { return; }
-        let n = 0, folded = 0;
-        (msg.add || []).forEach((r) => { n++; if (this.pending.add(r)) { folded++; } });
-        (msg.update || []).forEach((r) => { n++; if (this.pending.update(r)) { folded++; } });
-        (msg.remove || []).forEach((id) => { n++; if (this.pending.remove(String(typeof id === 'object' ? this.o.getRowId(id) : id))) { folded++; } });
-        this.stats.received += n;
-        this.stats.coalesced += folded;
-        this.stats.maxQueue = Math.max(this.stats.maxQueue, this.pending.size);
-        this.stats.behind = this.pending.size > this.o.highWater;
-        this.pump();
-      }
-      pump() {
-        while (this.inFlight < this.o.maxInFlight && (this.pending.size || this.after.length)) {
-          if (!this.pending.size) {
-            const notice = this.after.shift();
-            if (this.target.dataChanged) { this.target.dataChanged(notice); }
-            continue;
-          }
-          const tx = this.pending.take(), rows = tx.add.length + tx.update.length + tx.remove.length;
-          this.inFlight++;
-          this.stats.batches++;
-          Promise.resolve(this.target.applyTransactionAsync(tx)).then(() => {
-            this.inFlight--;
-            this.stats.applied += rows;
-            this.stats.behind = this.pending.size > this.o.highWater;
-            this.report();
-            this.pump();
-          }, (err) => { this.inFlight--; this.report(err); this.pump(); });
-        }
-        if (!this.inFlight && !this.pending.size && !this.after.length) { const w = this.idle; this.idle = []; w.forEach((f) => f()); }
-      }
-      report(err) { if (this.o.onStats) { this.o.onStats(Object.assign({ pending: this.pending.size, inFlight: this.inFlight, error: err || null }, this.stats)); } }
-      drained() { return new Promise((resolve) => { this.idle.push(resolve); this.pump(); }); }
-    }
-    function pipeToGrid(feed, grid, o) {
-      const sink = new TransactionSink(grid, o);
-      const stop = feed.subscribe((m) => sink.push(m));
-      return { sink: sink, stop: stop };
-    }
-    return { "TransactionSink": TransactionSink, "pipeToGrid": pipeToGrid };
-  })();
   /* ---- src/drishti_data-compute.js ---- */
   __m["src/drishti_data-compute.js"] = (function () {
     function binCounts(values, o) {
@@ -557,7 +478,7 @@
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
 
-    return { "TransactionSink": __m["src/drishti_backpressure.js"].TransactionSink, "pipeToGrid": __m["src/drishti_backpressure.js"].pipeToGrid, "ARROW_MEDIA": __m["src/drishti_arrow.js"].ARROW_MEDIA, "ARROW_VENDOR": __m["src/drishti_arrow.js"].ARROW_VENDOR, "arrowLib": __m["src/drishti_arrow.js"].arrowLib, "readColumn": __m["src/drishti_arrow.js"].readColumn, "DataFrame": __m["src/drishti_arrow.js"].DataFrame, "fromArrow": __m["src/drishti_arrow.js"].fromArrow, "fromArrowTable": __m["src/drishti_arrow.js"].fromArrowTable, "fromJson": __m["src/drishti_arrow.js"].fromJson, "readResponse": __m["src/drishti_arrow.js"].readResponse, "fetchFrame": __m["src/drishti_arrow.js"].fetchFrame, "ArrowClient": __m["src/drishti_arrow.js"].ArrowClient, "binCounts": __m["src/drishti_data-compute.js"].binCounts, "DATA_WORKER": __m["src/drishti_data-worker-client.js"].DATA_WORKER, "frameFromWorker": __m["src/drishti_data-worker-client.js"].frameFromWorker, "DataWorker": __m["src/drishti_data-worker-client.js"].DataWorker, "FeedMonitor": __m["src/drishti_feed-monitor.js"].FeedMonitor, "feedBadge": __m["src/drishti_feed-monitor.js"].feedBadge, "rowRequest": __m["src/drishti_sources.js"].rowRequest, "memorySource": __m["src/drishti_sources.js"].memorySource, "restSource": __m["src/drishti_sources.js"].restSource, "serverSideSource": __m["src/drishti_sources.js"].serverSideSource, "arrowSource": __m["src/drishti_sources.js"].arrowSource, "liveSource": __m["src/drishti_sources.js"].liveSource, "readAll": __m["src/drishti_sources.js"].readAll };
+    return { "ARROW_MEDIA": __m["src/drishti_arrow.js"].ARROW_MEDIA, "ARROW_VENDOR": __m["src/drishti_arrow.js"].ARROW_VENDOR, "arrowLib": __m["src/drishti_arrow.js"].arrowLib, "readColumn": __m["src/drishti_arrow.js"].readColumn, "DataFrame": __m["src/drishti_arrow.js"].DataFrame, "fromArrow": __m["src/drishti_arrow.js"].fromArrow, "fromArrowTable": __m["src/drishti_arrow.js"].fromArrowTable, "fromJson": __m["src/drishti_arrow.js"].fromJson, "readResponse": __m["src/drishti_arrow.js"].readResponse, "fetchFrame": __m["src/drishti_arrow.js"].fetchFrame, "ArrowClient": __m["src/drishti_arrow.js"].ArrowClient, "binCounts": __m["src/drishti_data-compute.js"].binCounts, "DATA_WORKER": __m["src/drishti_data-worker-client.js"].DATA_WORKER, "frameFromWorker": __m["src/drishti_data-worker-client.js"].frameFromWorker, "DataWorker": __m["src/drishti_data-worker-client.js"].DataWorker, "FeedMonitor": __m["src/drishti_feed-monitor.js"].FeedMonitor, "feedBadge": __m["src/drishti_feed-monitor.js"].feedBadge, "rowRequest": __m["src/drishti_sources.js"].rowRequest, "memorySource": __m["src/drishti_sources.js"].memorySource, "restSource": __m["src/drishti_sources.js"].restSource, "serverSideSource": __m["src/drishti_sources.js"].serverSideSource, "arrowSource": __m["src/drishti_sources.js"].arrowSource, "liveSource": __m["src/drishti_sources.js"].liveSource, "readAll": __m["src/drishti_sources.js"].readAll };
   })();
   return Object.freeze(Object.assign({ library: "drishti-data", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

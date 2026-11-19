@@ -794,6 +794,11 @@ Where the build had to choose, or the API above changed, the choice and its reas
 | E3 | `EventSource` cannot see SSE comment lines: its heartbeat watch is on only when `heartbeatMs` is given | otherwise a quiet stream would be taken as dead every 67 s |
 | E3 | Raw mode's watchdog is `heartbeatMs` itself (not 1.5 times); raw over `EventSource` reads the event names in `events` (default `message`) | the behaviour of the deleted `LiveClient`, which raw mode replaces |
 | E3 | A sent request is not sent again after a reconnect (it fails on its timeout); an unacknowledged publish is (idempotent ids) | a request may have effects; a publish's id makes a second sending harmless |
+| E5 | `toGrid(grid, options)` answers `{ sink, stop }` (the sink's `stats` and `drained()`); its options are the folded `TransactionSink`'s (`getRowId`, `maxInFlight`, `highWater`, `onStats`) | the harness and the gallery read the counts; a test waits for `drained()` |
+| E5 | `buffer.overflow: 'conflate'` replaces a held message with the same key and otherwise drops the oldest; `'error'` drops the new message and publishes `limit.buffer` on `$events.error` | a full buffer of unkeyed messages has nothing to conflate |
+| E5 | `deliver: 'frame'` also arms a one-second timer: whichever comes first delivers | a page hidden after asking for a frame gets none |
+| E5 | Server-side conflation is asked with `conflate: { server: true }` (and `deliver.everyMs` as its pace), only when `welcome.can` has `conflate` | the design named the frame's field but not the option |
+| E5 | A page put away (or idle past `idleCloseMs`) is the state `closed` with `suspended: true`; publishes and requests wait for it to be shown again | one state list; a reload-free return sends what was made meanwhile |
 
 ---
 

@@ -220,7 +220,7 @@
     extra: [{ name: 'heartbeatMs', control: { kind: 'select', values: ['0', '2000'] }, desc: 'Silence allowed before the connection is taken as dead (0: no watch).' }],
     values: { heartbeatMs: '0' }, examples: [{ title: 'A manual feed into a grid', values: {} }],
     mount: function (host, values, ctx) {
-      const doc = host.ownerDocument, D = ctx.E.data, EV = ctx.E.events, h = ctx.h;
+      const doc = host.ownerDocument, EV = ctx.E.events, h = ctx.h;
       let es = null, n = 0;
       class ManualEventSource extends root.EventTarget {
         constructor(url) { super(); this.url = url; this.readyState = 0; es = this; setTimeout(() => { if (this.readyState !== 2) { this.readyState = 1; this.dispatchEvent(new root.Event('open')); } }, 5); }
@@ -241,10 +241,10 @@
       const client = EV.connect('/gallery/live/rows', { protocol: 'raw', transport: 'sse', env: { EventSource: ManualEventSource }, heartbeatMs: Number(values.heartbeatMs) || 0,
         backoff: { baseMs: 200, maxMs: 1000, jitter: false } });
       client.on('$events.state', (m) => { state.textContent = 'state: ' + m.data.state + (m.data.waitMs ? ' (again in ' + m.data.waitMs + ' ms)' : ''); ctx.log('state', m.data.state); });
-      const pipe = D.pipeToGrid(client.subscribe('feed'), g.grid, { getRowId: (r) => r.ID });
+      const pipe = client.subscribe('feed', null, { deliver: 'frame' }).toGrid(g.grid, { getRowId: (r) => r.ID });
       return { target: host, element: g, push: push, ready: Promise.resolve(), destroy: () => { pipe.stop(); client.destroy(); g.grid.destroy(); g.remove(); bar.remove(); } };
     },
-    code: () => ({ js: "import { connect } from '/elements/drishti-events/src/drishti_index.js';\nimport { pipeToGrid } from '/elements/drishti-data/src/drishti_index.js';\n\nconst events = connect('https://example.org/feed', { protocol: 'raw' });   // a server's own JSON over SSE; wss:// for a WebSocket\nevents.on('$events.state', (m) => console.log(m.data.state));\npipeToGrid(events.subscribe('feed'), grid, { getRowId: (r) => r.ID });" })
+    code: () => ({ js: "import { connect } from '/elements/drishti-events/src/drishti_index.js';\n\nconst events = connect('https://example.org/feed', { protocol: 'raw' });   // a server's own JSON over SSE; wss:// for a WebSocket\nevents.on('$events.state', (m) => console.log(m.data.state));\nevents.subscribe('feed', null, { deliver: 'frame' }).toGrid(grid, { getRowId: (r) => r.ID });   // at most one batch in the grid at a time" })
   }));
 
   demos.push(dataDemo({

@@ -513,6 +513,7 @@
     const CONNECTION_STATES = Object.freeze(['idle', 'connecting', 'open', 'reconnecting', 'offline', 'refused', 'closed']);
     const SECRET_PARAMS = Object.freeze(['token', 'access_token', 'jwt', 'key', 'apikey', 'secret', 'password', 'auth', 'signature']);
     const TRANSPORTS = { websocket: websocketTransport, sse: eventSourceTransport, fetch: fetchTransport };
+    const BUFFERED_LIMIT = 1048576;
     function checkAddress(url) {
       const at = String(url).indexOf('?');
       if (at < 0) { return url; }
@@ -559,17 +560,56 @@
         this.floorMs = 0;
         this.stopped = false;
         this.transport = null;
-        this.timers = { retry: null, ping: null, refresh: null, rescope: null };
+        this.timers = { retry: null, ping: null, refresh: null, rescope: null, pump: null, idle: null };
+        this.suspended = false;
         /** @type {Object} */ this.sequencer = null;
         this.stats = { connects: 0, reconnects: 0, openedAt: 0, connectedMs: 0, framesIn: 0, framesOut: 0, bytesIn: 0, unknown: 0, bad: 0,
           rtt: null, rtts: [], offset: null, published: 0, acked: 0, retried: 0, failed: 0 };
         this._onOnline = () => { if (this.state === 'offline' || this.state === 'reconnecting') { this._connectNow('connect'); } };
-        this._onVisible = () => { const d = this.env.document || (typeof document !== 'undefined' ? document : null); if (d && d.visibilityState === 'visible' && this.state === 'reconnecting') { this._connectNow('connect'); } };
-        if (this.win && this.win.addEventListener) { this.win.addEventListener('online', this._onOnline); }
-        const doc = this.env.document || (typeof document !== 'undefined' ? document : null);
-        if (doc && doc.addEventListener) { doc.addEventListener('visibilitychange', this._onVisible); }
+        this._onVisible = () => {
+          const d = this._doc();
+          if (!d) { return; }
+          if (d.visibilityState === 'hidden') {
+            if (this.o.idleCloseMs && this.timers.idle === null) { this.timers.idle = this.clock.setTimeout(() => { this.timers.idle = null; this._suspend('hidden for longer than ' + Math.round(this.o.idleCloseMs / 1000) + ' s'); }, this.o.idleCloseMs); }
+            return;
+          }
+          if (this.timers.idle !== null) { this.clock.clearTimeout(this.timers.idle); this.timers.idle = null; }
+          if (this.suspended) { this._wake(); } else if (this.state === 'reconnecting') { this._connectNow('connect'); }
+        };
+        this._onHide = () => this._suspend('the page was put away');
+        this._onShow = () => this._wake();
+        if (this.win && this.win.addEventListener) {
+          this.win.addEventListener('online', this._onOnline);
+          this.win.addEventListener('pagehide', this._onHide);
+          this.win.addEventListener('pageshow', this._onShow);
+        }
+        const doc = this._doc();
+        if (doc && doc.addEventListener) {
+          doc.addEventListener('visibilitychange', this._onVisible);
+          doc.addEventListener('freeze', this._onHide);
+          doc.addEventListener('resume', this._onShow);
+        }
         this.detach = events._attach('server', this);
         Promise.resolve().then(() => { if (this.state === 'idle' && !this.stopped) { this._connectNow('connect'); } });
+      }
+      _doc() { return this.env.document || (typeof document !== 'undefined' ? document : null); }
+      _suspend(reason) {
+        if (this.stopped || this.suspended || this.state === 'idle' || this.state === 'refused' || this.state === 'closed') { return; }
+        if (this.transport && this.state === 'open' && this.protocol === 1 && this.transport.kind === 'websocket') { this._send([{ t: 'bye' }]); }
+        this.suspended = true;
+        this.attempt++;
+        this.clock.clearTimeout(this.timers.retry);
+        this.timers.retry = null;
+        this._stopTimers();
+        this._teardown();
+        this.subs.forEach((s) => { s.held = false; });
+        this._setState('closed', { reason: reason, suspended: true });
+      }
+      _wake() {
+        if (!this.suspended) { return; }
+        this.suspended = false;
+        this.backoff.reset();
+        this._connectNow('connect');
       }
       _pickTransport() {
         const t = this.o.transport;
@@ -870,7 +910,7 @@
         if (this.transport) { const t = this.transport; this.transport = null; try { t.close(1000); } catch (e) { /* closed */ } }
       }
       _stopTimers() {
-        ['ping', 'refresh', 'rescope'].forEach((k) => { if (this.timers[k] !== null) { this.clock.clearTimeout(this.timers[k]); this.timers[k] = null; } });
+        ['ping', 'refresh', 'rescope', 'pump'].forEach((k) => { if (this.timers[k] !== null) { this.clock.clearTimeout(this.timers[k]); this.timers[k] = null; } });
       }
       _ping() {
         if (!this.transport || this.transport.kind !== 'websocket') { return; }
@@ -907,7 +947,11 @@
         const f = { t: 'sub', id: s.id, topic: s.sub.pattern };
         const o = s.sub.o;
         if (o.retained) { f.retained = true; }
-        if (o.conflate && o.conflate.server) { f.conflate = Object.assign({ key: true }, o.conflate.server); }
+        if (o.conflate && o.conflate.server && this.can.indexOf('conflate') >= 0) {
+          f.conflate = { key: true };
+          const every = (o.deliver && o.deliver.everyMs) || o.conflate.everyMs;
+          if (every) { f.conflate.everyMs = every; }
+        }
         const after = this.sequencer && o.from !== 'now' ? this.sequencer.after(s.sub, s) : undefined;
         if (after && Object.keys(after).length) { f.after = after; }
         return f;
@@ -961,21 +1005,32 @@
         this.stats.published++;
         return new Promise((resolve, reject) => {
           const entry = { frame: frame, resolve: resolve, reject: reject, sent: false };
-          if (this.state === 'open') {
+          if (this.state === 'open' && !this.queue.length && !this._congested()) {
             if (ack) { entry.sent = true; this.acks.set(m.id, entry); }
             this._send([frame]).then((ok) => { if (!ack) { if (ok) { resolve({ acked: false }); } else { reject(new EventError('not.connected', 'the message could not be sent')); } } });
             return;
           }
           if (o && o.queue === false) { reject(new EventError('not.connected', 'not connected (' + this.state + '), and the publish asked not to wait')); return; }
-          if (this.state === 'refused' || this.state === 'closed') { reject(new EventError('not.connected', 'the connection is ' + this.state)); return; }
+          if ((this.state === 'refused' || this.state === 'closed') && !this.suspended) { reject(new EventError('not.connected', 'the connection is ' + this.state)); return; }
           if (this.queue.length + this.acks.size >= this.events.limits.outboxMessages) {
             reject(new EventError('limit.outbox', this.events.limits.outboxMessages + ' messages wait already (the limit)'));
             return;
           }
           if (ack) { this.acks.set(m.id, entry); }
           this.queue.push({ frame: frame, ack: ack ? entry : null, resolve: resolve });
+          if (this.state === 'open') { this._schedulePump(); }
           if (o && o.signal) { o.signal.addEventListener('abort', () => this._unqueue(m.id, reject), { once: true }); }
         });
+      }
+      _congested() { return !!(this.transport && this.transport.bufferedAmount && this.transport.bufferedAmount() > BUFFERED_LIMIT); }
+      _schedulePump() {
+        if (this.timers.pump !== null) { return; }
+        this.timers.pump = this.clock.setTimeout(() => {
+          this.timers.pump = null;
+          if (this.state !== 'open') { return; }
+          if (this._congested()) { this._schedulePump(); return; }
+          this._resend();
+        }, 50);
       }
       _unqueue(id, reject) {
         const i = this.queue.findIndex((x) => x.frame.id === id);
@@ -986,7 +1041,7 @@
       }
       request(m, o) {
         if (this.protocol === 'raw') { return Promise.reject(new EventError('protocol', 'request and reply need the events protocol; this connection is raw')); }
-        if (this.state === 'refused' || this.state === 'closed') { return Promise.reject(new EventError('not.connected', 'the connection is ' + this.state)); }
+        if ((this.state === 'refused' || this.state === 'closed') && !this.suspended) { return Promise.reject(new EventError('not.connected', 'the connection is ' + this.state)); }
         const frame = { t: 'req', id: m.id, topic: m.topic, data: m.data, ttl: o.timeoutMs };
         if (m.kind !== undefined) { frame.kind = m.kind; }
         if (m.meta !== undefined) { frame.meta = m.meta; }
@@ -1031,6 +1086,7 @@
       close() {
         if (this.transport && this.state === 'open' && this.protocol === 1 && this.transport.kind === 'websocket') { this._send([{ t: 'bye' }]); }
         this.stopped = true;
+        this.suspended = false;
         this.attempt++;
         this.clock.clearTimeout(this.timers.retry);
         this.timers.retry = null;
@@ -1047,9 +1103,18 @@
         this.queue = [];
         this.reqs.forEach((r) => r.reject(gone));
         this.reqs.clear();
-        if (this.win && this.win.removeEventListener) { this.win.removeEventListener('online', this._onOnline); }
-        const doc = this.env.document || (typeof document !== 'undefined' ? document : null);
-        if (doc && doc.removeEventListener) { doc.removeEventListener('visibilitychange', this._onVisible); }
+        if (this.timers.idle !== null) { this.clock.clearTimeout(this.timers.idle); this.timers.idle = null; }
+        if (this.win && this.win.removeEventListener) {
+          this.win.removeEventListener('online', this._onOnline);
+          this.win.removeEventListener('pagehide', this._onHide);
+          this.win.removeEventListener('pageshow', this._onShow);
+        }
+        const doc = this._doc();
+        if (doc && doc.removeEventListener) {
+          doc.removeEventListener('visibilitychange', this._onVisible);
+          doc.removeEventListener('freeze', this._onHide);
+          doc.removeEventListener('resume', this._onShow);
+        }
       }
       metrics() {
         const r = this.stats.rtts.slice().sort((a, b) => a - b);
@@ -1071,19 +1136,196 @@
       return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
     function eventsEndpoint() { return endpoint('events'); }
-    return { "CONNECTION_STATES": CONNECTION_STATES, "SECRET_PARAMS": SECRET_PARAMS, "checkAddress": checkAddress, "Connection": Connection, "base64url": base64url, "eventsEndpoint": eventsEndpoint };
+    return { "CONNECTION_STATES": CONNECTION_STATES, "SECRET_PARAMS": SECRET_PARAMS, "BUFFERED_LIMIT": BUFFERED_LIMIT, "checkAddress": checkAddress, "Connection": Connection, "base64url": base64url, "eventsEndpoint": eventsEndpoint };
   })();
   /* ---- src/drishti_flow.js ---- */
   __m["src/drishti_flow.js"] = (function () {
-    function createFlow(sub, o, events) {
-      return { push: (m) => sub._deliver(o.batch ? [m] : m), stop: () => undefined, events: events };
+    var EventError = __m["src/drishti_envelope.js"].EventError;
+    const OVERFLOW_RULES = Object.freeze(['conflate', 'drop-oldest', 'drop-newest', 'error']);
+    const HIDDEN_DELIVERY_MS = 1000;
+    class Conflater {
+      constructor(o) {
+        this.o = Object.assign({ max: 10000, overflow: 'conflate' }, o);
+        if (OVERFLOW_RULES.indexOf(this.o.overflow) < 0) { throw new EventError('buffer.invalid', 'an overflow rule is one of ' + OVERFLOW_RULES.join(', ') + '; got ' + this.o.overflow); }
+        this.keyOf = keyFunction(this.o.key);
+        /** @private */ this.held = new Map();
+        /** @private */ this.n = 0;
+      }
+      get size() { return this.held.size; }
+      push(m) {
+        const k = this.keyOf ? this.keyOf(m) : null;
+        const slot = k === null || k === undefined ? 'u' + (this.n++) : 'k' + k;
+        const old = this.held.get(slot);
+        if (old) {
+          this.held.set(slot, this.o.merge ? this.o.merge(old, m) : m);
+          this.drop(old, 'conflated');
+          return true;
+        }
+        if (this.held.size >= this.o.max) {
+          const rule = this.o.overflow;
+          if (rule === 'drop-newest' || rule === 'error') { this.drop(m, 'overflow'); return false; }
+          const first = this.held.keys().next().value;
+          const gone = this.held.get(first);
+          this.held.delete(first);
+          this.drop(gone, 'overflow');
+        }
+        this.held.set(slot, m);
+        return true;
+      }
+      take() {
+        const out = Array.from(this.held.values());
+        this.held.clear();
+        return out;
+      }
+      clear() { this.held.clear(); }
+      drop(m, why) { if (this.o.onDrop) { this.o.onDrop(m, why); } }
     }
-    return { "createFlow": createFlow };
+    function keyFunction(key) {
+      if (typeof key === 'function') { return (m) => { const k = key(m); return k === undefined || k === null ? null : String(k); }; }
+      if (typeof key === 'string' && key) {
+        return (m) => {
+          const v = m[key] !== undefined ? m[key] : (m.data && typeof m.data === 'object' ? m.data[key] : undefined);
+          return v === undefined || v === null ? null : String(v);
+        };
+      }
+      return (m) => (m.key === undefined || m.key === null ? null : String(m.key));
+    }
+    class Flow {
+      constructor(sub, o, events) {
+        this.sub = sub;
+        this.events = events;
+        this.clock = events.clock;
+        const d = o.deliver || 'now';
+        this.mode = d === 'frame' ? 'frame' : (d && typeof d === 'object' && d.everyMs > 0) ? 'every' : 'now';
+        if (d !== 'now' && d !== 'frame' && this.mode === 'now') { throw new EventError('deliver.invalid', "deliver is 'now', 'frame' or { everyMs }"); }
+        this.everyMs = this.mode === 'every' ? Number(d.everyMs) : 0;
+        this.batch = !!o.batch;
+        const buf = Object.assign({ max: events.limits.undelivered, overflow: 'conflate' }, o.buffer);
+        const c = o.conflate;
+        this.conflating = !!c;
+        this.q = new Conflater({ key: c ? (c === true ? undefined : c.key) : () => null, merge: c && c.merge, max: buf.max, overflow: buf.overflow,
+          onDrop: (m, why) => {
+            events._drop(why, m, sub, why === 'conflated' ? 'Conflated: replaced by a later message with the same key' : 'Dropped: the buffer was full (' + buf.max + '), rule ' + buf.overflow);
+            if (why === 'overflow' && buf.overflow === 'error') { events._error(new EventError('limit.buffer', 'the subscription to ' + sub.pattern + ' holds ' + buf.max + ' undelivered messages'), { pattern: sub.pattern, where: 'buffer' }); }
+          } });
+        this.direct = this.mode === 'now' && !this.conflating;
+        this.frame = null;
+        this.timer = null;
+        this.last = 0;
+        this.stopped = false;
+      }
+      push(m) {
+        if (this.stopped) { return; }
+        if (this.direct) { this.sub._deliver(this.batch ? [m] : m); return; }
+        this.q.push(m);
+        if (this.mode === 'now') { this.drain(); return; }
+        this.schedule();
+      }
+      schedule() {
+        if (this.mode === 'frame') {
+          if (this.frame === null && !this.clock.hidden()) { this.frame = this.clock.requestFrame(() => { this.frame = null; this.drain(); }); }
+          if (this.timer === null) { this.timer = this.clock.setTimeout(() => { this.timer = null; this.drain(); }, HIDDEN_DELIVERY_MS); }
+          return;
+        }
+        if (this.timer === null) {
+          const wait = this.clock.hidden() ? Math.max(this.everyMs, HIDDEN_DELIVERY_MS) : Math.max(0, this.everyMs - (this.clock.now() - this.last));
+          this.timer = this.clock.setTimeout(() => { this.timer = null; this.drain(); }, wait);
+        }
+      }
+      drain() {
+        if (this.frame !== null) { this.clock.cancelFrame(this.frame); this.frame = null; }
+        if (this.timer !== null) { this.clock.clearTimeout(this.timer); this.timer = null; }
+        this.last = this.clock.now();
+        const out = this.q.take();
+        if (!out.length || this.stopped) { return 0; }
+        if (this.batch) { this.sub._deliver(out); } else { out.forEach((m) => this.sub._deliver(m)); }
+        return out.length;
+      }
+      get size() { return this.q.size; }
+      stop() {
+        this.stopped = true;
+        if (this.frame !== null) { this.clock.cancelFrame(this.frame); this.frame = null; }
+        if (this.timer !== null) { this.clock.clearTimeout(this.timer); this.timer = null; }
+        this.q.clear();
+      }
+    }
+    function createFlow(sub, o, events) { return new Flow(sub, o, events); }
+    class Pending {
+      constructor(getRowId) { this.getRowId = getRowId; this.map = new Map(); }
+      get size() { return this.map.size; }
+      add(row) { const id = this.getRowId(row), cur = this.map.get(id); this.map.set(id, { op: cur && cur.op === 'remove' ? 'update' : 'add', row: row }); return !!cur; }
+      update(row) { const id = this.getRowId(row), cur = this.map.get(id); this.map.set(id, { op: cur && cur.op === 'add' ? 'add' : 'update', row: row }); return !!cur; }
+      remove(id) { const cur = this.map.get(id); if (cur && cur.op === 'add') { this.map.delete(id); return true; } this.map.set(id, { op: 'remove', id: id }); return !!cur; }
+      take() {
+        const tx = { add: [], update: [], remove: [] };
+        this.map.forEach((x, id) => { if (x.op === 'remove') { tx.remove.push(id); } else { tx[x.op].push(x.row); } });
+        this.map.clear();
+        return tx;
+      }
+      clear() { this.map.clear(); }
+    }
+    class GridSink {
+      constructor(target, o) {
+        if (!target || typeof target.applyTransactionAsync !== 'function') { throw new EventError('grid.invalid', 'a grid sink needs a target with applyTransactionAsync (a drishti-grid Grid)'); }
+        this.target = target;
+        this.o = Object.assign({ getRowId: (r) => String(r.id), maxInFlight: 1, highWater: 10000 }, o);
+        this.pending = new Pending((r) => String(this.o.getRowId(r)));
+        this.inFlight = 0;
+        this.after = [];
+        this.stats = { received: 0, applied: 0, coalesced: 0, batches: 0, maxQueue: 0, behind: false };
+        this.idle = [];
+      }
+      push(msg) {
+        if (!msg) { return; }
+        const t = msg.type || 'transaction';
+        if (t === 'rows') {
+          this.pending.clear();
+          this.after = [];
+          if (this.target.setRows) { this.target.setRows(msg.rows || []); }
+          this.report();
+          return;
+        }
+        if (t === 'dataChanged') { this.after.push(msg); this.pump(); return; }
+        if (t !== 'transaction') { return; }
+        let n = 0, folded = 0;
+        (msg.add || []).forEach((r) => { n++; if (this.pending.add(r)) { folded++; } });
+        (msg.update || []).forEach((r) => { n++; if (this.pending.update(r)) { folded++; } });
+        (msg.remove || []).forEach((id) => { n++; if (this.pending.remove(String(typeof id === 'object' ? this.o.getRowId(id) : id))) { folded++; } });
+        this.stats.received += n;
+        this.stats.coalesced += folded;
+        this.stats.maxQueue = Math.max(this.stats.maxQueue, this.pending.size);
+        this.stats.behind = this.pending.size > this.o.highWater;
+        this.pump();
+      }
+      pump() {
+        while (this.inFlight < this.o.maxInFlight && (this.pending.size || this.after.length)) {
+          if (!this.pending.size) {
+            const notice = this.after.shift();
+            if (this.target.dataChanged) { this.target.dataChanged(notice); }
+            continue;
+          }
+          const tx = this.pending.take(), rows = tx.add.length + tx.update.length + tx.remove.length;
+          this.inFlight++;
+          this.stats.batches++;
+          Promise.resolve(this.target.applyTransactionAsync(tx)).then(() => {
+            this.inFlight--;
+            this.stats.applied += rows;
+            this.stats.behind = this.pending.size > this.o.highWater;
+            this.report();
+            this.pump();
+          }, (err) => { this.inFlight--; this.report(err); this.pump(); });
+        }
+        if (!this.inFlight && !this.pending.size && !this.after.length) { const w = this.idle; this.idle = []; w.forEach((f) => f()); }
+      }
+      report(err) { if (this.o.onStats) { this.o.onStats(Object.assign({ pending: this.pending.size, inFlight: this.inFlight, error: err || null }, this.stats)); } }
+      drained() { return new Promise((resolve) => { this.idle.push(resolve); this.pump(); }); }
+    }
+    return { "OVERFLOW_RULES": OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": HIDDEN_DELIVERY_MS, "Conflater": Conflater, "Flow": Flow, "createFlow": createFlow, "GridSink": GridSink };
   })();
   /* ---- src/drishti_subscription.js ---- */
   __m["src/drishti_subscription.js"] = (function () {
     var EventError = __m["src/drishti_envelope.js"].EventError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isMessage = __m["src/drishti_envelope.js"].isMessage, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic;
-    var createFlow = __m["src/drishti_flow.js"].createFlow;
+    var createFlow = __m["src/drishti_flow.js"].createFlow, GridSink = __m["src/drishti_flow.js"].GridSink;
     const SUBSCRIPTION_STATES = Object.freeze(['pending', 'active', 'recovering', 'refused', 'closed']);
     class Subscription {
       constructor(events, pattern, fn, o) {
@@ -1210,6 +1452,12 @@
           if (f) { f(m.data, m); }
         }));
       }
+      toGrid(grid, o) {
+        const sink = new GridSink(grid, o);
+        const stop = this.subscribe((data) => sink.push(data));
+        return { sink: sink, stop: stop };
+      }
+      get undelivered() { return this._flow.size; }
       _add(f) {
         this._fns.push(f);
         return () => { const i = this._fns.indexOf(f); if (i >= 0) { this._fns.splice(i, 1); } };
@@ -1623,7 +1871,7 @@
       }
       return events;
     }
-    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse };
+    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink };
   })();
   return Object.freeze(Object.assign({ library: "drishti-events", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

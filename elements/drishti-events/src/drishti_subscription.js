@@ -18,7 +18,7 @@
    flow (conflation, the buffer, delivery now or per frame) and finally the listeners: the function given, feeds (subscribe(fn): the data,
    so a grid's connectLive and liveSource take a subscription as a feed), handlers by kind, and async iterators. */
 import { EventError, AbortError, makeMessage, isMessage, isOwnTopic } from './drishti_envelope.js';
-import { createFlow } from './drishti_flow.js';
+import { createFlow, GridSink } from './drishti_flow.js';
 
 /** A subscription's states. */
 export const SUBSCRIPTION_STATES = Object.freeze(['pending', 'active', 'recovering', 'refused', 'closed']);
@@ -220,6 +220,25 @@ export class Subscription {
       if (f) { f(m.data, m); }
     }));
   }
+
+  /**
+   * Feeds a grid with backpressure: the flow ends in the grid's applyTransactionAsync with at most one batch in flight, everything that
+   * arrives meanwhile folded by row id (each message's data: a transaction, every row, or a data-changed notice).
+   * @param {Object} grid a drishti-grid Grid or GridModel (anything with applyTransactionAsync)
+   * @param {import('./drishti_flow.js').GridSinkOptions} [o] getRowId, maxInFlight, highWater, onStats
+   * @returns {{sink: GridSink, stop: function(): void}} stop: the grid hears no more
+   */
+  toGrid(grid, o) {
+    const sink = new GridSink(grid, o);
+    const stop = this.subscribe((data) => sink.push(data));
+    return { sink: sink, stop: stop };
+  }
+
+  /**
+   * How many messages wait in the flow (conflated, held for a frame or a tick).
+   * @type {number}
+   */
+  get undelivered() { return this._flow.size; }
 
   /** @private */
   _add(f) {

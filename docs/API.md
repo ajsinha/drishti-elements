@@ -14776,47 +14776,6 @@ One of the header's actions.
 
 Bundle `elements/drishti-data/drishti_data.js`, global `Drishti.elements.data`; requires drishti-core.
 
-### drishti_backpressure.js
-
-#### class `TransactionSink`
-
-Feeds a grid from a live feed with backpressure.
-
-##### `new TransactionSink(target, o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `target` | `{applyTransactionAsync: function(Object): Promise, setRows: function(Object[]): void, dataChanged: function(Object): void}` | a drishti-grid Grid or GridModel (or anything with those methods) |
-| `[o]` | `{getRowId: function(Object): string, maxInFlight: number, highWater: number, onStats: function(Object): void}` | getRowId default row.id; maxInFlight default 1; highWater: pending rows past which the sink says it is behind (default 10,000) |
-
-##### `TransactionSink.push(msg)`
-
-One message of the feed: {type: transaction, add, update, remove} \| {type: rows, rows} \| {type: dataChanged, ...}.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `msg` | `Object` |  |
-
-Returns `void`.
-
-##### `TransactionSink.drained()`
-
-Resolves when everything received has reached the grid.
-
-Returns `Promise&lt;void&gt;`.
-
-#### `pipeToGrid(feed, grid, o)`
-
-Wires a feed (a drishti-events subscription, or any {subscribe}) into a grid through a TransactionSink.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `feed` | `{subscribe: function(function(Object): void): function(): void}` |  |
-| `grid` | `Object` | a drishti-grid Grid or GridModel |
-| `[o]` | `{getRowId: function(Object): string, maxInFlight: number, highWater: number, onStats: function(Object): void}` |  |
-
-Returns `{sink: TransactionSink, stop: function(): void}`.
-
 ### drishti_arrow.js
 
 #### `ARROW_MEDIA`
@@ -18994,6 +18953,17 @@ Handlers by the message's kind ({ rows: fn, resync: fn, ... }; '*' hears the kin
 
 Returns `function(): void`: stops them.
 
+##### `Subscription.toGrid(grid, o)`
+
+Feeds a grid with backpressure: the flow ends in the grid's applyTransactionAsync with at most one batch in flight, everything that arrives meanwhile folded by row id (each message's data: a transaction, every row, or a data-changed notice).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `grid` | `Object` | a drishti-grid Grid or GridModel (anything with applyTransactionAsync) |
+| `[o]` | `import('./drishti_flow.js').GridSinkOptions` | getRowId, maxInFlight, highWater, onStats |
+
+Returns `{sink: GridSink, stop: function(): void}`: stop: the grid hears no more.
+
 ##### `Subscription.off()`
 
 Ends it: the listeners are stopped, a server is told, iterators end.
@@ -19407,6 +19377,75 @@ The events of a fetch answer that streams Server-Sent Events, as an async iterat
 
 Returns `AsyncIterable&lt;SseEvent&gt;`.
 
+### drishti_flow.js
+
+#### `OVERFLOW_RULES`
+
+The overflow rules of a buffer.
+
+#### `HIDDEN_DELIVERY_MS`
+
+How long a hidden page waits between deliveries (it has no animation frames).
+
+#### class `Conflater`
+
+The latest value by key: push messages, take what is held in arrival order (a later message with a held key takes the earlier one's place, or is merged into it). Bounded: past max the overflow rule applies.
+
+##### `new Conflater(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{key: (string\|function(Object): ?string), merge: function(Object, Object): Object, max: number, overflow: string, onDrop: function(Object, string): void}` | key: a field of the message ('key', 'topic'), else of its data, or a function (null: not conflated); default the message's key. max default 10,000; overflow default 'conflate' (a message whose key is held replaces it, else the oldest goes); onDrop hears each dropped message and its reason (conflated, overflow) |
+
+##### `Conflater.push(m)`
+
+Adds a message (it may replace a held one with its key, or be dropped by the overflow rule).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+
+Returns `boolean`: false: the message was refused (overflow 'error' or 'drop-newest').
+
+##### `Conflater.take()`
+
+Takes everything held, in arrival order.
+
+Returns `Object[]`.
+
+##### `Conflater.clear()`
+
+Forgets everything held.
+
+Returns `void`.
+
+#### class `GridSink`
+
+A grid fed with backpressure: at most maxInFlight batches in the grid, everything arriving meanwhile folded by row id. A message's data is {type: 'transaction', add, update, remove}, {type: 'rows', rows} or {type: 'dataChanged', ...}.
+
+##### `new GridSink(target, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `target` | `{applyTransactionAsync: function(Object): Promise, setRows: function(Object[]): void, dataChanged: function(Object): void}` | a drishti-grid Grid or GridModel (or anything with those methods) |
+| `[o]` | `GridSinkOptions` |  |
+
+##### `GridSink.push(msg)`
+
+One message's data: a transaction, every row, or a data-changed notice.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `msg` | `Object` |  |
+
+Returns `void`.
+
+##### `GridSink.drained()`
+
+Resolves when everything received has reached the grid.
+
+Returns `Promise&lt;void&gt;`.
+
 ### drishti_index.js
 
 #### `segment(text)`
@@ -19447,6 +19486,7 @@ The options of connect (with those of an Events: routes, clock, limits, signal, 
 | `[heartbeatMs]` | `number` | silence allowed before the connection is taken as dead (1.5 times this); default the server's figure from welcome, else 45,000; EventSource cannot see comment lines, so its watch is on only when this is given |
 | `[backoff]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean}` |  |
 | `[subprotocol='events.v1']` | `string` | the WebSocket sub-protocol's name |
+| `[idleCloseMs]` | `number` | a page hidden for longer than this gives its connection back and takes it again when shown (off by default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume) |
 | `[events]` | `string[]` | raw SSE: the event names that carry values (default every name for fetch, message for EventSource) |
 | `[topicOf]` | `function(*, Object): string` | raw: the topic of a value (default 'feed') |
 | `[seqOf]` | `function(*, Object): number` | raw |
@@ -19560,6 +19600,17 @@ The options of an Events.
 | `[limits]` | `Object&lt;string, number&gt;` | the ceilings (DEFAULT_LIMITS) |
 | `[signal]` | `AbortSignal` | ends the whole Events (a component's life) |
 | `[onError]` | `function(Error, Object): void` | also told of every error published on $events.error |
+
+#### `GridSinkOptions` : `Object`
+
+The options of a grid sink.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[getRowId]` | `function(Object): string` | default row.id |
+| `[maxInFlight=1]` | `number` | batches in the grid's applyTransactionAsync at once |
+| `[highWater=10000]` | `number` | pending rows past which the sink says it is behind |
+| `[onStats]` | `function(Object): void` | the counts after each batch (received, applied, coalesced, batches, maxQueue, behind, pending) |
 
 #### `RawMapping` : `Object`
 

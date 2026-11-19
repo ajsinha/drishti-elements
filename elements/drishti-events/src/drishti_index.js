@@ -28,6 +28,7 @@ export { systemClock, testClock, seededRandom, Backoff, Heartbeat } from './dris
 export { CONNECTION_STATES, SECRET_PARAMS, Connection, checkAddress, base64url } from './drishti_connection.js';
 export { PROTOCOL_VERSION, SUBPROTOCOL, CLIENT_FRAMES, SERVER_FRAMES, ERROR_CODES, CLOSE_CODES, encodeFrames, decodeFrames, checkFrame } from './drishti_protocol.js';
 export { parseSse, readSse } from './drishti_transport-sse.js';
+export { OVERFLOW_RULES, HIDDEN_DELIVERY_MS, Conflater, GridSink } from './drishti_flow.js';
 
 /**
  * Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.

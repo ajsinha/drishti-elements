@@ -46,6 +46,9 @@ export const SECRET_PARAMS = Object.freeze(['token', 'access_token', 'jwt', 'key
 
 const TRANSPORTS = { websocket: websocketTransport, sse: eventSourceTransport, fetch: fetchTransport };
 
+/** Publishing pauses while a WebSocket holds more than this many bytes unsent. */
+export const BUFFERED_LIMIT = 1048576;
+
 /**
  * The options of connect (with those of an Events: routes, clock, limits, signal, ...).
  * @typedef {Object} ConnectOptions
@@ -62,6 +65,8 @@ const TRANSPORTS = { websocket: websocketTransport, sse: eventSourceTransport, f
  *   from welcome, else 45,000; EventSource cannot see comment lines, so its watch is on only when this is given
  * @property {{baseMs: number, maxMs: number, factor: number, jitter: boolean}} [backoff]
  * @property {string} [subprotocol='events.v1'] the WebSocket sub-protocol's name
+ * @property {number} [idleCloseMs] a page hidden for longer than this gives its connection back and takes it again when shown (off by
+ *   default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume)
  * @property {string[]} [events] raw SSE: the event names that carry values (default every name for fetch, message for EventSource)
  * @property {function(*, Object): string} [topicOf] raw: the topic of a value (default 'feed')
  * @property {function(*, Object): number} [seqOf] raw
@@ -133,20 +138,66 @@ export class Connection {
     this.floorMs = 0;
     this.stopped = false;
     this.transport = null;
-    this.timers = { retry: null, ping: null, refresh: null, rescope: null };
+    this.timers = { retry: null, ping: null, refresh: null, rescope: null, pump: null, idle: null };
+    /** @type {boolean} closed because the page was put away or hidden too long: opened again when it is shown */
+    this.suspended = false;
     /** @type {Object} */ this.sequencer = null;
     /** @type {Object} the figures the metrics read */
     this.stats = { connects: 0, reconnects: 0, openedAt: 0, connectedMs: 0, framesIn: 0, framesOut: 0, bytesIn: 0, unknown: 0, bad: 0,
       rtt: null, rtts: [], offset: null, published: 0, acked: 0, retried: 0, failed: 0 };
     this._onOnline = () => { if (this.state === 'offline' || this.state === 'reconnecting') { this._connectNow('connect'); } };
-    this._onVisible = () => { const d = this.env.document || (typeof document !== 'undefined' ? document : null); if (d && d.visibilityState === 'visible' && this.state === 'reconnecting') { this._connectNow('connect'); } };
-    if (this.win && this.win.addEventListener) { this.win.addEventListener('online', this._onOnline); }
-    const doc = this.env.document || (typeof document !== 'undefined' ? document : null);
-    if (doc && doc.addEventListener) { doc.addEventListener('visibilitychange', this._onVisible); }
+    this._onVisible = () => {
+      const d = this._doc();
+      if (!d) { return; }
+      if (d.visibilityState === 'hidden') {
+        if (this.o.idleCloseMs && this.timers.idle === null) { this.timers.idle = this.clock.setTimeout(() => { this.timers.idle = null; this._suspend('hidden for longer than ' + Math.round(this.o.idleCloseMs / 1000) + ' s'); }, this.o.idleCloseMs); }
+        return;
+      }
+      if (this.timers.idle !== null) { this.clock.clearTimeout(this.timers.idle); this.timers.idle = null; }
+      if (this.suspended) { this._wake(); } else if (this.state === 'reconnecting') { this._connectNow('connect'); }
+    };
+    this._onHide = () => this._suspend('the page was put away');
+    this._onShow = () => this._wake();
+    if (this.win && this.win.addEventListener) {
+      this.win.addEventListener('online', this._onOnline);
+      this.win.addEventListener('pagehide', this._onHide);
+      this.win.addEventListener('pageshow', this._onShow);
+    }
+    const doc = this._doc();
+    if (doc && doc.addEventListener) {
+      doc.addEventListener('visibilitychange', this._onVisible);
+      doc.addEventListener('freeze', this._onHide);
+      doc.addEventListener('resume', this._onShow);
+    }
     this.detach = events._attach('server', this);
     // the first attempt waits for the end of the current task: whoever listens to $events.state or subscribes right after connect()
     // hears 'connecting', and a stream that carries its subscriptions in its address opens with them
     Promise.resolve().then(() => { if (this.state === 'idle' && !this.stopped) { this._connectNow('connect'); } });
+  }
+
+  /** @private the page's document (or the stand-in's) */
+  _doc() { return this.env.document || (typeof document !== 'undefined' ? document : null); }
+
+  /** @private the page was put away (or hidden too long): closed cleanly, so it stays eligible for the back-forward cache */
+  _suspend(reason) {
+    if (this.stopped || this.suspended || this.state === 'idle' || this.state === 'refused' || this.state === 'closed') { return; }
+    if (this.transport && this.state === 'open' && this.protocol === 1 && this.transport.kind === 'websocket') { this._send([{ t: 'bye' }]); }
+    this.suspended = true;
+    this.attempt++;
+    this.clock.clearTimeout(this.timers.retry);
+    this.timers.retry = null;
+    this._stopTimers();
+    this._teardown();
+    this.subs.forEach((s) => { s.held = false; });
+    this._setState('closed', { reason: reason, suspended: true });
+  }
+
+  /** @private the page is shown again: open and resume */
+  _wake() {
+    if (!this.suspended) { return; }
+    this.suspended = false;
+    this.backoff.reset();
+    this._connectNow('connect');
   }
 
   /** @private */
@@ -501,7 +552,7 @@ export class Connection {
 
   /** @private */
   _stopTimers() {
-    ['ping', 'refresh', 'rescope'].forEach((k) => { if (this.timers[k] !== null) { this.clock.clearTimeout(this.timers[k]); this.timers[k] = null; } });
+    ['ping', 'refresh', 'rescope', 'pump'].forEach((k) => { if (this.timers[k] !== null) { this.clock.clearTimeout(this.timers[k]); this.timers[k] = null; } });
   }
 
   // ---- heartbeat and token refresh -------------------------------------------------------------------------------------------------
@@ -554,7 +605,11 @@ export class Connection {
     const f = { t: 'sub', id: s.id, topic: s.sub.pattern };
     const o = s.sub.o;
     if (o.retained) { f.retained = true; }
-    if (o.conflate && o.conflate.server) { f.conflate = Object.assign({ key: true }, o.conflate.server); }
+    if (o.conflate && o.conflate.server && this.can.indexOf('conflate') >= 0) {
+      f.conflate = { key: true };
+      const every = (o.deliver && o.deliver.everyMs) || o.conflate.everyMs;
+      if (every) { f.conflate.everyMs = every; }
+    }
     const after = this.sequencer && o.from !== 'now' ? this.sequencer.after(s.sub, s) : undefined;
     if (after && Object.keys(after).length) { f.after = after; }
     return f;
@@ -637,21 +692,36 @@ export class Connection {
     this.stats.published++;
     return new Promise((resolve, reject) => {
       const entry = { frame: frame, resolve: resolve, reject: reject, sent: false };
-      if (this.state === 'open') {
+      if (this.state === 'open' && !this.queue.length && !this._congested()) {
         if (ack) { entry.sent = true; this.acks.set(m.id, entry); }
         this._send([frame]).then((ok) => { if (!ack) { if (ok) { resolve({ acked: false }); } else { reject(new EventError('not.connected', 'the message could not be sent')); } } });
         return;
       }
       if (o && o.queue === false) { reject(new EventError('not.connected', 'not connected (' + this.state + '), and the publish asked not to wait')); return; }
-      if (this.state === 'refused' || this.state === 'closed') { reject(new EventError('not.connected', 'the connection is ' + this.state)); return; }
+      if ((this.state === 'refused' || this.state === 'closed') && !this.suspended) { reject(new EventError('not.connected', 'the connection is ' + this.state)); return; }
       if (this.queue.length + this.acks.size >= this.events.limits.outboxMessages) {
         reject(new EventError('limit.outbox', this.events.limits.outboxMessages + ' messages wait already (the limit)'));
         return;
       }
       if (ack) { this.acks.set(m.id, entry); }
       this.queue.push({ frame: frame, ack: ack ? entry : null, resolve: resolve });
+      if (this.state === 'open') { this._schedulePump(); }
       if (o && o.signal) { o.signal.addEventListener('abort', () => this._unqueue(m.id, reject), { once: true }); }
     });
+  }
+
+  /** @private the socket holds too much unsent: publishing waits */
+  _congested() { return !!(this.transport && this.transport.bufferedAmount && this.transport.bufferedAmount() > BUFFERED_LIMIT); }
+
+  /** @private while congested, look again every 50 ms; send what waits once the socket has room */
+  _schedulePump() {
+    if (this.timers.pump !== null) { return; }
+    this.timers.pump = this.clock.setTimeout(() => {
+      this.timers.pump = null;
+      if (this.state !== 'open') { return; }
+      if (this._congested()) { this._schedulePump(); return; }
+      this._resend();
+    }, 50);
   }
 
   /** @private a publish given up before it was sent */
@@ -671,7 +741,7 @@ export class Connection {
    */
   request(m, o) {
     if (this.protocol === 'raw') { return Promise.reject(new EventError('protocol', 'request and reply need the events protocol; this connection is raw')); }
-    if (this.state === 'refused' || this.state === 'closed') { return Promise.reject(new EventError('not.connected', 'the connection is ' + this.state)); }
+    if ((this.state === 'refused' || this.state === 'closed') && !this.suspended) { return Promise.reject(new EventError('not.connected', 'the connection is ' + this.state)); }
     const frame = { t: 'req', id: m.id, topic: m.topic, data: m.data, ttl: o.timeoutMs };
     if (m.kind !== undefined) { frame.kind = m.kind; }
     if (m.meta !== undefined) { frame.meta = m.meta; }
@@ -741,6 +811,7 @@ export class Connection {
   close() {
     if (this.transport && this.state === 'open' && this.protocol === 1 && this.transport.kind === 'websocket') { this._send([{ t: 'bye' }]); }
     this.stopped = true;
+    this.suspended = false;
     this.attempt++;
     this.clock.clearTimeout(this.timers.retry);
     this.timers.retry = null;
@@ -762,9 +833,18 @@ export class Connection {
     this.queue = [];
     this.reqs.forEach((r) => r.reject(gone));
     this.reqs.clear();
-    if (this.win && this.win.removeEventListener) { this.win.removeEventListener('online', this._onOnline); }
-    const doc = this.env.document || (typeof document !== 'undefined' ? document : null);
-    if (doc && doc.removeEventListener) { doc.removeEventListener('visibilitychange', this._onVisible); }
+    if (this.timers.idle !== null) { this.clock.clearTimeout(this.timers.idle); this.timers.idle = null; }
+    if (this.win && this.win.removeEventListener) {
+      this.win.removeEventListener('online', this._onOnline);
+      this.win.removeEventListener('pagehide', this._onHide);
+      this.win.removeEventListener('pageshow', this._onShow);
+    }
+    const doc = this._doc();
+    if (doc && doc.removeEventListener) {
+      doc.removeEventListener('visibilitychange', this._onVisible);
+      doc.removeEventListener('freeze', this._onHide);
+      doc.removeEventListener('resume', this._onShow);
+    }
   }
 
   /**

@@ -50,6 +50,16 @@ Each release lists what changed, by library. One version for every library: the 
   `liveSource` and `grid.connectLive`). Its budget is lowered to 42,000 bytes. The guard that only one library opens a WebSocket or an
   `EventSource` now names drishti-events (and `BroadcastChannel`, `SharedWorker`). The gallery's live page is drishti-events'
   "Connection" page; the inputs harness feeds its live grid through a drishti-events connection.
+- **drishti-events** (eventing step E5, flow): every subscription has a pipeline between arrival and its listeners: `conflate` (`true`:
+  the message's key; `{ key, merge }`: a field of the message or of its data, or a function), a bounded `buffer` (`max`, `overflow`:
+  `conflate`, `drop-oldest`, `drop-newest`, `error`), and `deliver` (`'now'`, `'frame'`, `{ everyMs }`) with `batch`; a hidden page
+  delivers once a second and keeps conflating; every drop is counted with its reason. `Conflater` (the latest value by key) and
+  `GridSink`; `subscription.toGrid(grid, { getRowId, onStats })` feeds a grid with at most one batch in flight (folding the grid's way).
+  The page's life: `pagehide` and `freeze` close the connection cleanly (back-forward cache), `pageshow` and `resume` open and resume
+  it, `idleCloseMs` gives it back while hidden. Publishing pauses while a socket holds more than 1 MB unsent. `conflate: { server: true }`
+  asks a server whose welcome offers `conflate` to conflate before the wire. The bundle's budget is 150,000 bytes for now (step 12
+  settles it).
+- **drishti-data** (breaking): `TransactionSink` and `pipeToGrid` removed: `subscription.toGrid(grid)` (drishti-events) is the one way.
 - **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
   its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
 - **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script
