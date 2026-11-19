@@ -17,7 +17,8 @@
    shared channels of drishti-link), shown as one chip ("12 selected · Desk Rates ×") with a Clear, and a short history to go back to a
    selection. The history is a model (SelectionHistory, runs under Node); the chip listens to the bus and draws it. */
 import { h } from './drishti_dom.js';
-import { SELECTION_EVENT, publishSelection } from './drishti_link.js';
+import { publishSelection } from './drishti_link.js';
+import { selectionTopic } from './drishti_topics.js';
 import { bus as sharedBus } from './drishti_events.js';
 
 /** The last selections of a channel, newest first, each once. */
@@ -69,7 +70,7 @@ export class SelectionChip {
     this.ids = [];
     this.el = h(this.doc, 'span', { cls: 'drishti-selchip', attrs: { role: 'status', 'aria-live': 'polite' } });
     host.appendChild(this.el);
-    this.off = this.bus.on(SELECTION_EVENT, (p) => { if (p && p.channel === o.channel) { this.set(p.ids || []); } });
+    this.off = this.bus.on(selectionTopic(o.channel), (p) => { if (p) { this.set(p.ids || []); } });
     this.draw();
   }
 

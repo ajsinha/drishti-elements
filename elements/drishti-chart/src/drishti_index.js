@@ -50,7 +50,7 @@ export { kernelDensity, tenorDays, buildRadar, buildViolin, buildRidgeline, buil
 export { colourScale } from './drishti_chart-scale.js';
 export { linkCrosshair, facets } from './drishti_chart-multiples.js';
 import { buildCalendar } from './drishti_chart-calendar.js';
-export { SELECTION_EVENT, linkGrid, publishSelection } from '../../drishti-core/src/drishti_index.js';
+export { selectionTopic, filterTopic, linkGrid, publishSelection } from '../../drishti-core/src/drishti_index.js';
 export { PANEL_KINDS, escapeTip, panelCompact, panelLineCompact, panelTokens, labelFit, panelOption } from './drishti_chart-panels.js';
 export { drawMap, PanelCharts } from './drishti_chart-panel-draw.js';
 export { CHART_ELEMENT, defineChartElement, chartIn } from './drishti_chart-element.js';

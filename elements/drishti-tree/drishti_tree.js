@@ -961,7 +961,7 @@
   })();
   /* ---- src/drishti_tree-view.js ---- */
   __m["src/drishti_tree-view.js"] = (function () {
-    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, EventBus = __lib("drishti-core").EventBus, sharedBus = __lib("drishti-core").bus, SELECTION_EVENT = __lib("drishti-core").SELECTION_EVENT, visualTheme = __lib("drishti-core").visualTheme, formatterFor = __lib("drishti-core").formatterFor, renderExplain = __lib("drishti-core").renderExplain, announce = __lib("drishti-core").announce, DENSITIES = __lib("drishti-core").DENSITIES;
+    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, EventBus = __lib("drishti-core").EventBus, sharedBus = __lib("drishti-core").bus, selectionTopic = __lib("drishti-core").selectionTopic, visualTheme = __lib("drishti-core").visualTheme, formatterFor = __lib("drishti-core").formatterFor, renderExplain = __lib("drishti-core").renderExplain, announce = __lib("drishti-core").announce, DENSITIES = __lib("drishti-core").DENSITIES;
     var HierarchyModel = __m["src/drishti_tree-model.js"].HierarchyModel;
     var drawOrg = __m["src/drishti_tree-draw.js"].drawOrg, drawPartition = __m["src/drishti_tree-draw.js"].drawPartition, partitionTable = __m["src/drishti_tree-draw.js"].partitionTable;
     var TreeGrid = __m["src/drishti_tree-grid.js"].TreeGrid;
@@ -1004,7 +1004,7 @@
         this.build();
         this.offModel = this.model.events.on('changed', (p) => this.modelChanged(p));
         loadOpenChildren(this);
-        if (o.link) { this.offLink = this.bus.on(SELECTION_EVENT, (p) => { if (p && p.source !== this && p.channel === o.link.channel) { const id = (p.ids || []).find((x) => this.model.node(x)); this.select(id || null, { silent: true }); } }); }
+        if (o.link) { this.offLink = this.bus.on(selectionTopic(o.link.channel), (p) => { if (p && p.source !== this) { const id = (p.ids || []).find((x) => this.model.node(x)); this.select(id || null, { silent: true }); } }); }
         if (this.win.MutationObserver) { this.watch = new this.win.MutationObserver(() => this.draw()); this.watch.observe(this.doc.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] }); }
         this.draw();
         this.askSoon();
@@ -1166,7 +1166,7 @@
         else { this.draw(); }
         if (n) { announce(n.label + ' selected, ' + this.model.breadcrumbs(n.id).join(', ')); }
         this.emit('selectionChanged', { ids: this.selected ? [this.selected] : [], path: this.selected ? this.model.breadcrumbs(this.selected) : [] });
-        if (this.o.link && !(o && o.silent)) { this.bus.emit(SELECTION_EVENT, { channel: this.o.link.channel, ids: this.selected ? [this.selected] : [], source: this }); }
+        if (this.o.link && !(o && o.silent)) { this.bus.emit(selectionTopic(this.o.link.channel), { channel: this.o.link.channel, ids: this.selected ? [this.selected] : [], source: this }); }
       }
       find(q) {
         this.query = String(q || '').trim();

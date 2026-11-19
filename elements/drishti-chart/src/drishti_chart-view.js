@@ -21,7 +21,7 @@
    and the card's chrome and status line. Two modes of one component : 'card' (A, the default) and 'studio' (B: the kinds in a rail,
    the chart with its table, the spec beside it with options that change both). A map (kind: 'map') is drawn by its view
    (drishti_map-view.js) inside the same card. */
-import { h, stateBlock, showState, renderExplain, EventBus, bus as sharedBus, announce, SELECTION_EVENT, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
+import { h, stateBlock, showState, renderExplain, EventBus, bus as sharedBus, announce, selectionTopic, url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
 import { normalizeSpec, kindOf } from './drishti_chart-spec.js';
 import { rowsOf } from './drishti_chart-data.js';
 import { chartTheme, formatterFor } from './drishti_chart-theme.js';
@@ -87,7 +87,7 @@ export class Chart extends ChartIO {
     this.mode = CHART_MODES.indexOf(this.o.mode) >= 0 ? this.o.mode : 'card';
     this.density = this.o.density;
     this.mount();
-    if (this.o.link) { this.offLink = this.bus.on(SELECTION_EVENT, (p) => { if (p && p.source !== this && p.channel === this.o.link.channel) { this.setSelection(p.ids, { silent: true }); } }); }
+    if (this.o.link) { this.offLink = this.bus.on(selectionTopic(this.o.link.channel), (p) => { if (p && p.source !== this) { this.setSelection(p.ids, { silent: true }); } }); }
     this.watch = new this.win.MutationObserver(() => this.draw());
     this.watch.observe(this.doc.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
     this.ready = this.load();
@@ -301,7 +301,7 @@ export class Chart extends ChartIO {
     this.selected = next;
     this.draw();
     this.emit('selectionChanged', { ids: Array.from(next), source: o && o.silent ? 'link' : 'chart' });
-    if (this.o.link && !(o && o.silent)) { this.bus.emit(SELECTION_EVENT, { channel: this.o.link.channel, ids: Array.from(next), source: this }); }
+    if (this.o.link && !(o && o.silent)) { this.bus.emit(selectionTopic(this.o.link.channel), { channel: this.o.link.channel, ids: Array.from(next), source: this }); }
   }
 
   /**

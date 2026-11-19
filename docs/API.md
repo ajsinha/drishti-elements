@@ -744,7 +744,7 @@ An event bus.
 
 ##### `EventBus.on(type, fn)`
 
-Listens to an event ("*": every event).
+Listens to an event ("*": every event; a dotted name with "*" for one segment or a last "&gt;" for the rest: a pattern).
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -816,11 +816,102 @@ Returns `EventBus`.
 
 The bus a page shares.
 
+### drishti_topics.js
+
+#### `MAX_TOPIC_SEGMENTS`
+
+The most segments a topic has.
+
+#### `MAX_TOPIC_LENGTH`
+
+The most characters a topic has.
+
+#### `isTopic(topic)`
+
+Says whether text is a topic (concrete: no wildcards).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `*` |  |
+
+Returns `boolean`.
+
+#### `isPattern(pattern)`
+
+Says whether text is a pattern: a topic whose segments may be "*", and whose last segment may be "&gt;".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `*` |  |
+
+Returns `boolean`.
+
+#### `hasWildcard(name)`
+
+Says whether a name carries a wildcard segment ("*" or "&gt;") and has more than one segment, or is "&gt;": a lone "*" is not a pattern here, it is the bus's "every event".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `boolean`.
+
+#### `topicMatches(pattern, topic)`
+
+Says whether a topic matches a pattern.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` | 'prices.*.USDCAD', 'prices.&gt;', 'prices.fx.USDCAD' |
+| `topic` | `string` | a concrete topic |
+
+Returns `boolean`.
+
+#### `segment(text)`
+
+Encodes any text as one topic segment: letters, digits, "_", "-" and ":" stay; every other byte of its UTF-8 becomes "~" and two capital hexadecimal digits (so "~" itself is "~7E"); the empty text is "~".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+#### `unsegment(seg)`
+
+The text a segment encodes (the inverse of segment).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `seg` | `string` |  |
+
+Returns `string`.
+
+#### `DEFAULT_FILTER_CHANNEL`
+
+The channel a filter bar and the grids on it share when none is named.
+
+#### `selectionTopic(channel)`
+
+The topic of a linked selection channel: 'ui.selection.&lt;channel&gt;'. Its payload is {channel, ids, source}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `channel` | `string` |  |
+
+Returns `string`.
+
+#### `filterTopic(channel)`
+
+The topic of a filter channel: 'ui.filter.&lt;channel&gt;' (default channel 'default'). Its payload is {source, model, quickFilter}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[channel]` | `string` |  |
+
+Returns `string`.
+
 ### drishti_link.js
-
-#### `SELECTION_EVENT`
-
-The selection's event on the shared bus: {channel, ids, source}.
 
 #### `linkGrid(grid, o)`
 
@@ -1781,10 +1872,6 @@ A filter model in words, for the line above a grid ("Desk in RATES, FX; Notional
 | `[header]` | `function(string): string` | a column's heading |
 
 Returns `string`.
-
-#### `FILTER_CHANNEL`
-
-The bus event a filter bar emits and grids and charts listen to; its payload is {model, quickFilter, source}.
 
 #### `filterRows(rows, model, o)`
 
@@ -5124,7 +5211,7 @@ A field the bar may filter.
 | `fields` | `FilterField[]` |  |
 | `[model]` | `Object` | the filters at the start |
 | `[bus]` | `Object` | the drishti-core EventBus it emits on (default: the page's shared bus) |
-| `[channel]` | `string` | the event name (default FILTER_CHANNEL) |
+| `[channel]` | `string` | the filter channel's name (default 'default'); the topic is 'ui.filter.&lt;channel&gt;' (filterTopic) |
 | `[quick=true]` | `boolean` | the quick-search field |
 | `[asOf]` | `string` | the business date date presets count from |
 | `[calendar]` | `string` | the business calendar of date fields |
@@ -7093,12 +7180,12 @@ Returns `void`.
 
 ##### `GridModel.followFilters(bus, o)`
 
-Follows a filter bar (drishti-inputs) or any page part that emits the filter model on a bus under FILTER_CHANNEL: each payload's filters on this grid's columns (by id or field) become its filter model, and its quick filter the grid's; filters on fields this grid has not are left out.
+Follows a filter bar (drishti-inputs) or any page part that emits the filter model on a bus under the topic 'ui.filter.&lt;channel&gt;': each payload's filters on this grid's columns (by id or field) become its filter model, and its quick filter the grid's; filters on fields this grid has not are left out.
 
 | Parameter | Type | Meaning |
 |---|---|---|
 | `bus` | `EventBus` | drishti-core's bus (the page's shared bus, or the filter bar's) |
-| `[o]` | `{channel: string, source: string}` | channel default FILTER_CHANNEL; source: follow only the bar of this id |
+| `[o]` | `{channel: string, source: string}` | channel default 'default' (the filter channel's name, not the topic); source: follow only the bar of this id |
 
 Returns `function(): void`: stops following.
 
@@ -16781,11 +16868,29 @@ One chart per member of a field (small multiples): the spec's rows split by the 
 
 Returns `{charts: Chart[], members: string[], ready: Promise&lt;void&gt;, destroy: function(): void}`.
 
+### drishti_topics.js
+
+#### `selectionTopic(channel)`
+
+The topic of a linked selection channel: 'ui.selection.&lt;channel&gt;'. Its payload is {channel, ids, source}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `channel` | `string` |  |
+
+Returns `string`.
+
+#### `filterTopic(channel)`
+
+The topic of a filter channel: 'ui.filter.&lt;channel&gt;' (default channel 'default'). Its payload is {source, model, quickFilter}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[channel]` | `string` |  |
+
+Returns `string`.
+
 ### drishti_link.js
-
-#### `SELECTION_EVENT`
-
-The selection's event on the shared bus: {channel, ids, source}.
 
 #### `linkGrid(grid, o)`
 

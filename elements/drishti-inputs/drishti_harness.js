@@ -94,7 +94,7 @@
   H.fbar = new I.FilterBar(document.getElementById('hx-fbar'), { bus: bus, asOf: '2026-11-06', calendar: 'US', label: 'Filters',
     fields: [{ id: 'DESK', label: 'Desk', type: 'set', options: Object.keys(DESKS) }, { id: 'CCY', label: 'Currency', type: 'set', options: CCYS.slice(0, 6) },
       { id: 'NOTIONAL', label: 'Notional', type: 'number' }, { id: 'BOOK', label: 'Book', type: 'text' }, { id: 'TRADE_DATE', label: 'Trade date', type: 'date' }] });
-  bus.on(core.FILTER_CHANNEL, (p) => note('bus:filters', p));
+  bus.on(core.filterTopic(), (p) => note('bus:filters', p));
 
   /* ---- the form ------------------------------------------------------------------------------------------------------------------- */
   const schema = { type: 'object', title: 'Amend a trade', description: 'Fields marked * are required. Changes go to a second person.', required: ['book', 'side', 'notional', 'tradeDate', 'maturity', 'product'],

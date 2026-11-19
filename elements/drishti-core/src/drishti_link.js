@@ -17,12 +17,10 @@
 /* Linked selection between components, through the shared event bus: rows selected in a drishti-grid outline their marks in every
    chart and their nodes in every graph or tree on the same channel, and marks, places or nodes clicked select their rows in the grid. A
    grid is linked by its model's typed events (selectionChanged) and its selection model, so no library imports drishti-grid for it; a
-   chart, a graph or a tree is linked by its link option ({channel}) and publishes and hears SELECTION_EVENT itself. The ids are the
+   chart, a graph or a tree is linked by its link option ({channel}) and publishes and hears the topic 'ui.selection.<channel>' (selectionTopic) itself; the payload is {channel, ids, source}. The ids are the
    rows' ids (the grid's getRowId, the chart spec's id field, the graph's node ids). */
 import { bus as sharedBus } from './drishti_events.js';
-
-/** The selection's event on the shared bus: {channel, ids, source}. */
-export const SELECTION_EVENT = 'drishti:selection';
+import { selectionTopic } from './drishti_topics.js';
 
 /**
  * Links a drishti-grid (the Grid, the element's grid, or its GridModel) to a selection channel: its row selection is published, and a
@@ -35,9 +33,9 @@ export function linkGrid(grid, o) {
   const model = grid && grid.model ? grid.model : grid, b = (o && o.bus) || sharedBus, channel = o && o.channel;
   if (!model || !model.events || !model.selection) { throw new Error('linkGrid: give a drishti-grid (Grid, the element\'s grid, or its model)'); }
   let applying = false;
-  const off1 = model.events.on('selectionChanged', (p) => { if (!applying) { b.emit(SELECTION_EVENT, { channel: channel, ids: (p && p.ids) || [], source: model }); } });
-  const off2 = b.on(SELECTION_EVENT, (p) => {
-    if (!p || p.channel !== channel || p.source === model) { return; }
+  const off1 = model.events.on('selectionChanged', (p) => { if (!applying) { b.emit(selectionTopic(channel), { channel: channel, ids: (p && p.ids) || [], source: model }); } });
+  const off2 = b.on(selectionTopic(channel), (p) => {
+    if (!p || p.source === model) { return; }
     applying = true;
     try { model.selection.selectAll(p.ids || []); } finally { applying = false; }
   });
@@ -51,4 +49,4 @@ export function linkGrid(grid, o) {
  * @param {{bus: Object, source: *}} [o]
  * @returns {void}
  */
-export function publishSelection(channel, ids, o) { ((o && o.bus) || sharedBus).emit(SELECTION_EVENT, { channel: channel, ids: ids || [], source: (o && o.source) || null }); }
+export function publishSelection(channel, ids, o) { ((o && o.bus) || sharedBus).emit(selectionTopic(channel), { channel: channel, ids: ids || [], source: (o && o.source) || null }); }

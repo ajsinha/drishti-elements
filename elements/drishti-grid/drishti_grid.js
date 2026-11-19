@@ -3737,7 +3737,7 @@
     var GridLive = __m["src/drishti_grid-live.js"].GridLive;
     var GridEditing = __m["src/drishti_grid-edit.js"].GridEditing;
     var GridModelBase = __m["src/drishti_grid-model-base.js"].GridModelBase, LAYOUTS = __m["src/drishti_grid-model-base.js"].LAYOUTS, DENSITIES = __m["src/drishti_grid-model-base.js"].DENSITIES, rowModelFor = __m["src/drishti_grid-model-base.js"].rowModelFor;
-    var cycleSort = __lib("drishti-core").cycleSort, FILTER_CHANNEL = __lib("drishti-core").FILTER_CHANNEL;
+    var cycleSort = __lib("drishti-core").cycleSort, filterTopic = __lib("drishti-core").filterTopic;
     class GridModel extends GridModelBase {
       constructor(o) {
         super();
@@ -3863,7 +3863,7 @@
       setQuickFilter(q) { this.rowModel.setQuickFilter(q); this.live.emit('filterChanged', { quickFilter: q || '' }); }
       followFilters(bus, o) {
         o = o || {};
-        return bus.on(o.channel || FILTER_CHANNEL, (p) => {
+        return bus.on(filterTopic(o.channel), (p) => {
           if (!p || (o.source && p.source !== o.source)) { return; }
           const known = {};
           Object.keys(p.model || {}).forEach((k) => { const c = this.columns.get(k) || this.columns.all().find((x) => x.field === k); if (c) { known[c.id] = p.model[k]; } });

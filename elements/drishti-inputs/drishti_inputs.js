@@ -1904,7 +1904,7 @@
   })();
   /* ---- src/drishti_filter-bar.js ---- */
   __m["src/drishti_filter-bar.js"] = (function () {
-    var sharedBus = __lib("drishti-core").bus, FILTER_CHANNEL = __lib("drishti-core").FILTER_CHANNEL, filterWords = __lib("drishti-core").filterWords, formatDateRange = __lib("drishti-core").formatDateRange, announce = __lib("drishti-core").announce, parseNumberText = __lib("drishti-core").parseNumberText;
+    var sharedBus = __lib("drishti-core").bus, filterTopic = __lib("drishti-core").filterTopic, filterWords = __lib("drishti-core").filterWords, formatDateRange = __lib("drishti-core").formatDateRange, announce = __lib("drishti-core").announce, parseNumberText = __lib("drishti-core").parseNumberText;
     var DATE_PRESETS = __m["src/drishti_calendar.js"].DATE_PRESETS, resolvePreset = __m["src/drishti_calendar.js"].resolvePreset, parseDateInput = __m["src/drishti_calendar.js"].parseDateInput, calendar = __m["src/drishti_calendar.js"].calendar;
     var InputBase = __m["src/drishti_inputs-dom.js"].InputBase, Popover = __m["src/drishti_inputs-dom.js"].Popover, Listbox = __m["src/drishti_inputs-dom.js"].Listbox, normalizeOptions = __m["src/drishti_inputs-dom.js"].normalizeOptions, searchOptions = __m["src/drishti_inputs-dom.js"].searchOptions, uid = __m["src/drishti_inputs-dom.js"].uid;
     var Select = __m["src/drishti_select.js"].Select;
@@ -1964,7 +1964,7 @@
     class FilterBar extends InputBase {
       constructor(host, options) {
         super(host, options, 'di-filter-bar');
-        const o = this.o = Object.assign({ quick: true, label: 'Filters', channel: FILTER_CHANNEL }, this.o);
+        const o = this.o = Object.assign({ quick: true, label: 'Filters', channel: 'default' }, this.o);
         this.bus = o.bus || sharedBus;
         this.id = uid('fb');
         this.state = new FilterModelBar({ fields: o.fields, model: o.model });
@@ -1994,7 +1994,7 @@
         this.render();
         const p = this.state.payload();
         this.emit('change', p);
-        this.bus.emit(this.o.channel, Object.assign({ source: this.id }, p));
+        this.bus.emit(filterTopic(this.o.channel), Object.assign({ source: this.id }, p));
         if (words) { announce(words); }
       }
       addMenu() {

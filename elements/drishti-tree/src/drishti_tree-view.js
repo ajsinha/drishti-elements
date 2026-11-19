@@ -20,7 +20,7 @@
    line. A non-additive figure is asked of the host (serverMeasures, debounced) and never summed; a selection is shared on drishti-core's
    bus (link); the edit mode collects moves into one proposal the host submits for four eyes (proposal, then applyProposal or
    discardProposal). Every event is on the tree's bus and a DOM event on the host (drishti:selection-changed ...). */
-import { h, stateBlock, EventBus, bus as sharedBus, SELECTION_EVENT, visualTheme, formatterFor, renderExplain, announce, DENSITIES } from '../../drishti-core/src/drishti_index.js';
+import { h, stateBlock, EventBus, bus as sharedBus, selectionTopic, visualTheme, formatterFor, renderExplain, announce, DENSITIES } from '../../drishti-core/src/drishti_index.js';
 import { HierarchyModel } from './drishti_tree-model.js';
 import { drawOrg, drawPartition, partitionTable } from './drishti_tree-draw.js';
 import { TreeGrid } from './drishti_tree-grid.js';
@@ -107,7 +107,7 @@ export class Tree {
     this.build();
     this.offModel = this.model.events.on('changed', (p) => this.modelChanged(p));
     loadOpenChildren(this);
-    if (o.link) { this.offLink = this.bus.on(SELECTION_EVENT, (p) => { if (p && p.source !== this && p.channel === o.link.channel) { const id = (p.ids || []).find((x) => this.model.node(x)); this.select(id || null, { silent: true }); } }); }
+    if (o.link) { this.offLink = this.bus.on(selectionTopic(o.link.channel), (p) => { if (p && p.source !== this) { const id = (p.ids || []).find((x) => this.model.node(x)); this.select(id || null, { silent: true }); } }); }
     if (this.win.MutationObserver) { this.watch = new this.win.MutationObserver(() => this.draw()); this.watch.observe(this.doc.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] }); }
     this.draw();
     this.askSoon();
@@ -311,7 +311,7 @@ export class Tree {
     else { this.draw(); }
     if (n) { announce(n.label + ' selected, ' + this.model.breadcrumbs(n.id).join(', ')); }
     this.emit('selectionChanged', { ids: this.selected ? [this.selected] : [], path: this.selected ? this.model.breadcrumbs(this.selected) : [] });
-    if (this.o.link && !(o && o.silent)) { this.bus.emit(SELECTION_EVENT, { channel: this.o.link.channel, ids: this.selected ? [this.selected] : [], source: this }); }
+    if (this.o.link && !(o && o.silent)) { this.bus.emit(selectionTopic(this.o.link.channel), { channel: this.o.link.channel, ids: this.selected ? [this.selected] : [], source: this }); }
   }
 
   /**

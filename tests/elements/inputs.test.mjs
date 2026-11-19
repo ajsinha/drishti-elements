@@ -210,7 +210,7 @@ test('the filter bar\'s model: chips in words, members, conditions read loosely,
   assert.equal(m.chips().length, 3);
   m.clear();
   assert.deepEqual(m.payload(), { model: {}, quickFilter: '' });
-  assert.equal(C.FILTER_CHANNEL, 'filters:changed');
+  assert.equal(C.filterTopic(), 'ui.filter.default');
 });
 
 test('code: the Rachana and YAML modes, completion from a catalogue, the text put in, the line diff side by side', () => {

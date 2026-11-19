@@ -1620,7 +1620,7 @@
   })();
   /* ---- src/drishti_graph-view.js ---- */
   __m["src/drishti_graph-view.js"] = (function () {
-    var h = __lib("drishti-core").h, renderExplain = __lib("drishti-core").renderExplain, announce = __lib("drishti-core").announce, saveFile = __lib("drishti-core").download, SELECTION_EVENT = __lib("drishti-core").SELECTION_EVENT, sharedBus = __lib("drishti-core").bus, DENSITIES = __lib("drishti-core").DENSITIES;
+    var h = __lib("drishti-core").h, renderExplain = __lib("drishti-core").renderExplain, announce = __lib("drishti-core").announce, saveFile = __lib("drishti-core").download, selectionTopic = __lib("drishti-core").selectionTopic, sharedBus = __lib("drishti-core").bus, DENSITIES = __lib("drishti-core").DENSITIES;
     var GraphBase = __m["src/drishti_graph-base.js"].GraphBase;
     var GRAPH_MODES = __m["src/drishti_graph-chrome.js"].GRAPH_MODES, answerLine = __m["src/drishti_graph-chrome.js"].answerLine, inspectorContent = __m["src/drishti_graph-chrome.js"].inspectorContent;
     var shortestPath = __m["src/drishti_graph-algo.js"].shortestPath;
@@ -1634,7 +1634,7 @@
         this.queue = []; this.flushTimer = 0;
         this.bus = this.o.bus || sharedBus;
         if (this.o.link && this.o.link.channel) {
-          this.offLink = this.bus.on(SELECTION_EVENT, (p) => { if (p && p.source !== this && p.channel === this.o.link.channel) { this.select((p.ids || []).filter((id) => this.byId.has(id)), { silent: true }); } });
+          this.offLink = this.bus.on(selectionTopic(this.o.link.channel), (p) => { if (p && p.source !== this) { this.select((p.ids || []).filter((id) => this.byId.has(id)), { silent: true }); } });
         }
       }
       selection() { return Array.from(this.selected); }
@@ -1654,7 +1654,7 @@
         this.draw();
         const ids = this.selection();
         this.emit('selectionChanged', { ids, source: o.from || (o.silent ? 'bus' : 'graph') });
-        if (this.o.link && this.o.link.channel && !o.silent) { this.bus.emit(SELECTION_EVENT, { channel: this.o.link.channel, ids, source: this }); }
+        if (this.o.link && this.o.link.channel && !o.silent) { this.bus.emit(selectionTopic(this.o.link.channel), { channel: this.o.link.channel, ids, source: this }); }
       }
       inspector() { return inspectorContent(this); }
       cardFor(id) {

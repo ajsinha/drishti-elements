@@ -19,6 +19,11 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **drishti-core** (eventing step E1): `EventBus` listens to patterns over dotted topics (`*` one segment, a last `>` the rest; exact
+  listeners are told first, then patterns, then a lone `*`); new topic helpers `isTopic`, `isPattern`, `topicMatches`, `segment`,
+  `unsegment`, `selectionTopic`, `filterTopic`. Linked selection is the topic `ui.selection.<channel>` and the filter model the topic
+  `ui.filter.<channel>`: `SELECTION_EVENT` and `FILTER_CHANNEL` are removed (no aliases); chart, graph, tree, selection chip, grid
+  (`followFilters`) and filter bar (`channel` is now a channel name, default `default`) moved in the same change.
 - **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
   its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
 - **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script
