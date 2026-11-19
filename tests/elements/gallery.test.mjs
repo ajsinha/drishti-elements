@@ -73,7 +73,7 @@ test('the frozen lists are what the code exports (events, layouts, modes)', () =
 
 test('the AG Grid mapping and the changelog come from the adapter and the CHANGELOG', () => {
   const built = new Set(cat.libraries.map((l) => l.name));
-  assert.equal(built.size, 8);
+  assert.equal(built.size, 9);
   assert.equal(typeof cat.agGrid.built, 'boolean');
   assert.ok(cat.agGrid.mapping.length >= 15);
   assert.ok(cat.agGrid.mapping.some((r) => /pivotMode/.test(r.ag)));

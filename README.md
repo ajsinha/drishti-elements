@@ -38,6 +38,7 @@ client, trees, graphs and a designer kit. No framework, no build step, no CDN, a
 | [`drishti-data`](docs/API.md#drishti-data) | One data-source contract (memory, REST, server-side rows, Arrow, live), the live client and the Arrow client | `drishti-core` |
 | [`drishti-chart`](docs/API.md#drishti-chart) | One chart spec over ECharts: the general kinds, maps from the world to first-level regions, Explain, export | `drishti-core`, `drishti-inputs` |
 | [`drishti-graph`](docs/API.md#drishti-graph) | Networks on a canvas for thousands of nodes: layouts, paths, groups, selection, an adjacency table | `drishti-core`, `drishti-inputs`, `drishti-grid` |
+| [`drishti-events`](docs/API.md#drishti-events) | Events in the page, across tabs and with a server: topics, publish and subscribe, request and reply, streams | `drishti-core` |
 
 <!-- /libraries -->
 

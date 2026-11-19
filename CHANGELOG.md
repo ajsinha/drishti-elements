@@ -24,6 +24,14 @@ Each release lists what changed, by library. One version for every library: the 
   `unsegment`, `selectionTopic`, `filterTopic`. Linked selection is the topic `ui.selection.<channel>` and the filter model the topic
   `ui.filter.<channel>`: `SELECTION_EVENT` and `FILTER_CHANNEL` are removed (no aliases); chart, graph, tree, selection chip, grid
   (`followFilters`) and filter bar (`channel` is now a channel name, default `default`) moved in the same change.
+- **drishti-events** (new, the ninth library; eventing step E2, the kernel): `createEvents(options)` and `connect()` (no server yet: the
+  page and its tabs), `Events` with routes (the most specific pattern wins; `share(pattern, { to })` adds a scope), the page scope as
+  drishti-core's shared bus itself, `on`, `subscribe` (a `Subscription`: state, `ready`, `stats`, `latest(key)`, a feed through
+  `subscribe(fn)`, `byKind(handlers)` for a live-set channel, an async iterator), `once`, `off`, `publish` (a `Receipt`), `request` and
+  `reply` (timeouts, `AbortSignal`, `no.responder`), `stream`, typed `topic(name, { kind, validate })`, `define(kind, validate)` and
+  `shape({...})`, `events.page` / `events.tabs` / `events.server` pinned to a scope, the library's own events as `$events.*` topics
+  (`$events.error`, `$events.drop`, `$events.subscription`), `EventError`, `TimeoutError` and `AbortError`, one clock for every timer
+  (`systemClock()`, `testClock({ seed })`). Budget 110,000 bytes; no domain words (the generic libraries' guard).
 - **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
   its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
 - **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script

@@ -148,6 +148,18 @@ export const MANIFEST = Object.freeze({
       ],
       "scripts": [],
       "module": "core"
+    },
+    "drishti-events": {
+      "title": "Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests)",
+      "bundle": "drishti-events/drishti_events.js",
+      "entry": "drishti-events/src/drishti_index.js",
+      "global": "events",
+      "requires": [
+        "drishti-core"
+      ],
+      "css": [],
+      "scripts": [],
+      "module": "core"
     }
   }
 });

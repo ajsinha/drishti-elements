@@ -114,6 +114,15 @@
         "elements/drishti-graph/drishti_graph.css",
         "elements/drishti-grid/drishti_grid.css"
       ]
+    },
+    "drishti-events": {
+      "title": "Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests)",
+      "summary": "Events in the page, across tabs and with a server: topics, publish and subscribe, request and reply, streams",
+      "entry": "src/drishti_index.js",
+      "requires": [
+        "drishti-core"
+      ],
+      "css": []
     }
   }
 }

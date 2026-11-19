@@ -31,6 +31,7 @@ version above (not Drishti's own).
 | [drishti-data](#drishti-data) | Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live), the live client over SSE and WebSocket with reconnect, heartbeat, resume and backpressure, and the Arrow client |
 | [drishti-chart](#drishti-chart) | The chart: one engine-neutral spec over the vendored ECharts (the general kinds, the maps from world to every country's first-level regions, the card and studio modes, the map's ranking and table modes), Explain on any mark, the data table, export, linked selection and live updates; Vega-Lite translated into the spec |
 | [drishti-graph](#drishti-graph) | The graph: networks cyclic or acyclic on a canvas for thousands of nodes; force (seeded), layered (DAG), radial, circular and grouped layouts; zoom, pan, minimap and fit; neighbours expanded on demand; the shortest path; groups collapsed by an attribute and filters by type; size and colour by a measure with a legend; pin, multi-select and lasso; a selection panel with Explain; linked selection; export (PNG, SVG, data); keyboard and an adjacency table; live updates; the lineage preset; the view's graph panel |
+| [drishti-events](#drishti-events) | Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests) |
 
 ## drishti-core
 
@@ -18663,3 +18664,787 @@ One line of a command's answer.
 | `text` | `string` |  |
 | `[tone]` | `('ok'\|'error'\|'dim'\|'echo'\|'')` |  |
 | `[node]` | `string` | a node the line names (the line is a link that selects it) |
+
+## drishti-events
+
+Bundle `elements/drishti-events/drishti_events.js`, global `Drishti.elements.events`; requires drishti-core.
+
+### drishti_events-hub.js
+
+#### `SCOPES`
+
+The scopes a message travels in.
+
+#### `OWN_TOPICS`
+
+The library's own topics.
+
+#### `DEFAULT_LIMITS`
+
+The ceilings of every store, and their defaults (section 3.8 of the design); `limits` changes any of them.
+
+#### class `Events`
+
+Events in the page, across tabs and with a server: publish and subscribe, request and reply, streams.
+
+##### `new Events(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `EventsOptions` |  |
+
+##### `Events.routeOf(topic)`
+
+The scopes a topic is published to (the most specific route that matches it).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+
+Returns `string[]`.
+
+##### `Events.scopesOf(pattern)`
+
+The scopes a pattern is heard from: every scope a route that some topic of the pattern can take names.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+
+Returns `string[]`.
+
+##### `Events.share(pattern, o)`
+
+Routes a pattern to a scope as well ('ui.selection.&gt;' to 'tabs': selections reach the other tabs and still the page).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `o` | `{to: (string\|string[])}` |  |
+
+Returns `function(): void`: takes the route away.
+
+##### `Events.on(pattern, fn, options)`
+
+Hears every message matching the pattern (as EventBus.on).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` | 'prices.*.USDCAD', 'prices.&gt;', '$events.state' |
+| `fn` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `function(): void`: stops it.
+
+##### `Events.subscribe(pattern, fn, options)`
+
+The same as on, as an object with state, statistics and helpers (a feed for a grid, an async iterator, latest values).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[fn]` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `Subscription`.
+
+##### `Events.once(pattern, options)`
+
+The next message matching the pattern.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `{timeoutMs: number, signal: AbortSignal, where: function(Message&lt;*&gt;): boolean, scope: string}` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `Events.off(pattern, fn)`
+
+Stops one listener, every listener of a pattern, or (with nothing) every listener.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[pattern]` | `string` |  |
+| `[fn]` | `function(Message&lt;*&gt;): void` |  |
+
+Returns `void`.
+
+##### `Events.stream(pattern, options)`
+
+Messages as an async iterator: for await (const m of events.stream('prices.&gt;', { signal })).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `AsyncIterable&lt;Message&lt;*&gt;&gt;`.
+
+##### `Events.publish(topic, data, options)`
+
+Publishes; resolves when delivered (the page: at once; a server: when it acknowledges).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` | any JSON value |
+| `[options]` | `PublishOptions` |  |
+
+Returns `Promise&lt;Receipt&gt;`.
+
+##### `Events.request(topic, data, options)`
+
+Sends and waits for the one answer; rejects with a TimeoutError after timeoutMs (default 10 s).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[options]` | `RequestOptions` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `Events.reply(topic, fn)`
+
+Answers requests on a topic or pattern in the page and the tabs (what the function answers is the reply; what it throws is the requester's rejection).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `fn` | `function(Message&lt;*&gt;): (*\|Promise&lt;*&gt;)` |  |
+
+Returns `function(): void`: stops answering.
+
+##### `Events.topic(name, o)`
+
+A typed handle on a topic or pattern: ticks.on(fn), ticks.publish(data), ticks.request(data).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `[o]` | `{kind: string, validate: function(*, Message&lt;*&gt;): (boolean\|string), scope: string}` |  |
+
+Returns `Topic`.
+
+##### `Events.define(kind, validate)`
+
+Registers the check of a kind: a message of that kind whose data fails it is dropped on the way in (recorded as invalid) and refused on the way out.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` |  |
+| `validate` | `function(*, Message&lt;*&gt;): (boolean\|string)` | true, or words |
+
+Returns `void`.
+
+##### `Events.reconnect()`
+
+Opens the connection again now (a person pressed Reconnect).
+
+Returns `void`.
+
+##### `Events.close()`
+
+Closes the connection and stops trying (subscriptions stay, and are sent again by reconnect()).
+
+Returns `void`.
+
+##### `Events.flush()`
+
+Sends what the queue holds now (it is sent on its own when the connection opens).
+
+Returns `Promise&lt;number&gt;`: how many were sent.
+
+##### `Events.clearOutbox()`
+
+Empties the queue: what waits is not sent.
+
+Returns `Promise&lt;number&gt;`: how many were dropped.
+
+##### `Events.signOut()`
+
+The person signs out: the queue is emptied, the positions in streams are forgotten and the other tabs are told to do the same.
+
+Returns `Promise&lt;void&gt;`.
+
+##### `Events.metrics()`
+
+The figures so far (one plain object).
+
+Returns `Object`.
+
+##### `Events.destroy()`
+
+Closes the connection, ends every subscription and request, stops answering: the Events is done.
+
+Returns `void`.
+
+#### class `ScopedEvents`
+
+The same calls pinned to one scope, whatever the routes say (events.page, events.tabs, events.server).
+
+##### `new ScopedEvents(events, scope)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Events` |  |
+| `scope` | `string` |  |
+
+##### `ScopedEvents.on(pattern, fn, options)`
+
+As Events.on, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `fn` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `function(): void`.
+
+##### `ScopedEvents.subscribe(pattern, fn, options)`
+
+As Events.subscribe, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[fn]` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `Subscription`.
+
+##### `ScopedEvents.once(pattern, options)`
+
+As Events.once, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `Object` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `ScopedEvents.off(pattern, fn)`
+
+As Events.off.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[pattern]` | `string` |  |
+| `[fn]` | `Function` |  |
+
+Returns `void`.
+
+##### `ScopedEvents.publish(topic, data, options)`
+
+As Events.publish, to this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[options]` | `PublishOptions` |  |
+
+Returns `Promise&lt;Receipt&gt;`.
+
+##### `ScopedEvents.request(topic, data, options)`
+
+As Events.request, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[options]` | `RequestOptions` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `ScopedEvents.reply(topic, fn)`
+
+As Events.reply.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `fn` | `function(Message&lt;*&gt;): *` |  |
+
+Returns `function(): void`.
+
+##### `ScopedEvents.stream(pattern, options)`
+
+As Events.stream, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `AsyncIterable&lt;Message&lt;*&gt;&gt;`.
+
+##### `ScopedEvents.topic(name, o)`
+
+As Events.topic, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `[o]` | `Object` |  |
+
+Returns `Topic`.
+
+#### class `Topic`
+
+A typed handle on a topic (or a pattern: publishing then names the topic in options.topic).
+
+##### `new Topic(events, name, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Events` |  |
+| `name` | `string` |  |
+| `o` | `{kind: string, validate: Function, scope: string}` |  |
+
+##### `Topic.on(fn, options)`
+
+Hears this topic's messages.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `fn` | `function(Message&lt;T&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `function(): void`.
+
+##### `Topic.subscribe(fn, options)`
+
+A subscription to this topic.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[fn]` | `function(Message&lt;T&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `Subscription`.
+
+##### `Topic.once(options)`
+
+The next message.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[options]` | `Object` |  |
+
+Returns `Promise&lt;Message&lt;T&gt;&gt;`.
+
+##### `Topic.publish(data, options)`
+
+Publishes data of this topic's kind (options.topic names the topic when the handle is a pattern).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `data` | `T` |  |
+| `[options]` | `PublishOptions` |  |
+
+Returns `Promise&lt;Receipt&gt;`.
+
+##### `Topic.request(data, options)`
+
+Asks on this topic.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `data` | `T` |  |
+| `[options]` | `RequestOptions` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `Topic.stream(options)`
+
+This topic's messages as an async iterator.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `AsyncIterable&lt;Message&lt;T&gt;&gt;`.
+
+#### `createEvents(options)`
+
+A new Events with no server: the page and (when given) the tabs.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[options]` | `EventsOptions` |  |
+
+Returns `Events`.
+
+#### `covers(general, specific)`
+
+Says whether every topic of the specific pattern is a topic of the general one.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `general` | `string` |  |
+| `specific` | `string` |  |
+
+Returns `boolean`.
+
+### drishti_subscription.js
+
+#### `SUBSCRIPTION_STATES`
+
+A subscription's states.
+
+#### class `Subscription`
+
+A subscription to a pattern.
+
+##### `new Subscription(events, pattern, fn, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events it belongs to |
+| `pattern` | `string` |  |
+| `fn` | `?function(Object): void` |  |
+| `o` | `Object` | its options (SubscribeOptions) |
+
+##### `Subscription.latest(key)`
+
+The latest message (of a key, when given; a message's key is what a later one replaces).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[key]` | `string` |  |
+
+Returns `?Object`.
+
+##### `Subscription.latestAll()`
+
+Every latest message by key, oldest first.
+
+Returns `Object[]`.
+
+##### `Subscription.subscribe(fn)`
+
+A feed: fn hears each message's data (and the message), so drishti-grid's connectLive and drishti-data's liveSource take a subscription as they take any feed.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `fn` | `function(*, Object): void` |  |
+
+Returns `function(): void`: stops it.
+
+##### `Subscription.byKind(handlers)`
+
+Handlers by the message's kind ({ rows: fn, resync: fn, ... }; '*' hears the kinds no handler names): each hears the data and the message. With it a subscription is a live-set channel: { subscribe: (h) =&gt; subscription.byKind(h) }.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `handlers` | `Object&lt;string, function(*, Object): void&gt;` |  |
+
+Returns `function(): void`: stops them.
+
+##### `Subscription.off()`
+
+Ends it: the listeners are stopped, a server is told, iterators end.
+
+Returns `void`.
+
+### drishti_envelope.js
+
+#### class `EventError`
+
+A failure of drishti-events, in words: a code and the detail.
+
+##### `new EventError(code, detail, extra)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `code` | `string` | 'topic.invalid', 'timeout', 'no.responder', 'forbidden', ... (a server may send codes of its own) |
+| `detail` | `string` | what happened, in words |
+| `[extra]` | `Object` | more fields kept on the error (retry, status) |
+
+#### class `TimeoutError`
+
+A wait that ran out of time.
+
+##### `new TimeoutError(detail)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `detail` | `string` |  |
+
+#### class `AbortError`
+
+A wait that was given up (its AbortSignal fired, or the Events was closed).
+
+##### `new AbortError(detail)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[detail]` | `string` |  |
+
+#### `MAX_ID_LENGTH`
+
+The longest id the protocol allows.
+
+#### `isMessage(x)`
+
+Says whether a value is a message made by drishti-events (and not a plain payload some other code put on the page's bus).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `x` | `*` |  |
+
+Returns `boolean`.
+
+#### `checkTopic(topic, own)`
+
+Throws when a topic is not one a message may be published on (or, with own, a library's own '$' topic).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `*` |  |
+| `[own]` | `boolean` | '$' topics allowed |
+
+Returns `string`: the topic.
+
+#### `checkPattern(pattern)`
+
+Throws when a pattern is not one a listener may name ('$events.*' allowed: the library's own topics).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `*` |  |
+
+Returns `string`: the pattern.
+
+#### `matches(pattern, topic)`
+
+Says whether a topic matches a pattern (drishti-core's matcher; a library's own '$' topics too).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `topic` | `string` |  |
+
+Returns `boolean`.
+
+#### `patternsOverlap(a, b)`
+
+Says whether some topic matches both patterns.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `a` | `string` |  |
+| `b` | `string` |  |
+
+Returns `boolean`.
+
+#### `shape(spec)`
+
+A small shape checker: shape({ symbol: 'string', bid: 'number', note: 'string?', legs: [{ side: 'string' }], at: { x: 'number' } }). Types: string, number, boolean, object, array, any, null; a final "?" makes a field optional; an array of one shape is a list of that shape; an object is a nested shape. Fields not named are allowed.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `Object` |  |
+
+Returns `Validator`.
+
+### drishti_timing.js
+
+#### `systemClock(o)`
+
+The page's own clock (or Node's): Date.now, setTimeout, requestAnimationFrame, Math.random and the document's visibility.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{document: Object}` | the document whose visibility counts (default the page's) |
+
+Returns `Clock`.
+
+#### `testClock(o)`
+
+A clock for tests: time moves only when the test says.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{seed: number, start: number}` | seed default 1; start: the clock's first time (default 1,794,000,000,000) |
+
+Returns `TestClock`.
+
+#### `seededRandom(seed)`
+
+A seeded random function (mulberry32): the same seed, the same numbers.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `seed` | `number` |  |
+
+Returns `function(): number`.
+
+### drishti_index.js
+
+#### `segment(text)`
+
+Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+#### `connect(url, options)`
+
+An Events. With no address: the page (and its tabs) only.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[url]` | `string` | the server's address |
+| `[options]` | `import('./drishti_events-hub.js').EventsOptions` |  |
+
+Returns `import('./drishti_events-hub.js').Events`.
+
+### Types of drishti-events
+
+#### `Message` : `Object`
+
+A message.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `id` | `string` | unique per publisher; made by the publisher |
+| `topic` | `string` | 'prices.fx.USDCAD' |
+| `data` | `T` | any JSON value |
+| `time` | `number` | the publisher's clock, ms since 1970 |
+| `source` | `string` | who published: a server's name, 'page', or 'tab:&lt;id&gt;' |
+| `[seq]` | `number` | the position in its stream (a server's messages) |
+| `[stream]` | `string` | the stream the seq counts in (default: the topic) |
+| `[key]` | `string` | what a later message replaces (conflation) |
+| `[kind]` | `string` | the name of the data's shape ('tick', 'rows') |
+| `[re]` | `string` | the id of the request this answers |
+| `[meta]` | `Object&lt;string, string&gt;` | headers (a trace id) |
+| `scope` | `('page'\|'tabs'\|'server')` | where it came from (added on receipt) |
+| `receivedAt` | `number` | this page's clock (added on receipt) |
+| `[retained]` | `boolean` | a last value sent on subscribing |
+| `[replayed]` | `boolean` | a message sent again after a gap |
+| `[invalid]` | `boolean` | it failed its kind's check and was delivered anyway (onInvalid: 'deliver') |
+
+#### `Validator`
+
+A check of a message's data: true, or what is wrong in words.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `data` | `*` |  |
+| `[message]` | `Message&lt;*&gt;` |  |
+
+#### `Receipt` : `Object`
+
+What a publish answers once it is delivered.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `id` | `string` | the message's id |
+| `topic` | `string` |  |
+| `time` | `number` | when it was published |
+| `to` | `string[]` | the scopes it went to |
+| `acked` | `boolean` | a server acknowledged it (always true for the page and the tabs once sent) |
+| `[unrouted]` | `string[]` | scopes routed to that this Events does not have (counted as dropped: unrouted) |
+
+#### `SubscribeOptions` : `Object`
+
+The options of a subscription (section 2.3 of the design).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[scope]` | `('page'\|'tabs'\|'server')` | hear only this scope (default: every scope the routes give) |
+| `[signal]` | `AbortSignal` | ends it |
+| `[where]` | `function(Message&lt;*&gt;): boolean` | false drops the message (recorded as filtered) |
+| `[validate]` | `function(*, Message&lt;*&gt;): (boolean\|string)` | one more check of the data (true, or words) |
+| `[onInvalid='drop']` | `('drop'\|'deliver')` | a message that fails its check: dropped, or delivered marked invalid |
+| `[conflate]` | `({key: (string\|function(Message&lt;*&gt;): string), merge: function(Message&lt;*&gt;, Message&lt;*&gt;): Message&lt;*&gt;}\|boolean)` | keep only the latest message per key until delivery (key: a field of the message, or of its data, or a function; default the message's key); merge combines an older and a newer one |
+| `[deliver='now']` | `('now'\|'frame'\|{everyMs: number})` | when to deliver: at once, once per animation frame, at most this often |
+| `[batch=false]` | `boolean` | the listener receives an array per delivery |
+| `[buffer]` | `{max: number, overflow: ('conflate'\|'drop-oldest'\|'drop-newest'\|'error')}` | the most messages held undelivered (default 10,000, overflow conflate) |
+| `[retained=false]` | `boolean` | ask the server for the last value of each matching topic first |
+| `[from='resume']` | `('now'\|'resume')` | after a reconnect: nothing missed, or what was missed |
+| `[onGap='replay']` | `('replay'\|'resync'\|'ignore')` | what a gap in a stream does |
+| `[staleMs]` | `number` | how long silence is normal |
+
+#### `PublishOptions` : `Object`
+
+The options of a publish.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[to]` | `(string\|string[])` | the scope or scopes (default: the routes) |
+| `[key]` | `string` | what a later message replaces |
+| `[kind]` | `string` | the name of the data's shape |
+| `[meta]` | `Object&lt;string, string&gt;` | headers |
+| `[ack]` | `boolean` | wait for a server's acknowledgement (default true to a server) |
+| `[queue='memory']` | `('memory'\|'persist'\|boolean)` | while not connected: held in memory, kept on disk, or false: fail at once |
+| `[ttlMs]` | `number` | dropped from the queue when older |
+| `[signal]` | `AbortSignal` |  |
+
+#### `RequestOptions` : `Object`
+
+The options of a request.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[timeoutMs=10000]` | `number` |  |
+| `[signal]` | `AbortSignal` | aborting tells the server (cancel) |
+| `[to]` | `(string\|string[])` | the scope (default: the routes) |
+| `[kind]` | `string` |  |
+| `[meta]` | `Object&lt;string, string&gt;` |  |
+
+#### `EventsOptions` : `Object`
+
+The options of an Events.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[routes]` | `Object&lt;string, (string\|string[])&gt;` | pattern to scope or scopes ('ui.&gt;': 'page', '&gt;': 'server'); the most specific pattern wins; a topic no route matches takes the default (with a server: 'ui.&gt;' the page, everything else the server; without one: the page) |
+| `[clock]` | `Clock` | every timer, time and random number (testClock() in tests) |
+| `[bus]` | `EventBus` | the page's bus (default drishti-core's shared bus) |
+| `[source='page']` | `string` | the source named on this page's messages |
+| `[limits]` | `Object&lt;string, number&gt;` | the ceilings (DEFAULT_LIMITS) |
+| `[signal]` | `AbortSignal` | ends the whole Events (a component's life) |
+| `[onError]` | `function(Error, Object): void` | also told of every error published on $events.error |
+
+#### `Clock` : `Object`
+
+The clock every part of the library reads.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `now` | `function(): number` | ms since 1970 |
+| `setTimeout` | `function(Function, number): *` |  |
+| `clearTimeout` | `function(*): void` |  |
+| `requestFrame` | `function(Function): *` | the next animation frame (a timer of 16 ms where the page has none) |
+| `cancelFrame` | `function(*): void` |  |
+| `random` | `function(): number` | a number in [0, 1) |
+| `hidden` | `function(): boolean` | whether the page is hidden (no animation frames come then) |
+
+#### `TestClock` : `Object`
+
+A clock a test moves by hand.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `now` | `function(): number` |  |
+| `setTimeout` | `function(Function, number): number` |  |
+| `clearTimeout` | `function(*): void` |  |
+| `requestFrame` | `function(Function): number` |  |
+| `cancelFrame` | `function(*): void` |  |
+| `random` | `function(): number` | seeded |
+| `hidden` | `function(): boolean` |  |
+| `tick` | `function(number): number` | moves time on by ms, running every timer that falls due (in time order, timers set on the way included); answers how many ran |
+| `frame` | `function(): number` | runs the animation frames asked for so far (time does not move); answers how many ran |
+| `runAll` | `function(number): number` | runs timers until none is left (at most `limit`, default 100,000, so a timer that sets itself again cannot hang a test); answers how many ran |
+| `setHidden` | `function(boolean): void` | hides or shows the page (a hidden page gets no frames) |
+| `pending` | `function(): number` | how many timers wait |
