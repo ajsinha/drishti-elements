@@ -19,6 +19,10 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **drishti-events** (eventing step E10, the inspector): `events.inspect(el?)` opens the inspector (its own file and sheet, loaded when
+  opened, with drishti-grid): Messages (time, direction, scope, topic, kind, seq, latency, what happened; a filter by pattern or words;
+  pause), Subscriptions, Connection (figures and the state timeline), Queue, Why (`explain` drawn); keys `/`, Space, Enter, Escape;
+  `inspectorCommand(events)` for the command palette. **drishti-core**: `loadPart(library, part)`; the manifest names each library's parts.
 - **drishti-events** (eventing step E9, observability): `metrics()` in groups (`connection`, `in` with rates over 1 s and 10 s, bytes,
   counts by pattern, delivery latency and listener time; `out` with acknowledgement time and requests; `drops` by reason; `stores`),
   fixed log-scale histograms (`Histogram`, `Rate`); `$events.metrics` once a second while someone listens, and `onMetrics`; the recorder

@@ -1752,6 +1752,17 @@ Returns `Promise&lt;(Object\|Object[])&gt;`.
 Drishti.elements.core.load('drishti-grid').then((grid) => grid.createGridModel({...}))
 ```
 
+#### `loadPart(name, part)`
+
+Loads a part of a library (a file beside its bundle: drishti-events' inspector), after the library itself; resolves with the part's API.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` | the library ("drishti-events") |
+| `part` | `string` | the part ("inspector") |
+
+Returns `Promise&lt;Object&gt;`.
+
 #### `refused(name)`
 
 Why a library may not be loaded on this page (its module is not on for the person), or null when it may.
@@ -18994,6 +19005,17 @@ The figures so far (one plain object).
 
 Returns `Object`.
 
+##### `Events.inspect(el, o)`
+
+Opens the events inspector (its own file, loaded now with drishti-grid): into an element (a dock's panel, a page's place), or a drawer at the page's side. A page of ES modules imports src/drishti_inspector.js and calls openInspector(events, el) itself.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[el]` | `HTMLElement` |  |
+| `[o]` | `{refreshMs: number}` |  |
+
+Returns `Promise&lt;Object&gt;`: the Inspector.
+
 ##### `Events.explain(query)`
 
 Why a message did or did not reach this page's listeners, in words: the steps (a listener matched, the route, the subscription, the connection, arrival, validity, kept, the listener ran), the first that failed marked. Draw it with drishti-core's renderExplain.
@@ -20696,6 +20718,129 @@ Returns `void`.
 Stops every timer and connection; the address is free again.
 
 Returns `void`.
+
+### drishti_inspector.js
+
+#### `INSPECTOR_TABS`
+
+The inspector's tabs.
+
+#### `outcomeOf(e)`
+
+What became of a recorded message, in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `e` | `Object` | a recorder entry |
+
+Returns `string`.
+
+#### `messageRows(events, f)`
+
+The Messages tab's rows: the recorder's entries, newest first, filtered by a topic pattern ('prices.&gt;') or words in the topic, kind or outcome; and by direction and outcome.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+| `[f]` | `{text: string, dir: string, outcome: string, max: number}` | outcome: 'delivered', 'dropped' or 'none' |
+
+Returns `Object[]`.
+
+#### `subscriptionRows(events)`
+
+The Subscriptions tab's rows.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `Object[]`.
+
+#### `queueRows(events)`
+
+The Queue tab's rows: what waits for a server, oldest first.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `Object[]`.
+
+#### `connectionView(events)`
+
+The Connection tab: the states, newest last, and the figures in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `{states: Array&lt;{time: string, state: string, reason: string}&gt;, figures: Array&lt;{label: string, value: string}&gt;}`.
+
+#### class `Inspector`
+
+The inspector drawn into an element.
+
+##### `new Inspector(el, events, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` | where it is drawn |
+| `events` | `Object` | the Events inspected |
+| `[o]` | `{refreshMs: number, onClose: function(): void, gridLib: Object}` | gridLib: drishti-grid's API (default: loaded) |
+
+##### `Inspector.show(t)`
+
+Shows a tab.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `t` | `string` | one of INSPECTOR_TABS |
+
+Returns `void`.
+
+##### `Inspector.refresh()`
+
+Draws the shown tab from the events' state now.
+
+Returns `void`.
+
+##### `Inspector.open(row)`
+
+Opens one message: its header and, when the recorder keeps payloads, its data (as text).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `row` | `(Object\|number)` | a Messages row, or its index |
+
+Returns `void`.
+
+##### `Inspector.close()`
+
+Closes the inspector (its element is emptied).
+
+Returns `void`.
+
+#### `openInspector(events, el, o)`
+
+Opens the inspector: into an element (a dock's panel, a page's own place), or else a drawer at the page's side. drishti-grid is loaded first.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+| `[el]` | `HTMLElement` | where to draw it |
+| `[o]` | `{refreshMs: number}` |  |
+
+Returns `Promise&lt;Inspector&gt;`.
+
+#### `inspectorCommand(events)`
+
+A command for drishti-core's command palette: "Open the events inspector".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `{id: string, title: string, run: function(): Promise&lt;Inspector&gt;}`.
 
 ### Types of drishti-events
 

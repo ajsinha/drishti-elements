@@ -2311,7 +2311,7 @@
   })();
   /* ---- src/drishti_events-hub.js ---- */
   __m["src/drishti_events-hub.js"] = (function () {
-    var pageBus = __lib("drishti-core").bus, EventBus = __lib("drishti-core").EventBus;
+    var pageBus = __lib("drishti-core").bus, EventBus = __lib("drishti-core").EventBus, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart;
     var EventError = __m["src/drishti_envelope.js"].EventError, TimeoutError = __m["src/drishti_envelope.js"].TimeoutError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isMessage = __m["src/drishti_envelope.js"].isMessage, IdMaker = __m["src/drishti_envelope.js"].IdMaker, checkTopic = __m["src/drishti_envelope.js"].checkTopic, checkPattern = __m["src/drishti_envelope.js"].checkPattern, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic, matches = __m["src/drishti_envelope.js"].matches, patternsOverlap = __m["src/drishti_envelope.js"].patternsOverlap, specificity = __m["src/drishti_envelope.js"].specificity, Kinds = __m["src/drishti_envelope.js"].Kinds;
     var systemClock = __m["src/drishti_timing.js"].systemClock;
     var Subscription = __m["src/drishti_subscription.js"].Subscription;
@@ -2620,6 +2620,10 @@
         out.drops = Object.assign({}, this.counters.drops);
         out.stores = { undelivered: undelivered, heldForGaps: srv.held || 0, outbox: out.outbox || null, pendingRequests: this._pending.size, recorder: this.recorder.metrics() };
         return out;
+      }
+      inspect(el, o) {
+        const have = loaded('drishti-events:inspector');
+        return (have ? Promise.resolve(have) : loadPart('drishti-events', 'inspector')).then((api) => api.openInspector(this, el, o));
       }
       explain(query) { return explainWhy(this, query || {}); }
       _delivered(sub, item, listeners, ms) {

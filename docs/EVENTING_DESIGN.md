@@ -821,6 +821,9 @@ Where the build had to choose, or the API above changed, the choice and its reas
 | E9 | `explain()` answers drishti-core's `ExplainResult` plus `failed` (the first failed step) and `ok` on each step; `value` is the first failure's words, or the delivery's | `renderExplain` draws the steps; a test reads `failed` |
 | E9 | `statusBadge` speaks through its own polite live region (the drawn state is `presentation`), at most once in five seconds, the countdown's seconds left out of what it says | a ticking countdown must not be announced every second |
 | E9 | The badge's look is the library's own sheet (`drishti_events.css`): a dot repeating the state's tone beside the words | every colour has a word beside it |
+| E10 | The inspector is a part (`drishti_events-inspector.js` and its sheet), loaded by drishti-core's new `loadPart(library, part)` (the generated manifest names each library's parts); it reaches drishti-grid at run time (`load('drishti-grid')`), not by an import | drishti-events requires only core |
+| E10 | `inspect(el)` draws into any element (a dock's panel is one); with none, a drawer at the page's side | the page owns its dock's layout |
+| E10 | The Messages filter is a topic pattern when it has `*` or `>`, otherwise words in the topic, kind or outcome | one field for both |
 
 ---
 

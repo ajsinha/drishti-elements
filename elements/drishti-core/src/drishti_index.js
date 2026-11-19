@@ -45,7 +45,7 @@ export { fuzzyScore, rankCommands, keymapCommands, CommandPalette, bindPaletteKe
 export { DockModel, Dock, workspaceStore } from './drishti_dock.js';
 export { SelectionHistory, SelectionChip } from './drishti_selection-chip.js';
 export { openDialog, closeDialog, openDrawer, ToastTray, toast } from './drishti_overlay.js';
-export { configure, endpoint, register, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
+export { configure, endpoint, register, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, loadPart, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
 export { isBlank, compareValues, compareRows, cycleSort, passes, rowFilter, filterWords, filterRows, textSortKey,
   compareTextKeys } from './drishti_filters.js';
 export { h, placeAt, placeUnder, attrAllowed, safeUrl } from './drishti_dom.js';

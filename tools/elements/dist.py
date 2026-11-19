@@ -228,6 +228,8 @@ def library_tree(train: Train, lib: str) -> dict[str, bytes]:
     out[f"elements/{lib}/{bundle_name(lib)}"] = (ELEMENTS / lib / bundle_name(lib)).read_bytes()
     for part in (spec.get("parts") or {}).values():                       # its parts: files beside the bundle (a worker, an inspector)
         out[f"elements/{lib}/{part['file']}"] = (ELEMENTS / lib / part["file"]).read_bytes()
+        for c in part.get("css") or []:
+            out[c] = (ROOT / c).read_bytes()
     for c in spec.get("css") or []:
         if owner(c) in (None, lib):
             out[c] = (ROOT / c).read_bytes()

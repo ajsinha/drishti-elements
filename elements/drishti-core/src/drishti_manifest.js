@@ -18,7 +18,8 @@
 /** The libraries of Drishti Elements by name (all at the one Elements version, `elements`): bundle and entry (relative to the elements folder), global name, the
  *  libraries each requires, the style sheets and the vendored engine's scripts (both relative to the static root) it needs, and the
  *  module it ships with (core: every installation; a domain module's library is loaded only where that module is on for the person).
- *  @type {{elements: string, libraries: Object<string, {title: string, bundle: string, entry: string, global: string, requires: string[], css: string[], scripts: string[], module: string}>}} */
+ *  A library's parts (files beside its bundle, loaded by loadPart) are named with their file and style sheets.
+ *  @type {{elements: string, libraries: Object<string, {title: string, bundle: string, entry: string, global: string, requires: string[], css: string[], scripts: string[], module: string, parts: Object<string, {file: string, css: string[]}>}>}} */
 export const MANIFEST = Object.freeze({
   "elements": "3.0.0-rc.1",
   "libraries": {
@@ -161,7 +162,23 @@ export const MANIFEST = Object.freeze({
         "elements/drishti-events/drishti_events.css"
       ],
       "scripts": [],
-      "module": "core"
+      "module": "core",
+      "parts": {
+        "worker": {
+          "file": "drishti-events/drishti_events-worker.js",
+          "css": []
+        },
+        "mock": {
+          "file": "drishti-events/drishti_events-mock.js",
+          "css": []
+        },
+        "inspector": {
+          "file": "drishti-events/drishti_events-inspector.js",
+          "css": [
+            "elements/drishti-events/drishti_events-inspector.css"
+          ]
+        }
+      }
     }
   }
 });

@@ -135,6 +135,13 @@
         "mock": {
           "file": "drishti_events-mock.js",
           "entry": "src/drishti_mock.js"
+        },
+        "inspector": {
+          "file": "drishti_events-inspector.js",
+          "entry": "src/drishti_inspector.js",
+          "css": [
+            "elements/drishti-events/drishti_events-inspector.css"
+          ]
         }
       }
     }

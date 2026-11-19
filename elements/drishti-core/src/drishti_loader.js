@@ -224,6 +224,26 @@ export function loadScript(src) {
 export function loadStyle(href) { const doc = root().document; if (doc) { addCss(doc, url(href)); } }
 
 /**
+ * Loads a part of a library (a file beside its bundle: drishti-events' inspector), after the library itself; resolves with the part's API.
+ * @param {string} name the library ("drishti-events")
+ * @param {string} part the part ("inspector")
+ * @returns {Promise<Object>}
+ */
+export function loadPart(name, part) {
+  const key = name + ':' + part, l = lib(name), p = l && l.parts && l.parts[part];
+  if (!p) { return Promise.reject(new Error('loadPart: ' + name + ' has no part ' + part)); }
+  if (loaded(key)) { return Promise.resolve(loaded(key)); }
+  return load(name).then(() => {
+    const doc = root().document;
+    if (doc && doc.head) { (p.css || []).forEach((c) => addCss(doc, staticBase() + c + '?v=' + MANIFEST.elements)); }
+    return loadScript((l.own ? l.own.replace(/\/?$/, '/') + p.file.slice(name.length + 1) : base() + p.file) + '?v=' + MANIFEST.elements);
+  }).then(() => {
+    if (!loaded(key)) { throw new Error(key + ' loaded but did not register itself'); }
+    return loaded(key);
+  });
+}
+
+/**
  * Loads libraries (and what they require) into the page, each once; resolves with the API of the one named, or the APIs in order.
  * @param {(string|string[])} names for example "drishti-grid"
  * @returns {Promise<(Object|Object[])>}

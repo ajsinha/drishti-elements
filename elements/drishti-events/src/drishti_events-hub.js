@@ -20,7 +20,7 @@
    A scope other than the page is an adapter the hub is given (the connection gives 'server', the tab channel gives 'tabs'): it sends
    what the hub publishes and hands what it receives to receive(); the hub delivers each message to every subscription that matches it,
    once, from whichever scope brought it. The library's own events are messages too, on '$events.*' topics of the Events' own bus. */
-import { bus as pageBus, EventBus } from '../../drishti-core/src/drishti_index.js';
+import { bus as pageBus, EventBus, loaded, loadPart } from '../../drishti-core/src/drishti_index.js';
 import { EventError, TimeoutError, AbortError, makeMessage, isMessage, IdMaker, checkTopic, checkPattern, isOwnTopic, matches,
   patternsOverlap, specificity, Kinds } from './drishti_envelope.js';
 import { systemClock } from './drishti_timing.js';
@@ -646,6 +646,18 @@ export class Events {
     out.drops = Object.assign({}, this.counters.drops);
     out.stores = { undelivered: undelivered, heldForGaps: srv.held || 0, outbox: out.outbox || null, pendingRequests: this._pending.size, recorder: this.recorder.metrics() };
     return out;
+  }
+
+  /**
+   * Opens the events inspector (its own file, loaded now with drishti-grid): into an element (a dock's panel, a page's place), or a drawer
+   * at the page's side. A page of ES modules imports src/drishti_inspector.js and calls openInspector(events, el) itself.
+   * @param {HTMLElement} [el]
+   * @param {{refreshMs: number}} [o]
+   * @returns {Promise<Object>} the Inspector
+   */
+  inspect(el, o) {
+    const have = loaded('drishti-events:inspector');
+    return (have ? Promise.resolve(have) : loadPart('drishti-events', 'inspector')).then((api) => api.openInspector(this, el, o));
   }
 
   /**

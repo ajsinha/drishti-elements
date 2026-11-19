@@ -49,8 +49,9 @@ def test_every_library_has_a_budget():
     assert libs == set(BUNDLES), sorted(libs ^ set(BUNDLES))
 
 
-# a library's parts (files beside its bundle, loaded only when needed): bytes
-PARTS = {"drishti-events/drishti_events-worker.js": 8_000, "drishti-events/drishti_events-mock.js": 26_000}
+# a library's parts (files beside its bundle, loaded only when needed) and their sheets: bytes
+PARTS = {"drishti-events/drishti_events-worker.js": 8_000, "drishti-events/drishti_events-mock.js": 26_000,
+         "drishti-events/drishti_events-inspector.js": 32_000, "drishti-events/drishti_events-inspector.css": 6_000}
 
 
 @pytest.mark.parametrize("part,budget", sorted(PARTS.items()))
@@ -62,4 +63,5 @@ def test_every_part_has_a_budget():
     import json
     libs = json.loads((ELEMENTS / "drishti_elements.json").read_text(encoding="utf-8"))["libraries"]
     parts = {f"{n}/{p['file']}" for n, spec in libs.items() for p in (spec.get("parts") or {}).values()}
+    parts |= {c[len("elements/"):] for spec in libs.values() for p in (spec.get("parts") or {}).values() for c in p.get("css") or []}
     assert parts == set(PARTS), sorted(parts ^ set(PARTS))
