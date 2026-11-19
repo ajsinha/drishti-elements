@@ -30,7 +30,7 @@ COMMENT = re.compile(r"/\*.*?\*/|(?<![:\\'\"])//[^\n]*|\{#.*?#\}|<!--.*?-->", re
 # figure, a kind a domain library registers), never a domain's words in their code: a risk measure's name, a risk kind, a regulatory
 # rule. Comments and JSDoc are documentation and may use a domain's examples; so are the harness pages (the gallery's sample data). A
 # threshold (`limit`, a row cap or a line a caller draws) is a generic hook and is not listed.
-GENERIC = ("drishti-core", "drishti-grid", "drishti-chart", "drishti-inputs", "drishti-data", "drishti-graph", "drishti-tree")
+GENERIC = ("drishti-core", "drishti-grid", "drishti-chart", "drishti-inputs", "drishti-data", "drishti-graph", "drishti-tree", "drishti-views")
 DOMAIN_WORDS = re.compile(r"\b(?:VaR|VAR|var\d\d|ES|EEPE|EPE|PFE|MTM|DV01|FRTB|SIMM|P&L|[Ee]xposures?|[Bb]acktest\w*|Basel|[Tt]raffic light"
                           r"|[Nn]etting|[Cc]ounterpart(?:y|ies)|risk\.[a-z-]+)\b")
 # Documentation only: the generated manifest names every library with its title .

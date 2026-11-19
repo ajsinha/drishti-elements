@@ -1,0 +1,7448 @@
+{
+ "about": "drishti-views' conformance vectors for the ViewModel specification (contract 1.x, the pinned copy of drishti-rachana's spec/1/viewmodel.schema.json). Each view or frame has an id (stable: vectors are added, never renumbered), what it shows, and what a validator answers: ok (no error), and the issues, each {level, code, path}, compared as a set; strictOk and strictIssues for strict mode (when absent: the same as normal mode). V: valid; I: invalid; S: valid in normal mode, refused in strict mode; F: frames of the live stream. Synthetic data only.",
+ "views": [
+  {
+   "id": "V001",
+   "about": "a view of nine panels: words, a table, bars, a line, markdown, and the three panel states (error, denied, empty)",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "V002",
+   "about": "the least a view may be: every required field, nothing else",
+   "view": {
+    "ref": {
+     "kind": "note",
+     "id": "N-1"
+    },
+    "title": {
+     "pill": null,
+     "id": null,
+     "with": null
+    },
+    "strip": [],
+    "panels": [],
+    "keys": [],
+    "provenance": {
+     "layout": null,
+     "fingerprint": null,
+     "source": null,
+     "generation": 41,
+     "fetchedAt": null,
+     "live": false,
+     "businessDate": null,
+     "updatedAt": null,
+     "staleAfter": null,
+     "stale": false,
+     "sutra": null,
+     "masked": 0,
+     "maskedPanels": null
+    },
+    "timings": {},
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "V003",
+   "about": "a newer minor of contract 1 is drawn",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.7"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "V004",
+   "about": "a layout of named areas, a split, a tabbed area, a sticky area, places and the phone's order",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0",
+    "layout": {
+     "areas": [
+      "head head",
+      "body side"
+     ],
+     "columns": [
+      8,
+      4
+     ],
+     "arrange": false,
+     "tabs": [
+      "side"
+     ],
+     "sticky": "head",
+     "split": {
+      "between": [
+       "body",
+       "side"
+      ],
+      "resizable": true
+     },
+     "place": {
+      "summary": {
+       "area": "head"
+      },
+      "booked": {
+       "area": "head"
+      },
+      "orders": {
+       "area": "body"
+      },
+      "trend": {
+       "area": "body"
+      },
+      "by-country": {
+       "area": "side",
+       "order": 1
+      },
+      "notes": {
+       "area": "side",
+       "order": 2,
+       "collapsible": true
+      }
+     }
+    },
+    "phone": {
+     "order": [
+      "booked",
+      "orders"
+     ],
+     "default": "summary"
+    }
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "V005",
+   "about": "tabs holding fields and whole panels",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     },
+     {
+      "id": "parts",
+      "kind": "tabs",
+      "title": "Parts",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "layout": "tabs",
+       "tabs": [
+        {
+         "title": "Part 1",
+         "fields": [
+          {
+           "label": "Status",
+           "text": "open",
+           "tone": "warn"
+          }
+         ],
+         "panels": [
+          {
+           "id": "leg-1-cash",
+           "kind": "kv",
+           "title": "Cash",
+           "inferred": false,
+           "empty": false,
+           "data": {
+            "fields": [
+             {
+              "label": "Paid",
+              "text": "1,200"
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "title": "Part 2",
+         "fields": null
+        }
+       ]
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "V006",
+   "about": "a control in the strip and a panel whose click sets it",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0",
+    "controls": [
+     {
+      "id": "country",
+      "kind": "dropdown",
+      "label": "Country",
+      "placement": "strip",
+      "options": [
+       {
+        "value": "FRA",
+        "label": "France"
+       },
+       {
+        "value": "DEU",
+        "label": "Germany"
+       }
+      ],
+      "value": "FRA",
+      "reads": [
+       "orders"
+      ]
+     }
+    ],
+    "selects": [
+     {
+      "panel": "by-country",
+      "by": "country",
+      "filter": [
+       "orders"
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "V007",
+   "about": "a computing panel, a stale panel, a panel waiting on an event, and a partial view",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      },
+      "compute": {
+       "state": "computing",
+       "requestId": "r-19",
+       "connector": "estimates",
+       "message": "waiting for 3 of 8 parts",
+       "hasResult": true
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      },
+      "provenance": {
+       "source": "orders-service",
+       "kind": "order",
+       "fetchedAt": "2026-11-19T09:20:00Z",
+       "staleAfter": "PT5M",
+       "stale": true
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      },
+      "wire": {
+       "waits": "pick a region to see its countries"
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": [],
+     "partial": true,
+     "missing": [
+      "node-b did not answer"
+     ]
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [],
+    "strictOk": true
+   }
+  },
+  {
+   "id": "I001",
+   "about": "panels missing",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "required",
+      "path": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "I002",
+   "about": "a panel without a kind",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "required",
+      "path": "panels[0]"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I003",
+   "about": "a strip cell whose text is a number",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": 18420350,
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "type",
+      "path": "strip[0].text"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I004",
+   "about": "kv data that is a list",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": [
+       1,
+       2
+      ]
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "type",
+      "path": "panels[0].data"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I005",
+   "about": "a table row without its required highlight",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "required",
+      "path": "panels[2].data.rows[0]"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I006",
+   "about": "a contract of another major",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "2.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "view.version",
+      "path": "contract"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I007",
+   "about": "a key that would reach the prototype",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ],
+       "constructor": {}
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "key.forbidden",
+      "path": "panels[0].data.constructor"
+     },
+     {
+      "level": "note",
+      "code": "unknown-field",
+      "path": "panels[0].data.constructor"
+     }
+    ],
+    "strictIssues": [
+     {
+      "level": "error",
+      "code": "key.forbidden",
+      "path": "panels[0].data.constructor"
+     },
+     {
+      "level": "error",
+      "code": "unknown-field",
+      "path": "panels[0].data.constructor"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I008",
+   "about": "more panels than a view may hold",
+   "view": {
+    "ref": {
+     "kind": "note",
+     "id": "N-1"
+    },
+    "title": {
+     "pill": null,
+     "id": null,
+     "with": null
+    },
+    "strip": [],
+    "panels": [
+     {
+      "id": "n0",
+      "kind": "markdown"
+     },
+     {
+      "id": "n1",
+      "kind": "markdown"
+     },
+     {
+      "id": "n2",
+      "kind": "markdown"
+     },
+     {
+      "id": "n3",
+      "kind": "markdown"
+     },
+     {
+      "id": "n4",
+      "kind": "markdown"
+     },
+     {
+      "id": "n5",
+      "kind": "markdown"
+     },
+     {
+      "id": "n6",
+      "kind": "markdown"
+     },
+     {
+      "id": "n7",
+      "kind": "markdown"
+     },
+     {
+      "id": "n8",
+      "kind": "markdown"
+     },
+     {
+      "id": "n9",
+      "kind": "markdown"
+     },
+     {
+      "id": "n10",
+      "kind": "markdown"
+     },
+     {
+      "id": "n11",
+      "kind": "markdown"
+     },
+     {
+      "id": "n12",
+      "kind": "markdown"
+     },
+     {
+      "id": "n13",
+      "kind": "markdown"
+     },
+     {
+      "id": "n14",
+      "kind": "markdown"
+     },
+     {
+      "id": "n15",
+      "kind": "markdown"
+     },
+     {
+      "id": "n16",
+      "kind": "markdown"
+     },
+     {
+      "id": "n17",
+      "kind": "markdown"
+     },
+     {
+      "id": "n18",
+      "kind": "markdown"
+     },
+     {
+      "id": "n19",
+      "kind": "markdown"
+     },
+     {
+      "id": "n20",
+      "kind": "markdown"
+     },
+     {
+      "id": "n21",
+      "kind": "markdown"
+     },
+     {
+      "id": "n22",
+      "kind": "markdown"
+     },
+     {
+      "id": "n23",
+      "kind": "markdown"
+     },
+     {
+      "id": "n24",
+      "kind": "markdown"
+     },
+     {
+      "id": "n25",
+      "kind": "markdown"
+     },
+     {
+      "id": "n26",
+      "kind": "markdown"
+     },
+     {
+      "id": "n27",
+      "kind": "markdown"
+     },
+     {
+      "id": "n28",
+      "kind": "markdown"
+     },
+     {
+      "id": "n29",
+      "kind": "markdown"
+     },
+     {
+      "id": "n30",
+      "kind": "markdown"
+     },
+     {
+      "id": "n31",
+      "kind": "markdown"
+     },
+     {
+      "id": "n32",
+      "kind": "markdown"
+     },
+     {
+      "id": "n33",
+      "kind": "markdown"
+     },
+     {
+      "id": "n34",
+      "kind": "markdown"
+     },
+     {
+      "id": "n35",
+      "kind": "markdown"
+     },
+     {
+      "id": "n36",
+      "kind": "markdown"
+     },
+     {
+      "id": "n37",
+      "kind": "markdown"
+     },
+     {
+      "id": "n38",
+      "kind": "markdown"
+     },
+     {
+      "id": "n39",
+      "kind": "markdown"
+     },
+     {
+      "id": "n40",
+      "kind": "markdown"
+     },
+     {
+      "id": "n41",
+      "kind": "markdown"
+     },
+     {
+      "id": "n42",
+      "kind": "markdown"
+     },
+     {
+      "id": "n43",
+      "kind": "markdown"
+     },
+     {
+      "id": "n44",
+      "kind": "markdown"
+     },
+     {
+      "id": "n45",
+      "kind": "markdown"
+     },
+     {
+      "id": "n46",
+      "kind": "markdown"
+     },
+     {
+      "id": "n47",
+      "kind": "markdown"
+     },
+     {
+      "id": "n48",
+      "kind": "markdown"
+     },
+     {
+      "id": "n49",
+      "kind": "markdown"
+     },
+     {
+      "id": "n50",
+      "kind": "markdown"
+     },
+     {
+      "id": "n51",
+      "kind": "markdown"
+     },
+     {
+      "id": "n52",
+      "kind": "markdown"
+     },
+     {
+      "id": "n53",
+      "kind": "markdown"
+     },
+     {
+      "id": "n54",
+      "kind": "markdown"
+     },
+     {
+      "id": "n55",
+      "kind": "markdown"
+     },
+     {
+      "id": "n56",
+      "kind": "markdown"
+     },
+     {
+      "id": "n57",
+      "kind": "markdown"
+     },
+     {
+      "id": "n58",
+      "kind": "markdown"
+     },
+     {
+      "id": "n59",
+      "kind": "markdown"
+     },
+     {
+      "id": "n60",
+      "kind": "markdown"
+     },
+     {
+      "id": "n61",
+      "kind": "markdown"
+     },
+     {
+      "id": "n62",
+      "kind": "markdown"
+     },
+     {
+      "id": "n63",
+      "kind": "markdown"
+     },
+     {
+      "id": "n64",
+      "kind": "markdown"
+     },
+     {
+      "id": "n65",
+      "kind": "markdown"
+     },
+     {
+      "id": "n66",
+      "kind": "markdown"
+     },
+     {
+      "id": "n67",
+      "kind": "markdown"
+     },
+     {
+      "id": "n68",
+      "kind": "markdown"
+     },
+     {
+      "id": "n69",
+      "kind": "markdown"
+     },
+     {
+      "id": "n70",
+      "kind": "markdown"
+     },
+     {
+      "id": "n71",
+      "kind": "markdown"
+     },
+     {
+      "id": "n72",
+      "kind": "markdown"
+     },
+     {
+      "id": "n73",
+      "kind": "markdown"
+     },
+     {
+      "id": "n74",
+      "kind": "markdown"
+     },
+     {
+      "id": "n75",
+      "kind": "markdown"
+     },
+     {
+      "id": "n76",
+      "kind": "markdown"
+     },
+     {
+      "id": "n77",
+      "kind": "markdown"
+     },
+     {
+      "id": "n78",
+      "kind": "markdown"
+     },
+     {
+      "id": "n79",
+      "kind": "markdown"
+     },
+     {
+      "id": "n80",
+      "kind": "markdown"
+     },
+     {
+      "id": "n81",
+      "kind": "markdown"
+     },
+     {
+      "id": "n82",
+      "kind": "markdown"
+     },
+     {
+      "id": "n83",
+      "kind": "markdown"
+     },
+     {
+      "id": "n84",
+      "kind": "markdown"
+     },
+     {
+      "id": "n85",
+      "kind": "markdown"
+     },
+     {
+      "id": "n86",
+      "kind": "markdown"
+     },
+     {
+      "id": "n87",
+      "kind": "markdown"
+     },
+     {
+      "id": "n88",
+      "kind": "markdown"
+     },
+     {
+      "id": "n89",
+      "kind": "markdown"
+     },
+     {
+      "id": "n90",
+      "kind": "markdown"
+     },
+     {
+      "id": "n91",
+      "kind": "markdown"
+     },
+     {
+      "id": "n92",
+      "kind": "markdown"
+     },
+     {
+      "id": "n93",
+      "kind": "markdown"
+     },
+     {
+      "id": "n94",
+      "kind": "markdown"
+     },
+     {
+      "id": "n95",
+      "kind": "markdown"
+     },
+     {
+      "id": "n96",
+      "kind": "markdown"
+     },
+     {
+      "id": "n97",
+      "kind": "markdown"
+     },
+     {
+      "id": "n98",
+      "kind": "markdown"
+     },
+     {
+      "id": "n99",
+      "kind": "markdown"
+     },
+     {
+      "id": "n100",
+      "kind": "markdown"
+     },
+     {
+      "id": "n101",
+      "kind": "markdown"
+     },
+     {
+      "id": "n102",
+      "kind": "markdown"
+     },
+     {
+      "id": "n103",
+      "kind": "markdown"
+     },
+     {
+      "id": "n104",
+      "kind": "markdown"
+     },
+     {
+      "id": "n105",
+      "kind": "markdown"
+     },
+     {
+      "id": "n106",
+      "kind": "markdown"
+     },
+     {
+      "id": "n107",
+      "kind": "markdown"
+     },
+     {
+      "id": "n108",
+      "kind": "markdown"
+     },
+     {
+      "id": "n109",
+      "kind": "markdown"
+     },
+     {
+      "id": "n110",
+      "kind": "markdown"
+     },
+     {
+      "id": "n111",
+      "kind": "markdown"
+     },
+     {
+      "id": "n112",
+      "kind": "markdown"
+     },
+     {
+      "id": "n113",
+      "kind": "markdown"
+     },
+     {
+      "id": "n114",
+      "kind": "markdown"
+     },
+     {
+      "id": "n115",
+      "kind": "markdown"
+     },
+     {
+      "id": "n116",
+      "kind": "markdown"
+     },
+     {
+      "id": "n117",
+      "kind": "markdown"
+     },
+     {
+      "id": "n118",
+      "kind": "markdown"
+     },
+     {
+      "id": "n119",
+      "kind": "markdown"
+     },
+     {
+      "id": "n120",
+      "kind": "markdown"
+     },
+     {
+      "id": "n121",
+      "kind": "markdown"
+     },
+     {
+      "id": "n122",
+      "kind": "markdown"
+     },
+     {
+      "id": "n123",
+      "kind": "markdown"
+     },
+     {
+      "id": "n124",
+      "kind": "markdown"
+     },
+     {
+      "id": "n125",
+      "kind": "markdown"
+     },
+     {
+      "id": "n126",
+      "kind": "markdown"
+     },
+     {
+      "id": "n127",
+      "kind": "markdown"
+     },
+     {
+      "id": "n128",
+      "kind": "markdown"
+     },
+     {
+      "id": "n129",
+      "kind": "markdown"
+     },
+     {
+      "id": "n130",
+      "kind": "markdown"
+     },
+     {
+      "id": "n131",
+      "kind": "markdown"
+     },
+     {
+      "id": "n132",
+      "kind": "markdown"
+     },
+     {
+      "id": "n133",
+      "kind": "markdown"
+     },
+     {
+      "id": "n134",
+      "kind": "markdown"
+     },
+     {
+      "id": "n135",
+      "kind": "markdown"
+     },
+     {
+      "id": "n136",
+      "kind": "markdown"
+     },
+     {
+      "id": "n137",
+      "kind": "markdown"
+     },
+     {
+      "id": "n138",
+      "kind": "markdown"
+     },
+     {
+      "id": "n139",
+      "kind": "markdown"
+     },
+     {
+      "id": "n140",
+      "kind": "markdown"
+     },
+     {
+      "id": "n141",
+      "kind": "markdown"
+     },
+     {
+      "id": "n142",
+      "kind": "markdown"
+     },
+     {
+      "id": "n143",
+      "kind": "markdown"
+     },
+     {
+      "id": "n144",
+      "kind": "markdown"
+     },
+     {
+      "id": "n145",
+      "kind": "markdown"
+     },
+     {
+      "id": "n146",
+      "kind": "markdown"
+     },
+     {
+      "id": "n147",
+      "kind": "markdown"
+     },
+     {
+      "id": "n148",
+      "kind": "markdown"
+     },
+     {
+      "id": "n149",
+      "kind": "markdown"
+     },
+     {
+      "id": "n150",
+      "kind": "markdown"
+     },
+     {
+      "id": "n151",
+      "kind": "markdown"
+     },
+     {
+      "id": "n152",
+      "kind": "markdown"
+     },
+     {
+      "id": "n153",
+      "kind": "markdown"
+     },
+     {
+      "id": "n154",
+      "kind": "markdown"
+     },
+     {
+      "id": "n155",
+      "kind": "markdown"
+     },
+     {
+      "id": "n156",
+      "kind": "markdown"
+     },
+     {
+      "id": "n157",
+      "kind": "markdown"
+     },
+     {
+      "id": "n158",
+      "kind": "markdown"
+     },
+     {
+      "id": "n159",
+      "kind": "markdown"
+     },
+     {
+      "id": "n160",
+      "kind": "markdown"
+     },
+     {
+      "id": "n161",
+      "kind": "markdown"
+     },
+     {
+      "id": "n162",
+      "kind": "markdown"
+     },
+     {
+      "id": "n163",
+      "kind": "markdown"
+     },
+     {
+      "id": "n164",
+      "kind": "markdown"
+     },
+     {
+      "id": "n165",
+      "kind": "markdown"
+     },
+     {
+      "id": "n166",
+      "kind": "markdown"
+     },
+     {
+      "id": "n167",
+      "kind": "markdown"
+     },
+     {
+      "id": "n168",
+      "kind": "markdown"
+     },
+     {
+      "id": "n169",
+      "kind": "markdown"
+     },
+     {
+      "id": "n170",
+      "kind": "markdown"
+     },
+     {
+      "id": "n171",
+      "kind": "markdown"
+     },
+     {
+      "id": "n172",
+      "kind": "markdown"
+     },
+     {
+      "id": "n173",
+      "kind": "markdown"
+     },
+     {
+      "id": "n174",
+      "kind": "markdown"
+     },
+     {
+      "id": "n175",
+      "kind": "markdown"
+     },
+     {
+      "id": "n176",
+      "kind": "markdown"
+     },
+     {
+      "id": "n177",
+      "kind": "markdown"
+     },
+     {
+      "id": "n178",
+      "kind": "markdown"
+     },
+     {
+      "id": "n179",
+      "kind": "markdown"
+     },
+     {
+      "id": "n180",
+      "kind": "markdown"
+     },
+     {
+      "id": "n181",
+      "kind": "markdown"
+     },
+     {
+      "id": "n182",
+      "kind": "markdown"
+     },
+     {
+      "id": "n183",
+      "kind": "markdown"
+     },
+     {
+      "id": "n184",
+      "kind": "markdown"
+     },
+     {
+      "id": "n185",
+      "kind": "markdown"
+     },
+     {
+      "id": "n186",
+      "kind": "markdown"
+     },
+     {
+      "id": "n187",
+      "kind": "markdown"
+     },
+     {
+      "id": "n188",
+      "kind": "markdown"
+     },
+     {
+      "id": "n189",
+      "kind": "markdown"
+     },
+     {
+      "id": "n190",
+      "kind": "markdown"
+     },
+     {
+      "id": "n191",
+      "kind": "markdown"
+     },
+     {
+      "id": "n192",
+      "kind": "markdown"
+     },
+     {
+      "id": "n193",
+      "kind": "markdown"
+     },
+     {
+      "id": "n194",
+      "kind": "markdown"
+     },
+     {
+      "id": "n195",
+      "kind": "markdown"
+     },
+     {
+      "id": "n196",
+      "kind": "markdown"
+     },
+     {
+      "id": "n197",
+      "kind": "markdown"
+     },
+     {
+      "id": "n198",
+      "kind": "markdown"
+     },
+     {
+      "id": "n199",
+      "kind": "markdown"
+     },
+     {
+      "id": "n200",
+      "kind": "markdown"
+     }
+    ],
+    "keys": [],
+    "provenance": {
+     "layout": null,
+     "fingerprint": null,
+     "source": null,
+     "generation": 41,
+     "fetchedAt": null,
+     "live": false,
+     "businessDate": null,
+     "updatedAt": null,
+     "staleAfter": null,
+     "stale": false,
+     "sutra": null,
+     "masked": 0,
+     "maskedPanels": null
+    },
+    "timings": {},
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "limit",
+      "path": "panels"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I009",
+   "about": "a view that is not an object",
+   "view": [
+    "not",
+    "a",
+    "view"
+   ],
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "type",
+      "path": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "I010",
+   "about": "a series value that is text",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          "2.9",
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "type",
+      "path": "panels[4].data.series[0].values[1]"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I011",
+   "about": "provenance.generation that is not a whole number",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 4.5,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "type",
+      "path": "provenance.generation"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I012",
+   "about": "tabs nested five deep",
+   "view": {
+    "ref": {
+     "kind": "note",
+     "id": "N-1"
+    },
+    "title": {
+     "pill": null,
+     "id": null,
+     "with": null
+    },
+    "strip": [],
+    "panels": [
+     {
+      "id": "t0",
+      "kind": "tabs",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "layout": "tabs",
+       "tabs": [
+        {
+         "title": "x",
+         "fields": null,
+         "panels": [
+          {
+           "id": "t1",
+           "kind": "tabs",
+           "inferred": false,
+           "empty": false,
+           "data": {
+            "layout": "tabs",
+            "tabs": [
+             {
+              "title": "x",
+              "fields": null,
+              "panels": [
+               {
+                "id": "t2",
+                "kind": "tabs",
+                "inferred": false,
+                "empty": false,
+                "data": {
+                 "layout": "tabs",
+                 "tabs": [
+                  {
+                   "title": "x",
+                   "fields": null,
+                   "panels": [
+                    {
+                     "id": "t3",
+                     "kind": "tabs",
+                     "inferred": false,
+                     "empty": false,
+                     "data": {
+                      "layout": "tabs",
+                      "tabs": [
+                       {
+                        "title": "x",
+                        "fields": null,
+                        "panels": [
+                         {
+                          "id": "t4",
+                          "kind": "tabs",
+                          "inferred": false,
+                          "empty": false,
+                          "data": {
+                           "layout": "tabs",
+                           "tabs": [
+                            {
+                             "title": "x",
+                             "fields": null,
+                             "panels": [
+                              {
+                               "id": "p5",
+                               "kind": "kv",
+                               "inferred": false,
+                               "empty": false,
+                               "data": {
+                                "fields": []
+                               }
+                              }
+                             ]
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ],
+    "keys": [],
+    "provenance": {
+     "layout": null,
+     "fingerprint": null,
+     "source": null,
+     "generation": 41,
+     "fetchedAt": null,
+     "live": false,
+     "businessDate": null,
+     "updatedAt": null,
+     "staleAfter": null,
+     "stale": false,
+     "sutra": null,
+     "masked": 0,
+     "maskedPanels": null
+    },
+    "timings": {},
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "limit",
+      "path": "panels"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I013",
+   "about": "more strip cells than a view may hold",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "c0",
+      "text": "0"
+     },
+     {
+      "label": "c1",
+      "text": "1"
+     },
+     {
+      "label": "c2",
+      "text": "2"
+     },
+     {
+      "label": "c3",
+      "text": "3"
+     },
+     {
+      "label": "c4",
+      "text": "4"
+     },
+     {
+      "label": "c5",
+      "text": "5"
+     },
+     {
+      "label": "c6",
+      "text": "6"
+     },
+     {
+      "label": "c7",
+      "text": "7"
+     },
+     {
+      "label": "c8",
+      "text": "8"
+     },
+     {
+      "label": "c9",
+      "text": "9"
+     },
+     {
+      "label": "c10",
+      "text": "10"
+     },
+     {
+      "label": "c11",
+      "text": "11"
+     },
+     {
+      "label": "c12",
+      "text": "12"
+     },
+     {
+      "label": "c13",
+      "text": "13"
+     },
+     {
+      "label": "c14",
+      "text": "14"
+     },
+     {
+      "label": "c15",
+      "text": "15"
+     },
+     {
+      "label": "c16",
+      "text": "16"
+     },
+     {
+      "label": "c17",
+      "text": "17"
+     },
+     {
+      "label": "c18",
+      "text": "18"
+     },
+     {
+      "label": "c19",
+      "text": "19"
+     },
+     {
+      "label": "c20",
+      "text": "20"
+     },
+     {
+      "label": "c21",
+      "text": "21"
+     },
+     {
+      "label": "c22",
+      "text": "22"
+     },
+     {
+      "label": "c23",
+      "text": "23"
+     },
+     {
+      "label": "c24",
+      "text": "24"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "limit",
+      "path": "strip"
+     }
+    ]
+   }
+  },
+  {
+   "id": "I014",
+   "about": "a key with no action word the specification knows, and a misspelt tone",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "good",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "rawjson"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [
+     {
+      "level": "warning",
+      "code": "enum",
+      "path": "strip[1].tone"
+     },
+     {
+      "level": "warning",
+      "code": "enum",
+      "path": "keys[1].action"
+     }
+    ],
+    "strictOk": false,
+    "strictIssues": [
+     {
+      "level": "error",
+      "code": "enum",
+      "path": "strip[1].tone"
+     },
+     {
+      "level": "error",
+      "code": "enum",
+      "path": "keys[1].action"
+     }
+    ]
+   }
+  },
+  {
+   "id": "S001",
+   "about": "an unknown field (a misspelling) is ignored, and an error in strict mode",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      },
+      "spam": 6
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [
+     {
+      "level": "note",
+      "code": "unknown-field",
+      "path": "panels[0].spam"
+     }
+    ],
+    "strictOk": false,
+    "strictIssues": [
+     {
+      "level": "error",
+      "code": "unknown-field",
+      "path": "panels[0].spam"
+     }
+    ]
+   }
+  },
+  {
+   "id": "S002",
+   "about": "a kind the painter does not know is drawn as a titled panel that says so",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "seat-map",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0"
+   },
+   "expect": {
+    "ok": true,
+    "issues": [
+     {
+      "level": "warning",
+      "code": "enum",
+      "path": "panels[0].kind"
+     }
+    ],
+    "strictOk": false,
+    "strictIssues": [
+     {
+      "level": "error",
+      "code": "enum",
+      "path": "panels[0].kind"
+     }
+    ]
+   }
+  },
+  {
+   "id": "S003",
+   "about": "fields a newer minor adds are ignored",
+   "view": {
+    "ref": {
+     "kind": "region",
+     "id": "EMEA"
+    },
+    "mnemonic": "RGN",
+    "title": {
+     "pill": "Region · Orders",
+     "id": "EMEA",
+     "with": {
+      "label": "Owner",
+      "text": "Northwind Sales",
+      "link": {
+       "kind": "team",
+       "id": "T-7",
+       "mnemonic": null
+      }
+     }
+    },
+    "strip": [
+     {
+      "label": "Booked",
+      "text": "18,420,350",
+      "emphasis": true,
+      "path": "$.BOOKED"
+     },
+     {
+      "label": "vs yesterday",
+      "text": "+4.2%",
+      "tone": "pos",
+      "path": "$.CHANGE"
+     },
+     {
+      "label": "Open orders",
+      "text": "1,287"
+     }
+    ],
+    "panels": [
+     {
+      "id": "summary",
+      "kind": "kv",
+      "title": "Summary",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "span": 8,
+      "data": {
+       "fields": [
+        {
+         "label": "Region",
+         "text": "Europe, Middle East and Africa"
+        },
+        {
+         "label": "Currency",
+         "text": "EUR"
+        },
+        {
+         "label": "Desk",
+         "text": "North",
+         "link": {
+          "kind": "desk",
+          "id": "D-1",
+          "mnemonic": null
+         }
+        }
+       ]
+      },
+      "state": {
+       "is": "ready"
+      }
+     },
+     {
+      "id": "booked",
+      "kind": "metric",
+      "title": "Booked today",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "span": 4,
+      "data": {
+       "value": {
+        "label": "Booked",
+        "text": "18,420,350",
+        "emphasis": true
+       },
+       "delta": {
+        "label": "Change",
+        "text": "+4.2%",
+        "tone": "pos"
+       },
+       "unit": "EUR",
+       "caption": "since 00:00"
+      }
+     },
+     {
+      "id": "orders",
+      "kind": "table",
+      "title": "Largest orders",
+      "code": "ORD",
+      "key": "F3",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "columns": [
+        "Order",
+        "Country",
+        "Amount"
+       ],
+       "numeric": [
+        false,
+        false,
+        true
+       ],
+       "rows": [
+        {
+         "cells": [
+          {
+           "text": "O-1001",
+           "link": {
+            "kind": "order",
+            "id": "O-1001",
+            "mnemonic": null
+           }
+          },
+          {
+           "text": "FRA"
+          },
+          {
+           "text": "12,500"
+          }
+         ],
+         "highlight": false,
+         "path": null
+        },
+        {
+         "cells": [
+          {
+           "text": "O-1002"
+          },
+          {
+           "text": "DEU"
+          },
+          {
+           "text": "9,800"
+          }
+         ],
+         "highlight": true,
+         "path": null
+        }
+       ],
+       "total": {
+        "cells": [
+         {
+          "text": "Total"
+         },
+         {},
+         {
+          "text": "22,300",
+          "emphasis": true
+         }
+        ],
+        "highlight": false,
+        "path": null
+       }
+      }
+     },
+     {
+      "id": "by-country",
+      "kind": "hbar",
+      "title": "By country",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "bars": [
+        {
+         "label": "FRA",
+         "value": 12500,
+         "text": "12,500",
+         "tone": "accent"
+        },
+        {
+         "label": "DEU",
+         "value": 9800,
+         "text": "9,800",
+         "tone": null
+        }
+       ]
+      }
+     },
+     {
+      "id": "trend",
+      "kind": "line",
+      "title": "Booked by hour",
+      "area": "main",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "x": [
+        "09:00",
+        "10:00",
+        "11:00"
+       ],
+       "series": [
+        {
+         "label": "Booked",
+         "values": [
+          1.2,
+          2.9,
+          null
+         ],
+         "tone": "accent"
+        }
+       ],
+       "unit": "EUR m"
+      }
+     },
+     {
+      "id": "notes",
+      "kind": "markdown",
+      "title": "Notes",
+      "area": "right",
+      "inferred": false,
+      "empty": false,
+      "data": {
+       "text": "Orders **above 10,000** need a second approval."
+      }
+     },
+     {
+      "id": "failed",
+      "kind": "gauge",
+      "title": "Capacity",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "error": "E-2041 the capacity service did not answer"
+     },
+     {
+      "id": "hidden",
+      "kind": "links",
+      "title": "Related",
+      "area": "right",
+      "inferred": false,
+      "empty": true,
+      "denied": "no access to team"
+     },
+     {
+      "id": "nothing",
+      "kind": "timeline",
+      "title": "Events",
+      "area": "right",
+      "inferred": true,
+      "explanation": "a dated list was found",
+      "empty": true,
+      "data": {
+       "events": [],
+       "more": 0
+      }
+     }
+    ],
+    "keys": [
+     {
+      "key": "F3",
+      "label": "Orders",
+      "action": "panel",
+      "panel": "orders"
+     },
+     {
+      "key": "F9",
+      "label": "Raw JSON",
+      "action": "raw"
+     }
+    ],
+    "provenance": {
+     "layout": "Sutra orders-overview v2",
+     "fingerprint": "5c1e…09ab",
+     "source": "orders-service",
+     "generation": 41,
+     "fetchedAt": "2026-11-19T09:30:00Z",
+     "live": true,
+     "businessDate": "2026-11-19",
+     "updatedAt": "2026-11-19T09:29:58Z",
+     "staleAfter": "PT5M",
+     "stale": false,
+     "sutra": "orders-overview",
+     "masked": 0,
+     "maskedPanels": []
+    },
+    "timings": {
+     "fetch": 3.98,
+     "layout": 2.74,
+     "links": 1.28,
+     "bind": 1.73,
+     "total": 9.74
+    },
+    "contract": "1.0",
+    "a11y": {
+     "label": "Orders"
+    }
+   },
+   "expect": {
+    "ok": true,
+    "issues": [
+     {
+      "level": "note",
+      "code": "unknown-field",
+      "path": "a11y"
+     },
+     {
+      "level": "note",
+      "code": "unknown-field",
+      "path": "panels[0].state"
+     }
+    ],
+    "strictOk": false,
+    "strictIssues": [
+     {
+      "level": "error",
+      "code": "unknown-field",
+      "path": "a11y"
+     },
+     {
+      "level": "error",
+      "code": "unknown-field",
+      "path": "panels[0].state"
+     }
+    ]
+   }
+  }
+ ],
+ "frames": [
+  {
+   "id": "F001",
+   "about": "a strip cell, a panel and the provenance replaced",
+   "frame": {
+    "seq": 4113,
+    "generation": 42,
+    "latencyMs": 3.1,
+    "p99Ms": 11.0,
+    "patches": [
+     {
+      "op": "strip",
+      "index": 0,
+      "cell": {
+       "label": "Booked",
+       "text": "18,432,850",
+       "emphasis": true
+      }
+     },
+     {
+      "op": "panel",
+      "panel": {
+       "id": "notes",
+       "kind": "markdown",
+       "title": "Notes",
+       "area": "right",
+       "inferred": false,
+       "empty": false,
+       "data": {
+        "text": "Approvals are open."
+       }
+      }
+     },
+     {
+      "op": "provenance",
+      "provenance": {
+       "layout": "Sutra orders-overview v2",
+       "fingerprint": "5c1e…09ab",
+       "source": "orders-service",
+       "generation": 42,
+       "fetchedAt": "2026-11-19T09:30:00Z",
+       "live": true,
+       "businessDate": "2026-11-19",
+       "updatedAt": "2026-11-19T09:29:58Z",
+       "staleAfter": "PT5M",
+       "stale": false,
+       "sutra": "orders-overview",
+       "masked": 0,
+       "maskedPanels": []
+      }
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "issues": []
+   }
+  },
+  {
+   "id": "F002",
+   "about": "the thing shown was deleted, then restored",
+   "frame": {
+    "seq": 4114,
+    "generation": 43,
+    "latencyMs": null,
+    "p99Ms": null,
+    "patches": [
+     {
+      "op": "deleted",
+      "at": "2026-11-19T09:31:00Z"
+     },
+     {
+      "op": "restored"
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "issues": []
+   }
+  },
+  {
+   "id": "F003",
+   "about": "a heartbeat frame with no patches",
+   "frame": {
+    "seq": 4115,
+    "generation": 43,
+    "latencyMs": null,
+    "p99Ms": null,
+    "patches": null
+   },
+   "expect": {
+    "ok": true,
+    "issues": []
+   }
+  },
+  {
+   "id": "F101",
+   "about": "a frame without its sequence number",
+   "frame": {
+    "generation": 43,
+    "latencyMs": null,
+    "p99Ms": null,
+    "patches": []
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "required",
+      "path": ""
+     }
+    ]
+   }
+  },
+  {
+   "id": "F102",
+   "about": "a patch with an op the specification does not name",
+   "frame": {
+    "seq": 1,
+    "generation": 1,
+    "latencyMs": null,
+    "p99Ms": null,
+    "patches": [
+     {
+      "op": "set",
+      "path": "$.x"
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "issues": [
+     {
+      "level": "warning",
+      "code": "enum",
+      "path": "patches[0].op"
+     },
+     {
+      "level": "note",
+      "code": "unknown-field",
+      "path": "patches[0].path"
+     }
+    ]
+   }
+  },
+  {
+   "id": "F103",
+   "about": "a strip patch whose index is text",
+   "frame": {
+    "seq": 1,
+    "generation": 1,
+    "latencyMs": null,
+    "p99Ms": null,
+    "patches": [
+     {
+      "op": "strip",
+      "index": "0",
+      "cell": {}
+     }
+    ]
+   },
+   "expect": {
+    "ok": false,
+    "issues": [
+     {
+      "level": "error",
+      "code": "type",
+      "path": "patches[0].index"
+     }
+    ]
+   }
+  }
+ ]
+}

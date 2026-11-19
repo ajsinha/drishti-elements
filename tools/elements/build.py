@@ -29,7 +29,9 @@ The build also writes the generated modules of drishti-core, each from its one h
 * ``src/drishti_manifest.js``      the manifest (libraries, versions, files, requirements) the loader reads;
 * ``src/drishti_formats-table.js`` the server's named formats (``data/formats.yaml``);
 * ``src/drishti_theme-table.js``   the themes and their colour tokens (``css/drishti_tokens.css``);
-* drishti-chart's ``src/drishti_world-regions.js``  the world's regions (``data/world-regions.yaml``).
+* drishti-chart's ``src/drishti_world-regions.js``  the world's regions (``data/world-regions.yaml``);
+* drishti-views' ``src/drishti_views-schema.js``  the compact ViewModel schema (``tools/views/gen.py``, from the pinned copy of
+  drishti-rachana's ``spec/1/viewmodel.schema.json``).
 
 The module grammar the bundler accepts (anything else is refused with the file and line):
 
@@ -398,6 +400,15 @@ def gen_themes() -> str:
             f"export const THEME_TABLE = Object.freeze({body});\n")
 
 
+def gen_views():
+    """tools/views/gen.py: drishti-views' compact ViewModel schema, from the pinned copy of drishti-rachana's specification."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("drishti_views_gen", HOME / "tools" / "views" / "gen.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def outputs() -> dict[Path, str]:
     m = manifest()
     core = ELEMENTS / "drishti-core" / "src"
@@ -405,6 +416,9 @@ def outputs() -> dict[Path, str]:
     if "drishti-core" in m["libraries"]:                 # a host's own libraries have no generated modules: only this project's core and chart do
         out = {core / "drishti_manifest.js": gen_manifest(m), core / "drishti_formats-table.js": gen_formats(), core / "drishti_theme-table.js": gen_themes()}
         out[ELEMENTS / "drishti-chart" / "src" / "drishti_world-regions.js"] = gen_world_regions()
+    if "drishti-views" in m["libraries"] and ELEMENTS == OWN_ELEMENTS:
+        views = gen_views()
+        out[views.OUT] = views.render()
     for name, spec in m["libraries"].items():
         out[ELEMENTS / name / bundle_name(name)] = None  # rendered after the generated modules are in place
     return out

@@ -17,6 +17,17 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
+## Unreleased
+
+- **drishti-views** (new, being built in the steps of `docs/VIEWS_DESIGN.md`; steps 1 to 3 here): the ViewModel specification as a
+  pinned copy of drishti-rachana's `spec/1/viewmodel.schema.json` with its compact form (`tools/views/gen.py`, written by the build) and
+  conformance vectors; `validate(view, { strict })` (normal mode ignores unknown fields and words as the specification asks a consumer to;
+  strict mode refuses them; the bounds and the keys that would reach a prototype are refused in both); `paint(el, source, options)` and its
+  handle: the title line, the strip, the freshness line and the function keys, the panels' frames with their states, the layout (two
+  columns, named areas, tabs, folds, sections, a sticky area, the divider; the container's medium and narrow forms in the phone order),
+  frames of the live stream applied in one animation frame, the cards drawn instead of a view, navigation in place; `registerKind`.
+  Speed budgets in `tests/views_budget.json`.
+
 ## 2.4.0
 
 The first version of Drishti Elements as its own project: the libraries, the gallery, the build and the tests in one repository, one release

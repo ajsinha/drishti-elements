@@ -31,6 +31,7 @@ version above (not Drishti's own).
 | [drishti-data](#drishti-data) | Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live), the live client over SSE and WebSocket with reconnect, heartbeat, resume and backpressure, and the Arrow client |
 | [drishti-chart](#drishti-chart) | The chart: one engine-neutral spec over the vendored ECharts (the general kinds, the maps from world to every country's first-level regions, the card and studio modes, the map's ranking and table modes), Explain on any mark, the data table, export, linked selection and live updates; Vega-Lite translated into the spec |
 | [drishti-graph](#drishti-graph) | The graph: networks cyclic or acyclic on a canvas for thousands of nodes; force (seeded), layered (DAG), radial, circular and grouped layouts; zoom, pan, minimap and fit; neighbours expanded on demand; the shortest path; groups collapsed by an attribute and filters by type; size and colour by a measure with a legend; pin, multi-select and lasso; a selection panel with Explain; linked selection; export (PNG, SVG, data); keyboard and an adjacency table; live updates; the lineage preset; the view's graph panel |
+| [drishti-views](#drishti-views) | Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states (error, denied, waiting, computing, stale, failed, empty), the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order), the frames of the live stream applied by identity in one animation frame, navigation in place; the registry of panel kinds |
 
 ## drishti-core
 
@@ -18945,3 +18946,270 @@ One line of a command's answer.
 | `text` | `string` |  |
 | `[tone]` | `('ok'\|'error'\|'dim'\|'echo'\|'')` |  |
 | `[node]` | `string` | a node the line names (the line is a link that selects it) |
+
+## drishti-views
+
+Bundle `elements/drishti-views/drishti_views.js`, global `Drishti.elements.views`; requires drishti-core.
+
+### drishti_views-schema.js
+
+#### `CONTRACT` : `string`
+
+The contract the schema describes, major.minor.
+
+#### `SCHEMA_SHA256` : `string`
+
+SHA-256 of the copy this form was made from (the pin).
+
+### drishti_views-validate.js
+
+#### `LIMITS`
+
+The bounds a view is held to whatever its schema says: panels, strip cells, nesting of tabs inside tabs.
+
+#### `FORBIDDEN_KEYS`
+
+Keys no object of a view or a frame may carry: they would reach an object's prototype.
+
+#### `validate(value, o)`
+
+Validates a ViewModel (or, with as: 'frame', a frame of its live stream) against the specification: {ok, issues}. ok is false when any issue is an error. Fast enough to run on every load of a view; never run per patch.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `value` | `*` | the parsed JSON |
+| `[o]` | `ValidateOptions` |  |
+
+Returns `{ok: boolean, issues: ViewIssue[]}`.
+
+```js
+validate(vm).issues.forEach((i) => console.warn(formatIssue(i)))
+```
+
+#### `formatIssue(issue)`
+
+One issue as a line: its path, what is wrong and what to write instead.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `issue` | `ViewIssue` |  |
+
+Returns `string`.
+
+### drishti_views-cells.js
+
+#### `MESSAGES`
+
+The painter's own words; a host's options.messages replaces any of them ({name} is filled in as text).
+
+#### `TONES`
+
+The tones of the specification; a word outside it is drawn untoned.
+
+### drishti_views-panels.js
+
+#### `PANEL_STATES`
+
+The states a panel's frame is drawn in (data-state on the frame).
+
+### drishti_views-layout.js
+
+#### `WIDTHS`
+
+The container widths (px) at which the arrangement changes: at most NARROW is a phone, at most MEDIUM a tablet.
+
+#### `arrange(vm)`
+
+The arrangement a view's layout asks for, as data: the mode (flow, columns, areas, sections), each area's panels in order, the tabbed and sticky areas, the split, the folds, and each panel's rank in the phone order. Pure: no DOM.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `vm` | `Object` | the ViewModel |
+
+Returns `Object`.
+
+### drishti_views-patch.js
+
+#### `OPS`
+
+The patch ops of contract 1.
+
+### drishti_views-paint.js
+
+#### `SPECS`
+
+The contract majors this painter draws.
+
+#### class `ViewHandle`
+
+A painted view: what paint() answers.
+
+##### `new ViewHandle(el, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` | the container |
+| `[options]` | `PaintOptions` |  |
+
+##### `ViewHandle.load(source)`
+
+Reads and paints a source: a ViewModel, an address, a Response or a promise of one.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `source` | `*` |  |
+
+Returns `ViewHandle`.
+
+##### `ViewHandle.update(source)`
+
+A new ViewModel (or address) for the same container.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `source` | `*` |  |
+
+Returns `Promise&lt;ViewHandle&gt;`.
+
+##### `ViewHandle.patch(frame)`
+
+Applies a frame of the live stream ({seq, patches}) or a list of patches, in the next animation frame.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `frame` | `(Object\|Object[])` |  |
+
+Returns `boolean`: false when the frame was dropped (not newer than the last applied).
+
+##### `ViewHandle.panel(id)`
+
+One panel: its frame element, the panel as drawn, and its body.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `?{element: HTMLElement, body: HTMLElement, panel: Object, state: string}`.
+
+##### `ViewHandle.on(name, fn)`
+
+Listens to the view's events: ready, error, issues, link*, key*, patch, navigate, dispose (* cancelable). Each is also a DOM event elements-view:&lt;name&gt; on the container.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `fn` | `function(Object): void` | receives {type, detail, preventDefault} |
+
+Returns `function(): void`: stops listening.
+
+##### `ViewHandle.open(link)`
+
+Opens a Link the way a click on it does: the cancelable link event, then the host's resolveView, painted in place.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `link` | `Object` |  |
+
+Returns `boolean`: false when a listener cancelled it.
+
+##### `ViewHandle.back()`
+
+Goes back to the view before the last one opened in place.
+
+Returns `boolean`: whether there was one.
+
+##### `ViewHandle.metrics()`
+
+Paint times and counts: firstPaintMs, readyMs, paints, patches applied, ignored and dropped, lastApplyMs.
+
+Returns `Object&lt;string, number&gt;`.
+
+##### `ViewHandle.dispose()`
+
+Stops everything, disposes every panel's drawing and empties the container.
+
+Returns `void`.
+
+#### `paint(el, source, options)`
+
+Paints a view into an element (replacing what paint drew there before) and answers its handle.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` | the container |
+| `source` | `*` | a ViewModel, its address, a Response, or a promise of one |
+| `[options]` | `PaintOptions` |  |
+
+Returns `ViewHandle`.
+
+```js
+const view = paint(document.getElementById('orders'), '/views/orders.json'); view.ready.then(() => view.patch(frame));
+```
+
+### drishti_views-kinds.js
+
+#### `kinds()`
+
+The kinds that have a painter, in the order they were registered.
+
+Returns `string[]`.
+
+### drishti_index.js
+
+#### `registerKind(name, def)`
+
+Registers a panel kind's painter: a host's own kind, drawn in the frame, with the states, the layout and the patches of every kind.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` | a lower-case word ("seat-map") |
+| `def` | `import('./drishti_views-kinds.js').KindPainter` | paint(body, panel, ctx) answers {update(panel), dispose()} or nothing |
+
+Returns `void`.
+
+```js
+registerKind('note', { paint(body, panel, ctx) { body.textContent = panel.data.text; } });
+```
+
+### Types of drishti-views
+
+#### `KindPainter` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `paint` | `function(HTMLElement, Object, Object): ?{update: function(Object): void, dispose: function(): void}` | draws panel.data into the body (the element, the panel, the paint's context); answers what updates and disposes it, or nothing |
+| `[chart]` | `boolean` | true for a kind whose drawing is a picture (it keeps a data table as its text alternative) |
+
+#### `PaintOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[shadow=true]` | `boolean` | draw inside a shadow root (false: into the element itself, styled by the page's sheets) |
+| `[density]` | `('comfortable'\|'compact'\|'terminal')` | the density of the view (default: the page's) |
+| `[messages]` | `Object&lt;string, string&gt;` | the painter's own words, over the bundled English ones |
+| `[header='full']` | `('full'\|'strip'\|'none')` | how much of the header is drawn |
+| `[panels]` | `string[]` | draw only these panel ids |
+| `[validate='warn']` | `('off'\|'warn'\|'refuse')` | warn: paint and report the issues; refuse: do not paint an invalid view |
+| `[keys=false]` | `boolean` | the view's function keys answer the keyboard (inside the view) |
+| `[links]` | `{href: function(Object): ?string, resolveView: function(Object): *}` | href: an address for a Link (else a link is a button that raises the link event); resolveView: a ViewModel, an address or a promise of either for a Link, painted in place with a back step |
+| `[fetch]` | `function(string, Object): Promise&lt;Response&gt;` | the host's fetch, for a view given by its address |
+| `[label]` | `string` | the region's accessible name (default: the title) |
+| `[locale]` | `string` | how times are printed (default: the page's) |
+
+#### `ViewIssue` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `level` | `('error'\|'warning'\|'note')` | an error makes the view invalid; a warning and a note are drawn past |
+| `code` | `string` | what kind of problem: type, required, enum, const, unknown-field, any-of, one-of, pattern, minimum, maximum, max-items, max-length, format, view.version, key.forbidden, limit |
+| `path` | `string` | where, as a path into the view ("panels[2].data.rows[0]"; "" is the view itself) |
+| `message` | `string` | what is wrong, in words |
+| `[fix]` | `string` | what to write instead |
+
+#### `ValidateOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[strict=false]` | `boolean` | unknown fields and unknown words of a closed list are errors (a producer's own tests) |
+| `[as='view']` | `('view'\|'frame')` | what the value is: a ViewModel or a frame of its live stream |
+| `[limits]` | `{panels: number, strip: number, depth: number}` | bounds other than LIMITS |

@@ -75,3 +75,14 @@ The request a server-side row model sends, one shape for rows, groups and pivots
 
 The answer holds the rows in display order, the pivot result column keys, the cells with values, texts and tones, the totals, the approximation marks and
 the row count.
+
+## The ViewModel (drishti-views)
+
+A screen a server sends to `paint(el, viewModel)` is a **ViewModel**, contract 1.x. Its one home is drishti-rachana's
+`spec/1/viewmodel.schema.json`; drishti-views carries a byte-for-byte copy (`elements/drishti-views/spec/drishti_viewmodel.schema.json`)
+whose hash is pinned beside it, and `python3 tools/views/gen.py --sync <drishti-rachana checkout>` takes a new one. A view's `contract`
+is `major.minor`: the painter draws major 1, ignores what a newer minor adds (an unknown field, an unknown word, an unknown kind is drawn
+as a titled panel that says so) and refuses another major in words. A live view's frames are `{seq, generation, patches}` with the ops
+`strip`, `panel`, `provenance`, `deleted` and `restored`; frames are applied in `seq` order and an older one is dropped. The
+conformance vectors (`elements/drishti-views/spec/drishti_vectors.json`) say what a validator answers for valid and invalid views and
+frames.

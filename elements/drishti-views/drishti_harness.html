@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+  Drishti Elements
+
+  Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+  All rights reserved.
+
+  PROPRIETARY.
+
+  This file is the proprietary property of Ashutosh Sinha.
+  Copying, use, modification or distribution of this file, via any medium,
+  is not permitted except with the express prior written permission of the
+  copyright holder.
+
+  See the LICENSE file in the root of this repository.
+
+  drishti-views' fixture harness: one conformance vector (spec/drishti_vectors.json) painted, no server (static files only). By the
+  address: ?view=V001 (the default) | any vector id; &shadow=0 (draw into the element, styled by the page); &width=PX (the container's
+  width: the narrow and medium forms); &density=comfortable|compact|terminal; &theme=light. The browser test (tests/test_views_browser.py)
+  drives it. Nothing inline: it runs under a strict CSP.
+-->
+<html lang="en" data-theme="terminal">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>drishti-views · fixture harness</title>
+<link rel="stylesheet" href="../../css/drishti_tokens.css">
+<link rel="stylesheet" href="../../css/drishti_states.css">
+<link rel="stylesheet" href="drishti_harness.css">
+</head>
+<body>
+<header class="hx-top">
+  <b class="hx-brand">drishti-views</b>
+  <label>Vector <select id="hx-pick" aria-label="Vector"></select></label>
+  <button type="button" id="hx-theme">Light / dark</button>
+</header>
+<main class="hx-stage"><div id="hx-view"></div></main>
+<script src="../drishti-core/drishti_core.js"></script>
+<script src="drishti_views.js"></script>
+<script src="drishti_harness.js"></script>
+</body>
+</html>

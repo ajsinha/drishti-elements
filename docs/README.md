@@ -18,7 +18,7 @@
 | Document | What it holds |
 |---|---|
 | [USING.md](USING.md) | installing the release tree, a first page, picking libraries, connecting to a server |
-| [DESIGN.md](DESIGN.md) | the eight libraries and the rules each keeps |
+| [DESIGN.md](DESIGN.md) | the nine libraries and the rules each keeps |
 | [API.md](API.md) | every library's functions, classes, options and events, generated from the typed JSDoc |
 | [CONTRACTS.md](CONTRACTS.md) | the shapes a host's server answers in: errors, live sets, data capabilities, Explain, pivots |
 | [THEMING.md](THEMING.md) | the design tokens, the themes and your own |

@@ -21,10 +21,10 @@ How Drishti Elements is built and the rules it keeps. How to use it is [USING.md
 ## 1. One implementation of each thing
 
 An application that grows screen by screen collects a grid per screen, a chart wrapper per chart, a number formatter per file, each with its own
-keyboard, accessibility, bugs and look. Drishti Elements is one implementation of each: eight libraries, each with one job, and a guard that stops
+keyboard, accessibility, bugs and look. Drishti Elements is one implementation of each: nine libraries, each with one job, and a guard that stops
 a second copy from growing beside them (section 9).
 
-## 2. The eight libraries
+## 2. The nine libraries
 
 | Library | What it is | Requires |
 |---|---|---|
@@ -36,6 +36,7 @@ a second copy from growing beside them (section 9).
 | **drishti-tree** | hierarchies in four modes of one component: the tree grid, the org chart, the sunburst, the icicle; measures with non-additive ones asked of the host; an edit mode that proposes moves; the outline of an authoring screen | core, inputs, grid |
 | **drishti-graph** | networks on a canvas for thousands of nodes: force, layered, radial, circular and grouped layouts, paths, groups, selection, an adjacency table | core, inputs, grid |
 | **drishti-designer** | the designer kit: the layout canvas over a layout model, palette, inspector, outline, YAML pane, undo and redo on one command stack, the designer shell | core, inputs, tree |
+| **drishti-views** | whole screens from a ViewModel: the specification's validator (contract 1.x, a pinned copy of drishti-rachana's schema), the painter (the screen, the panels' frames and states, the layout, the frames of the live stream) and the registry of panel kinds. Being built in steps (VIEWS_DESIGN.md): the kinds, datasets, live subscription and `<elements-view>` come next | core |
 
 A library that draws a choice draws it with drishti-inputs' `Select`, so the grid, the chart, the graph and the tree require inputs. Nothing
 depends on a host: a library names no host route and needs no host page (section 4).
