@@ -688,6 +688,19 @@
         });
         return resync;
       }
+      seed(positions) {
+        let n = 0;
+        Object.keys(positions || {}).forEach((name) => {
+          const p = positions[name];
+          if (!p || typeof p.seq !== 'number' || !isFinite(p.seq)) { return; }
+          const s = this.state(name);
+          if (s.last !== null) { return; }
+          s.last = p.seq;
+          s.epoch = p.epoch != null ? String(p.epoch) : null;
+          n++;
+        });
+        return n;
+      }
       reset() {
         this.streams.forEach((s) => this.stopTimer(s));
         this.streams.clear(); this.ids.clear();
@@ -850,8 +863,8 @@
   })();
   /* ---- src/drishti_connection.js ---- */
   __m["src/drishti_connection.js"] = (function () {
-    var ELEMENTS_VERSION = __lib("drishti-core").ELEMENTS_VERSION, endpoint = __lib("drishti-core").endpoint;
-    var EventError = __m["src/drishti_envelope.js"].EventError, makeMessage = __m["src/drishti_envelope.js"].makeMessage;
+    var ELEMENTS_VERSION = __lib("drishti-core").ELEMENTS_VERSION, endpoint = __lib("drishti-core").endpoint, isTopic = __lib("drishti-core").isTopic;
+    var EventError = __m["src/drishti_envelope.js"].EventError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, matches = __m["src/drishti_envelope.js"].matches;
     var Backoff = __m["src/drishti_timing.js"].Backoff, Heartbeat = __m["src/drishti_timing.js"].Heartbeat;
     var PROTOCOL_VERSION = __m["src/drishti_protocol.js"].PROTOCOL_VERSION, SUBPROTOCOL = __m["src/drishti_protocol.js"].SUBPROTOCOL, CLOSE_CODES = __m["src/drishti_protocol.js"].CLOSE_CODES, decodeFrames = __m["src/drishti_protocol.js"].decodeFrames, checkFrame = __m["src/drishti_protocol.js"].checkFrame, messageOf = __m["src/drishti_protocol.js"].messageOf, rawMessage = __m["src/drishti_protocol.js"].rawMessage, encodeFrames = __m["src/drishti_protocol.js"].encodeFrames;
     var websocketTransport = __m["src/drishti_transport-ws.js"].websocketTransport;
@@ -898,7 +911,9 @@
       accept(m, deliver) { this.deliver = deliver; this._can(); this.seq.accept(m).forEach(deliver); }
       after(sub, s) {
         const all = this.seq.positions(), out = {};
-        Object.keys(s.streams || {}).forEach((k) => { if (all[k]) { out[k] = all[k]; } });
+        const known = Object.keys(s.streams || {});
+        if (known.length) { known.forEach((k) => { if (all[k]) { out[k] = all[k]; } }); return out; }
+        Object.keys(all).forEach((k) => { if (isTopic(k) && matches(sub.pattern, k)) { out[k] = all[k]; } });
         return out;
       }
       subscribed(sub, f) {
@@ -1878,12 +1893,203 @@
     }
     return { "SUBSCRIPTION_STATES": SUBSCRIPTION_STATES, "Subscription": Subscription };
   })();
+  /* ---- src/drishti_tabs.js ---- */
+  __m["src/drishti_tabs.js"] = (function () {
+    var EventError = __m["src/drishti_envelope.js"].EventError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic, matches = __m["src/drishti_envelope.js"].matches, MAX_ID_LENGTH = __m["src/drishti_envelope.js"].MAX_ID_LENGTH;
+    var isTopic = __lib("drishti-core").isTopic;
+    var byteLength = __m["src/drishti_protocol.js"].byteLength;
+    const TABS_VERSION = 1;
+    const TAB_FRAMES = ['msg', 'req', 'res', 'err', 'cancel', 'signout'];
+    const WIRE_FIELDS = ['id', 'topic', 'data', 'time', 'source', 'seq', 'stream', 'key', 'kind', 're', 'meta', 'retained', 'replayed', 'epoch'];
+    function wireOf(m) {
+      const out = {};
+      WIRE_FIELDS.forEach((k) => { if (m[k] !== undefined) { out[k] = m[k]; } });
+      return out;
+    }
+    function messageFromWire(w, scope, now) {
+      if (!w || typeof w !== 'object' || Array.isArray(w)) { return 'not a message'; }
+      if (!isTopic(w.topic) || isOwnTopic(w.topic)) { return 'no valid topic'; }
+      if (typeof w.id !== 'string' || !w.id || w.id.length > MAX_ID_LENGTH) { return 'no valid id'; }
+      if (w.seq !== undefined && !(typeof w.seq === 'number' && isFinite(w.seq))) { return 'a seq that is not a number'; }
+      const f = {};
+      WIRE_FIELDS.forEach((k) => { if (w[k] !== undefined && w[k] !== null) { f[k] = w[k]; } });
+      if (f.data === undefined) { f.data = null; }
+      if (typeof f.time !== 'number') { f.time = now; }
+      if (typeof f.source !== 'string') { f.source = scope === 'tabs' ? 'tab' : 'server'; }
+      if (f.meta !== undefined && (typeof f.meta !== 'object' || Array.isArray(f.meta))) { delete f.meta; }
+      ['key', 'kind', 'stream', 're'].forEach((k) => { if (f[k] !== undefined) { f[k] = String(f[k]); } });
+      f.scope = scope;
+      f.receivedAt = now;
+      return makeMessage(f);
+    }
+    function broadcastChannelOf(env) {
+      if (env && env.BroadcastChannel) { return env.BroadcastChannel; }
+      if (env && env.noTabs) { return null; }
+      return typeof window !== 'undefined' && window.BroadcastChannel ? window.BroadcastChannel : null;
+    }
+    function locksOf(env) {
+      if (env && env.locks) { return env.locks; }
+      return typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request ? navigator.locks : null;
+    }
+    class TabsScope {
+      constructor(events, o) {
+        this.events = events;
+        this.o = Object.assign({}, o);
+        this.Channel = broadcastChannelOf(this.o.env);
+        this.name = 'drishti-events.tabs' + (this.o.namespace ? '.' + this.o.namespace : '');
+        this.id = 'tab:' + events.ids.tab;
+        this.channel = null;
+        this.reqs = new Map();
+        this.repliers = [];
+        this.working = new Map();
+        this.stats = { sent: 0, received: 0, bad: 0, requests: 0, answered: 0 };
+        this.closed = false;
+      }
+      _open() {
+        if (this.channel || this.closed || !this.Channel) { return this.channel; }
+        this.channel = new this.Channel(this.name);
+        this.channel.onmessage = (e) => this._in(e && e.data);
+        return this.channel;
+      }
+      _post(frame) {
+        const ch = this._open();
+        if (!ch) { throw new EventError('tabs.unavailable', 'this browser has no BroadcastChannel: the tabs scope is off'); }
+        const text = JSON.stringify(Object.assign({ v: TABS_VERSION, from: this.id }, frame));
+        if (byteLength(text) > this.events.limits.frameBytes) { throw new EventError('limit.size', 'a message to the other tabs is at most ' + this.events.limits.frameBytes + ' bytes'); }
+        this.stats.sent++;
+        ch.postMessage(text);
+      }
+      _in(text) {
+        if (this.closed) { return; }
+        let f;
+        try {
+          if (typeof text !== 'string' || byteLength(text) > this.events.limits.frameBytes) { throw new Error('too large or not text'); }
+          f = JSON.parse(text);
+        } catch (e) { this.stats.bad++; this.events._drop('invalid', null, null, 'a frame from another tab was not JSON text within the size limit'); return; }
+        if (!f || f.v !== TABS_VERSION || TAB_FRAMES.indexOf(f.t) < 0 || typeof f.from !== 'string' || f.from === this.id) {
+          if (!f || f.from !== this.id) { this.stats.bad++; this.events._drop('invalid', null, null, 'a frame from another tab of another version or type'); }
+          return;
+        }
+        if (f.to && f.to !== this.id) { return; }
+        this.stats.received++;
+        const now = this.events.clock.now();
+        switch (f.t) {
+          case 'msg': {
+            const m = messageFromWire(f.m, 'tabs', now);
+            if (typeof m === 'string') { this.stats.bad++; this.events._drop('invalid', null, null, 'a message from another tab: ' + m); return; }
+            this.events._receive(m);
+            break;
+          }
+          case 'req': this._request(f, now); break;
+          case 'res': case 'err': {
+            const r = this.reqs.get(f.re);
+            if (!r) { return; }
+            this.reqs.delete(f.re);
+            if (f.t === 'err') { r.reject(new EventError(typeof f.code === 'string' ? f.code : 'reply.failed', typeof f.detail === 'string' ? f.detail : 'the other tab failed')); return; }
+            const m = messageFromWire(f.m, 'tabs', now);
+            if (typeof m === 'string') { r.reject(new EventError('invalid', 'the answer from another tab: ' + m)); return; }
+            this.stats.answered++;
+            r.resolve(m);
+            break;
+          }
+          case 'cancel': { const w = this.working.get(f.re); if (w) { this.working.delete(f.re); w.abort(); } break; }
+          case 'signout': if (this.events._signOutHere) { this.events._signOutHere('tabs'); } break;
+          default: break;
+        }
+      }
+      _request(f, now) {
+        const m0 = messageFromWire(f.m, 'tabs', now);
+        if (typeof m0 === 'string') { this.stats.bad++; return; }
+        const r = this.repliers.find((x) => matches(x.pattern, m0.topic));
+        if (!r) { return; }
+        const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        if (ctrl) { this.working.set(m0.id, ctrl); }
+        const req = makeMessage(Object.assign({}, m0, { signal: ctrl ? ctrl.signal : undefined }));
+        Promise.resolve().then(() => r.fn(req)).then((data) => {
+          this.working.delete(m0.id);
+          const ans = { id: this.events.ids.next(), topic: m0.topic, data: data === undefined ? null : data, time: this.events.clock.now(), source: this.events.source, re: m0.id };
+          this._safePost({ t: 'res', to: f.from, re: m0.id, m: ans });
+        }, (e) => {
+          this.working.delete(m0.id);
+          this._safePost({ t: 'err', to: f.from, re: m0.id, code: (e && e.code) || 'reply.failed', detail: (e && (e.detail || e.message)) || String(e) });
+        });
+      }
+      _safePost(frame) { try { this._post(frame); } catch (e) { this.events._error(e, { where: 'tabs' }); } }
+      publish(m) {
+        try { this._post({ t: 'msg', m: wireOf(m) }); } catch (e) { return Promise.reject(e); }
+        return Promise.resolve({ acked: true });
+      }
+      request(m, o) {
+        return new Promise((resolve, reject) => {
+          this.reqs.set(m.id, { resolve: resolve, reject: reject });
+          if (this.reqs.size > this.events.limits.pendingRequests) { this.reqs.delete(this.reqs.keys().next().value); }
+          try { this._post({ t: 'req', m: wireOf(m) }); this.stats.requests++; } catch (e) { this.reqs.delete(m.id); reject(e); return; }
+          if (o && o.signal) {
+            o.signal.addEventListener('abort', () => {
+              if (!this.reqs.has(m.id)) { return; }
+              this.reqs.delete(m.id);
+              this._safePost({ t: 'cancel', re: m.id });
+              reject(new AbortError('the request ' + m.topic + ' was given up'));
+            }, { once: true });
+          }
+        });
+      }
+      subscribe() { this._open(); return false; }
+      unsubscribe() {}
+      reply(pattern, fn) {
+        this._open();
+        const r = { pattern: pattern, fn: fn };
+        this.repliers.push(r);
+        return () => { const i = this.repliers.indexOf(r); if (i >= 0) { this.repliers.splice(i, 1); } };
+      }
+      signOut() {
+        try { this._post({ t: 'signout' }); } catch (e) { /* no channel: nothing else to tell */ }
+        return Promise.resolve();
+      }
+      metrics() { return Object.assign({ channel: this.name, open: !!this.channel, pendingRequests: this.reqs.size }, this.stats); }
+      destroy() {
+        this.closed = true;
+        this.reqs.forEach((r) => r.reject(new EventError('closed', 'the Events was closed')));
+        this.reqs.clear();
+        this.working.forEach((c) => c.abort());
+        this.working.clear();
+        if (this.channel) { try { this.channel.close(); } catch (e) { /* closed */ } this.channel = null; }
+      }
+    }
+    class Leader {
+      constructor(o) {
+        this.o = o;
+        this.locks = locksOf(o.env);
+        /** @type {boolean} */ this.leading = false;
+        this.release = null;
+        this.stopped = false;
+      }
+      get possible() { return !!this.locks; }
+      start() {
+        if (!this.locks || this.stopped) { return; }
+        const held = new Promise((resolve) => { this.release = resolve; });
+        Promise.resolve(this.locks.request(this.o.name, () => {
+          if (this.stopped) { return undefined; }
+          this.leading = true;
+          try { this.o.onLead(); } catch (e) { if (typeof console !== 'undefined') { console.error('drishti-events: the leader tab failed to start', e); } }
+          return held;
+        })).catch(() => { /* the lock was given up */ });
+      }
+      stop() {
+        this.stopped = true;
+        this.leading = false;
+        if (this.release) { this.release(); this.release = null; }
+      }
+    }
+    return { "TABS_VERSION": TABS_VERSION, "wireOf": wireOf, "messageFromWire": messageFromWire, "broadcastChannelOf": broadcastChannelOf, "locksOf": locksOf, "TabsScope": TabsScope, "Leader": Leader };
+  })();
   /* ---- src/drishti_events-hub.js ---- */
   __m["src/drishti_events-hub.js"] = (function () {
     var pageBus = __lib("drishti-core").bus, EventBus = __lib("drishti-core").EventBus;
     var EventError = __m["src/drishti_envelope.js"].EventError, TimeoutError = __m["src/drishti_envelope.js"].TimeoutError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isMessage = __m["src/drishti_envelope.js"].isMessage, IdMaker = __m["src/drishti_envelope.js"].IdMaker, checkTopic = __m["src/drishti_envelope.js"].checkTopic, checkPattern = __m["src/drishti_envelope.js"].checkPattern, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic, matches = __m["src/drishti_envelope.js"].matches, patternsOverlap = __m["src/drishti_envelope.js"].patternsOverlap, specificity = __m["src/drishti_envelope.js"].specificity, Kinds = __m["src/drishti_envelope.js"].Kinds;
     var systemClock = __m["src/drishti_timing.js"].systemClock;
     var Subscription = __m["src/drishti_subscription.js"].Subscription;
+    var TabsScope = __m["src/drishti_tabs.js"].TabsScope, broadcastChannelOf = __m["src/drishti_tabs.js"].broadcastChannelOf;
     const SCOPES = Object.freeze(['page', 'tabs', 'server']);
     const OWN_TOPICS = Object.freeze(['$events.state', '$events.error', '$events.gap', '$events.drop', '$events.subscription',
       '$events.auth', '$events.metrics']);
@@ -1913,6 +2119,7 @@
         this.page = new ScopedEvents(this, 'page');
         this.tabs = new ScopedEvents(this, 'tabs');
         this.server = new ScopedEvents(this, 'server');
+        if (this.o.tabs !== false && broadcastChannelOf(this.o.env)) { this._attach('tabs', new TabsScope(this, { namespace: this.o.namespace, env: this.o.env })); }
         if (this.o.signal) { onAbort(this.o.signal, () => this.destroy()); }
       }
       _candidates() {
@@ -1951,6 +2158,8 @@
       _rescope() { this._subs.forEach((s) => { if (!s.o.scope) { s._listen(); } }); }
       _attach(name, adapter) {
         this._adapters.set(name, adapter);
+        const tabs = this._adapters.get('tabs');
+        if (name === 'server' && tabs && tabs._open) { tabs._open(); }           // a sign-out in another tab must reach this one's server scope
         this._rescope();
         return () => { if (this._adapters.get(name) === adapter) { this._adapters.delete(name); this._rescope(); } };
       }
@@ -2141,6 +2350,12 @@
         this._adapters.forEach((a) => { if (a.signOut) { work.push(a.signOut()); } });
         return Promise.all(work).then(() => undefined);
       }
+      _signOutHere(from) {
+        const work = [];
+        this._adapters.forEach((a, name) => { if (name !== from && a.signOut) { work.push(a.signOut()); } });
+        this._emitOwn('$events.auth', { reason: 'signed-out', ok: false, from: from });
+        return Promise.all(work).then(() => undefined);
+      }
       metrics() {
         const out = { state: this.state, subscriptions: this._subs.size, pendingRequests: this._pending.size, counters: JSON.parse(JSON.stringify(this.counters)) };
         this._adapters.forEach((a, name) => { if (a.metrics) { out[name] = a.metrics(); } });
@@ -2234,11 +2449,591 @@
     }
     return { "SCOPES": SCOPES, "OWN_TOPICS": OWN_TOPICS, "DEFAULT_LIMITS": DEFAULT_LIMITS, "Events": Events, "ScopedEvents": ScopedEvents, "Topic": Topic, "createEvents": createEvents, "covers": covers, "onAbort": onAbort };
   })();
+  /* ---- src/drishti_shared-hub.js ---- */
+  __m["src/drishti_shared-hub.js"] = (function () {
+    var EventBus = __lib("drishti-core").EventBus;
+    var EventError = __m["src/drishti_envelope.js"].EventError, checkPattern = __m["src/drishti_envelope.js"].checkPattern, MAX_ID_LENGTH = __m["src/drishti_envelope.js"].MAX_ID_LENGTH;
+    var systemClock = __m["src/drishti_timing.js"].systemClock;
+    var createEvents = __m["src/drishti_events-hub.js"].createEvents;
+    var Connection = __m["src/drishti_connection.js"].Connection;
+    var wireOf = __m["src/drishti_tabs.js"].wireOf, messageFromWire = __m["src/drishti_tabs.js"].messageFromWire, broadcastChannelOf = __m["src/drishti_tabs.js"].broadcastChannelOf, locksOf = __m["src/drishti_tabs.js"].locksOf, Leader = __m["src/drishti_tabs.js"].Leader;
+    const HUB_TIMING = Object.freeze({ aliveMs: 5000, forgetMs: 15000, authMs: 10000 });
+    const HUB_FRAMES = ['join', 'sub', 'unsub', 'pub', 'req', 'cancel', 'auth', 'alive', 'bye', 'reconnect', 'close', 'flush', 'clearOutbox', 'signout', 'metrics'];
+    const CLIENT_FRAMES_IN = ['hello', 'leader', 'state', 'msg', 'substate', 'ok', 'err', 'res', 'auth?', 'gap', 'metrics', 'done'];
+    function travels(o) {
+      return Object.keys(o).every((k) => ['auth', 'headers', 'env', 'clock', 'signal', 'bus', 'onError', 'worker', 'routes', 'share', 'namespace'].indexOf(k) >= 0 || typeof o[k] !== 'function');
+    }
+    function hostOptions(o) {
+      const out = {};
+      Object.keys(o || {}).forEach((k) => {
+        if (['env', 'clock', 'signal', 'bus', 'onError', 'worker', 'routes', 'share', 'auth', 'headers', 'tabs'].indexOf(k) >= 0) { return; }
+        out[k] = o[k];
+      });
+      return out;
+    }
+    class HubHost {
+      constructor(o) {
+        this.o = o;
+        this.id = o.id;
+        this.clients = new Map();
+        this.held = new Map();
+        this.closed = false;
+        this.events = createEvents({ bus: new EventBus(), clock: o.clock, routes: { '>': 'server' }, tabs: false, namespace: o.options.namespace,
+          limits: o.options.limits, source: 'hub' });
+        const copts = hostOptions(o.options);
+        copts.env = o.env;
+        if (o.auth) { copts.auth = o.auth; } else if (o.options.hasAuth) { copts.auth = (a) => this._askAuth(a); }
+        if (o.headers) { copts.headers = o.headers; } else if (o.options.headerValues) { copts.headers = o.options.headerValues; }
+        delete copts.hasAuth; delete copts.headerValues;
+        this.authAsks = new Map();
+        /** @private publishes waiting for the server, by id: the tabs (and their ops) to tell */ this.pubs = new Map();
+        this.nextAsk = 1;
+        this.conn = new Connection(this.events, o.address, copts);
+        this.events.on('$events.state', (m) => { this.lastState = m.data; this._all({ t: 'state', d: plain(m.data) }); });
+        this.events.on('$events.gap', (m) => this._all({ t: 'gap', d: plain(m.data) }));
+        this.events.on('$events.subscription', (m) => this._subState(m.data));
+        this.sweep = o.clock.setTimeout(() => this._sweep(), HUB_TIMING.forgetMs);
+      }
+      _all(frame) { this.clients.forEach((c, id) => this._to(id, frame)); }
+      _to(id, frame) { try { this.o.post(id, frame); } catch (e) { /* a tab gone */ } }
+      _sweep() {
+        if (this.closed) { return; }
+        const now = this.o.clock.now();
+        this.clients.forEach((c, id) => { if (now - c.seen > HUB_TIMING.forgetMs) { this._leave(id); } });
+        this.sweep = this.o.clock.setTimeout(() => this._sweep(), HUB_TIMING.forgetMs);
+      }
+      _askAuth(a) {
+        const id = Array.from(this.clients.keys()).find((k) => this.clients.get(k).hasAuth);
+        if (!id) { return Promise.reject(new EventError('auth.required', 'no tab of this hub can answer auth')); }
+        const op = this.nextAsk++;
+        return new Promise((resolve, reject) => {
+          const timer = this.o.clock.setTimeout(() => { this.authAsks.delete(op); reject(new EventError('timeout', 'the tab did not answer auth in time')); }, HUB_TIMING.authMs);
+          this.authAsks.set(op, { resolve: resolve, reject: reject, timer: timer });
+          this._to(id, { t: 'auth?', op: op, reason: a.reason, status: a.status });
+        });
+      }
+      _subState(d) {
+        const h = this.held.get(d.pattern);
+        if (!h) { return; }
+        const entry = this.conn.bySub.get(h.sub);
+        h.holders.forEach((subId, key) => {
+          const cid = key.slice(0, key.lastIndexOf('|'));
+          this._to(cid, { t: 'substate', id: subId, state: d.state, reason: d.reason || null, streams: entry && entry.streams ? entry.streams : undefined });
+        });
+      }
+      frame(cid, f) {
+        if (this.closed || !f || typeof f !== 'object' || HUB_FRAMES.indexOf(f.t) < 0) { return; }
+        const c = this.clients.get(cid);
+        if (!c && f.t !== 'join') { if (f.t !== 'bye') { this._to(cid, { t: 'leader', host: this.id, rejoin: true }); } return; }
+        if (c) { c.seen = this.o.clock.now(); }
+        switch (f.t) {
+          case 'join': this._join(cid, f); break;
+          case 'alive': break;
+          case 'bye': this._leave(cid); break;
+          case 'sub': this._sub(cid, c, f); break;
+          case 'unsub': this._unsub(cid, c, f.id); break;
+          case 'pub': this._pub(cid, f); break;
+          case 'req': this._req(cid, c, f); break;
+          case 'cancel': { const ctl = c.reqs.get(f.op); if (ctl) { c.reqs.delete(f.op); ctl.abort(); } break; }
+          case 'auth': {
+            const a = this.authAsks.get(f.op);
+            if (!a) { return; }
+            this.authAsks.delete(f.op);
+            this.o.clock.clearTimeout(a.timer);
+            if (typeof f.token === 'string') { a.resolve({ token: f.token, expiresAt: f.expiresAt }); } else { a.reject(new EventError('auth.failed', String(f.error || 'the tab\'s auth failed'))); }
+            break;
+          }
+          case 'reconnect': this.conn.reconnect(); break;
+          case 'close': this.conn.close(); break;
+          case 'flush': this.conn.flush().then((n) => this._to(cid, { t: 'done', op: f.op, n: n })); break;
+          case 'clearOutbox': this.conn.clearOutbox().then((n) => this._to(cid, { t: 'done', op: f.op, n: n })); break;
+          case 'signout': this.conn.signOut().then(() => this._to(cid, { t: 'done', op: f.op })); break;
+          case 'metrics': this._to(cid, { t: 'metrics', op: f.op, d: plain(Object.assign({ tabs: this.clients.size, subscriptions: this.held.size }, this.conn.metrics())) }); break;
+          default: break;
+        }
+      }
+      _join(cid, f) {
+        if (this.clients.has(cid)) { this._leave(cid, true); }
+        this.clients.set(cid, { seen: this.o.clock.now(), subs: new Map(), reqs: new Map(), hasAuth: !!f.hasAuth });
+        if (f.positions && typeof f.positions === 'object' && this.conn.sequencer) { this.conn.sequencer.seq.seed(f.positions); }
+        this._to(cid, { t: 'hello', host: this.id, state: this.lastState ? plain(this.lastState) : { state: this.conn.state } });
+      }
+      _leave(cid, rejoining) {
+        const c = this.clients.get(cid);
+        if (!c) { return; }
+        c.subs.forEach((s, subId) => this._unsub(cid, c, subId));
+        c.reqs.forEach((ctl) => ctl.abort());
+        this.clients.delete(cid);
+        if (!rejoining && !this.clients.size && this.o.onEmpty) { this.o.onEmpty(); }
+      }
+      _sub(cid, c, f) {
+        try { checkPattern(f.pattern); } catch (e) { this._to(cid, { t: 'substate', id: f.id, state: 'refused', reason: 'not a valid pattern' }); return; }
+        const o = f.o && typeof f.o === 'object' ? f.o : {};
+        c.subs.set(f.id, f.pattern);
+        let h = this.held.get(f.pattern);
+        const fresh = !h;
+        if (fresh) {
+          h = { holders: new Map(), sub: null };
+          this.held.set(f.pattern, h);
+          h.holders.set(cid + '|' + f.id, f.id);
+          const so = { scope: 'server' };
+          ['retained', 'from', 'onGap', 'staleMs'].forEach((k) => { if (o[k] !== undefined) { so[k] = o[k]; } });
+          if (o.conflate && o.conflate.server) { so.conflate = { server: true, everyMs: o.conflate.everyMs }; }
+          h.sub = this.events.subscribe(f.pattern, (m) => this._fanOut(h, m), so);
+          return;
+        }
+        h.holders.set(cid + '|' + f.id, f.id);
+        this._to(cid, { t: 'substate', id: f.id, state: h.sub.state, reason: h.sub.reason || null });
+        if (o.retained) {
+          const kept = h.sub.latestAll();
+          const last = h.sub.latest();
+          (kept.length ? kept : (last ? [last] : [])).forEach((m) => this._to(cid, { t: 'msg', m: Object.assign(wireOf(m), { retained: true }) }));
+        }
+      }
+      _fanOut(h, m) {
+        const w = wireOf(m), sent = new Set();
+        h.holders.forEach((subId, key) => {
+          const cid = key.slice(0, key.lastIndexOf('|'));
+          if (sent.has(cid)) { return; }
+          sent.add(cid);
+          this._to(cid, { t: 'msg', m: w });
+        });
+      }
+      _unsub(cid, c, subId) {
+        const pattern = c.subs.get(subId);
+        if (pattern === undefined) { return; }
+        c.subs.delete(subId);
+        const h = this.held.get(pattern);
+        if (!h) { return; }
+        h.holders.delete(cid + '|' + subId);
+        if (!h.holders.size) { this.held.delete(pattern); h.sub.off(); }
+      }
+      _pub(cid, f) {
+        const m = messageFromWire(f.m, 'server', this.o.clock.now());
+        if (typeof m === 'string') { this._to(cid, { t: 'err', op: f.op, code: 'invalid', detail: 'the message: ' + m }); return; }
+        const o = f.o && typeof f.o === 'object' ? { ack: f.o.ack, queue: f.o.queue, ttlMs: f.o.ttlMs } : {};
+        const waiting = this.pubs.get(m.id);
+        if (waiting) { waiting.push([cid, f.op]); return; }                    // sent again by a tab that rejoined: one publish, both told
+        const tell = [[cid, f.op]];
+        this.pubs.set(m.id, tell);
+        const done = (frame) => { this.pubs.delete(m.id); tell.forEach(([c, op]) => this._to(c, Object.assign({ op: op }, frame))); };
+        this.conn.publish(m, o).then((r) => done({ t: 'ok', acked: !r || r.acked !== false }),
+          (e) => done({ t: 'err', code: (e && e.code) || 'error', detail: (e && (e.detail || e.message)) || String(e) }));
+      }
+      _req(cid, c, f) {
+        const m = messageFromWire(f.m, 'server', this.o.clock.now());
+        if (typeof m === 'string') { this._to(cid, { t: 'err', op: f.op, code: 'invalid', detail: 'the request: ' + m }); return; }
+        const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        if (ctl) { c.reqs.set(f.op, ctl); }
+        this.conn.request(m, { timeoutMs: Number(f.timeoutMs) || 10000, signal: ctl ? ctl.signal : undefined }).then((a) => {
+          c.reqs.delete(f.op);
+          this._to(cid, { t: 'res', op: f.op, m: wireOf(a) });
+        }, (e) => {
+          c.reqs.delete(f.op);
+          this._to(cid, { t: 'err', op: f.op, code: (e && e.code) || 'error', detail: (e && (e.detail || e.message)) || String(e) });
+        });
+      }
+      destroy() {
+        if (this.closed) { return; }
+        this.closed = true;
+        this.o.clock.clearTimeout(this.sweep);
+        this.authAsks.forEach((a) => { this.o.clock.clearTimeout(a.timer); a.reject(new EventError('closed', 'the hub closed')); });
+        this.events.destroy();
+      }
+    }
+    class HubClient {
+      constructor(events, link, o) {
+        this.events = events;
+        this.link = link;
+        this.o = o;
+        this.clock = events.clock;
+        /** @type {string} 'worker' or 'leader' */ this.mode = o.mode;
+        /** @type {string} */ this.state = 'connecting';
+        this.transportKind = 'shared';
+        this.host = null;
+        this.subs = new Map();
+        this.bySub = new Map();
+        this.nextId = 1;
+        this.ops = new Map();
+        this.nextOp = 1;
+        this.positions = {};
+        this.seen = new Map();
+        this.hostMetrics = null;
+        this.closed = false;
+        link.listen((f) => this._in(f));
+        this.detach = events._attach('server', this);
+        this.alive = this.clock.setTimeout(() => this._alive(), HUB_TIMING.aliveMs);
+        this._join();
+      }
+      _post(f) { if (!this.closed) { try { this.link.post(f); } catch (e) { this.events._error(e, { where: 'hub' }); } } }
+      _alive() { if (this.closed) { return; } this._post({ t: 'alive' }); this.alive = this.clock.setTimeout(() => this._alive(), HUB_TIMING.aliveMs); }
+      _join() { this._post({ t: 'join', hasAuth: typeof this.o.auth === 'function', positions: this.positions }); }
+      _in(f) {
+        if (this.closed || !f || typeof f !== 'object' || CLIENT_FRAMES_IN.indexOf(f.t) < 0) { return; }
+        switch (f.t) {
+          case 'leader': if (f.rejoin) { this.host = null; } if (f.host !== this.host) { this._join(); } break;
+          case 'hello': this._hello(f); break;
+          case 'state': this._state(f.d); break;
+          case 'msg': this._msg(f.m); break;
+          case 'substate': {
+            const s = this.subs.get(f.id);
+            if (!s) { return; }
+            if (f.streams && typeof f.streams === 'object') {
+              Object.keys(f.streams).forEach((k) => {
+                const p = f.streams[k];
+                if (!p || typeof p.seq !== 'number') { return; }
+                if (!this.positions[k]) { this.positions[k] = { epoch: p.epoch != null ? String(p.epoch) : null, seq: p.seq }; }
+                else if (p.epoch != null) { this.positions[k].epoch = String(p.epoch); }
+              });
+            }
+            if (['active', 'recovering', 'refused', 'pending'].indexOf(f.state) >= 0) { s.sub._setState(f.state, f.reason || undefined); }
+            if (f.state === 'refused') { this._forget(s.sub); }
+            break;
+          }
+          case 'ok': case 'err': case 'res': case 'done': case 'metrics': this._answer(f); break;
+          case 'auth?': this._auth(f); break;
+          case 'gap': if (f.d && typeof f.d === 'object') { this.events._emitOwn('$events.gap', f.d); } break;
+          default: break;
+        }
+      }
+      _hello(f) {
+        if (typeof f.host !== 'string' || f.host === this.host) { return; }
+        this.host = f.host;
+        if (f.state && typeof f.state.state === 'string') { this._state(f.state); }
+        this.subs.forEach((s, id) => this._post({ t: 'sub', id: id, pattern: s.sub.pattern, o: subOptions(s.sub.o) }));
+        this.ops.forEach((op, n) => {
+          if (op.kind === 'req' && op.sent) { this.ops.delete(n); op.reject(new EventError('restart', 'the shared hub changed while the request waited')); return; }
+          if (op.kind === 'metrics' && op.sent) { this.ops.delete(n); op.resolve(this.hostMetrics); return; }
+          op.sent = true;
+          this._post(Object.assign({ op: n }, op.frame));
+        });
+      }
+      _state(d) {
+        if (!d || typeof d.state !== 'string' || d.state === this.state && d.state !== 'reconnecting') { return; }
+        const was = this.state;
+        this.state = d.state;
+        this.events._emitOwn('$events.state', Object.assign({ state: d.state, was: was, attempt: d.attempt || 0, waitMs: d.waitMs == null ? null : d.waitMs,
+          reason: d.reason || null, transport: d.transport || null, resumed: !!d.resumed }, { shared: true, mode: this.mode }));
+      }
+      _msg(w) {
+        const m = messageFromWire(w, 'server', this.clock.now());
+        if (typeof m === 'string') { this.events._drop('invalid', null, null, 'a message from the shared hub: ' + m); return; }
+        if (this.seen.has(m.id)) { return; }
+        this.seen.set(m.id, true);
+        if (this.seen.size > this.events.limits.ids) { this.seen.delete(this.seen.keys().next().value); }
+        if (typeof m.seq === 'number') {
+          const k = m.stream || m.topic, p = this.positions[k];
+          if (!p || m.seq > p.seq) { this.positions[k] = { epoch: p ? p.epoch : null, seq: m.seq }; }
+          const keys = Object.keys(this.positions);
+          if (keys.length > this.events.limits.streams) { delete this.positions[keys[0]]; }
+        }
+        this.events._receive(m);
+      }
+      _answer(f) {
+        const op = this.ops.get(f.op);
+        if (f.t === 'metrics') { this.hostMetrics = f.d; }
+        if (!op) { return; }
+        this.ops.delete(f.op);
+        if (f.t === 'err') { op.reject(new EventError(typeof f.code === 'string' ? f.code : 'error', String(f.detail || f.code))); return; }
+        if (f.t === 'ok') { op.resolve({ acked: f.acked !== false }); return; }
+        if (f.t === 'res') {
+          const m = messageFromWire(f.m, 'server', this.clock.now());
+          if (typeof m === 'string') { op.reject(new EventError('invalid', 'the answer: ' + m)); return; }
+          op.resolve(m);
+          return;
+        }
+        op.resolve(f.t === 'metrics' ? f.d : f.n);
+      }
+      _auth(f) {
+        Promise.resolve().then(() => this.o.auth({ reason: f.reason || 'connect', status: f.status || 0 })).then((a) => {
+          this._post({ t: 'auth', op: f.op, token: a && a.token, expiresAt: a && a.expiresAt });
+        }, (e) => this._post({ t: 'auth', op: f.op, error: (e && e.message) || String(e) }));
+      }
+      _op(kind, frame) {
+        const n = this.nextOp++;
+        return new Promise((resolve, reject) => {
+          const op = { kind: kind, frame: frame, resolve: resolve, reject: reject, sent: !!this.host };
+          this.ops.set(n, op);
+          if (op.sent) { this._post(Object.assign({ op: n }, frame)); }
+        });
+      }
+      subscribe(sub) {
+        if (this.bySub.has(sub)) { return true; }
+        const id = this.nextId++;
+        this.subs.set(id, { sub: sub });
+        this.bySub.set(sub, id);
+        if (this.host) { this._post({ t: 'sub', id: id, pattern: sub.pattern, o: subOptions(sub.o) }); }
+        return true;
+      }
+      _forget(sub) { const id = this.bySub.get(sub); if (id !== undefined) { this.bySub.delete(sub); this.subs.delete(id); } return id; }
+      unsubscribe(sub) { const id = this._forget(sub); if (id !== undefined && this.host) { this._post({ t: 'unsub', id: id }); } }
+      pending(sub) { return this.bySub.has(sub) && sub.state === 'pending'; }
+      publish(m, o) {
+        if (o && o.queue === false && this.state !== 'open') { return Promise.reject(new EventError('not.connected', 'not connected (' + this.state + '), and the publish asked not to wait')); }
+        const wire = wireOf(m), opts = { ack: o ? o.ack : undefined, queue: o && o.queue === 'persist' ? 'persist' : undefined, ttlMs: o ? o.ttlMs : undefined };
+        return this._op('pub', { t: 'pub', m: wire, o: opts });
+      }
+      request(m, o) {
+        const n = this.nextOp;
+        const p = this._op('req', { t: 'req', m: wireOf(m), timeoutMs: o.timeoutMs });
+        if (o.signal) {
+          o.signal.addEventListener('abort', () => {
+            const op = this.ops.get(n);
+            if (!op) { return; }
+            this.ops.delete(n);
+            if (op.sent) { this._post({ t: 'cancel', op: n }); }
+          }, { once: true });
+        }
+        return p;
+      }
+      flush() { return this._op('flush', { t: 'flush' }); }
+      clearOutbox() { return this._op('clearOutbox', { t: 'clearOutbox' }); }
+      signOut() {
+        this.positions = {};
+        this.ops.forEach((op, n) => { if (op.kind === 'pub') { this.ops.delete(n); op.reject(new EventError('signed.out', 'the person signed out')); } });
+        return this._op('signout', { t: 'signout' }).then(() => undefined);
+      }
+      reconnect() { this._post({ t: 'reconnect' }); }
+      close() { this._post({ t: 'close' }); }
+      metrics() {
+        if (this.host) { this._op('metrics', { t: 'metrics' }).catch(() => {}); }
+        return Object.assign({ state: this.state, shared: true, mode: this.mode, host: this.host, waiting: this.ops.size }, this.hostMetrics ? { hub: this.hostMetrics } : {});
+      }
+      destroy() {
+        if (this.closed) { return; }
+        this._post({ t: 'bye' });
+        this.closed = true;
+        this.clock.clearTimeout(this.alive);
+        const gone = new EventError('closed', 'the Events was closed');
+        this.ops.forEach((op) => op.reject(gone));
+        this.ops.clear();
+        try { this.link.close(); } catch (e) { /* closed */ }
+      }
+    }
+    function subOptions(o) {
+      const out = {};
+      ['retained', 'from', 'onGap', 'staleMs'].forEach((k) => { if (o[k] !== undefined) { out[k] = o[k]; } });
+      if (o.conflate && o.conflate.server) { out.conflate = { server: true, everyMs: (o.deliver && o.deliver.everyMs) || o.conflate.everyMs }; }
+      return out;
+    }
+    function plain(d) {
+      const out = {};
+      Object.keys(d || {}).forEach((k) => { const v = d[k]; if (typeof v !== 'function' && !(v instanceof Error)) { out[k] = v; } });
+      return out;
+    }
+    function hubKey(o, address) {
+      const a = typeof address === 'string' ? address : (typeof o.hubKey === 'string' ? o.hubKey : 'provider');
+      return o.namespace + '|' + a;
+    }
+    function workerAddress(o) {
+      if (o.worker === false) { return null; }
+      if (typeof o.worker === 'string') { return o.worker; }
+      const g = typeof globalThis !== 'undefined' ? globalThis : null;
+      const base = g && g.Drishti && g.Drishti.elements && g.Drishti.elements.base;
+      return base ? base + 'drishti-events/drishti_events-worker.js' : null;
+    }
+    function shareConnection(events, address, o) {
+      if (!o.namespace) {
+        throw new EventError('share.namespace', 'share: true needs a namespace (one per application and signed-in person), so two people\'s tabs never share a connection');
+      }
+      const env = o.env || {};
+      const key = hubKey(o, address);
+      const Worker = env.SharedWorker || (typeof window !== 'undefined' && window.SharedWorker) || null;
+      const url = workerAddress(o);
+      if (Worker && url && typeof address === 'string' && travels(o)) {
+        const w = new Worker(url, { name: 'drishti-events.' + key });
+        const port = w.port;
+        const options = Object.assign(hostOptions(o), { hasAuth: typeof o.auth === 'function' });
+        if (o.headers && typeof o.headers !== 'function') { options.headerValues = o.headers; }
+        if (typeof o.headers === 'function') { try { options.headerValues = o.headers(); } catch (e) { /* none */ } }
+        const link = {
+          post: (f) => port.postMessage(f.t === 'join' ? Object.assign({ address: address, options: options }, f) : f),
+          listen: (fn) => { port.onmessage = (e) => fn(e && e.data); if (port.start) { port.start(); } },
+          close: () => { if (port.close) { port.close(); } }
+        };
+        new HubClient(events, link, { mode: 'worker', auth: o.auth });
+        return 'worker';
+      }
+      const Channel = broadcastChannelOf(env);
+      const locks = locksOf(env);
+      if (Channel && locks) {
+        const me = 'tab:' + events.ids.tab;
+        const ch = new Channel('drishti-events.hub.' + key);
+        let host = null, local = null, leader = null;
+        const toHost = (f) => {
+          if (host) { Promise.resolve().then(() => { if (host) { host.frame(me, f); } }); return; }
+          ch.postMessage(Object.assign({ to: 'leader', from: me }, f));
+        };
+        const link = { post: toHost, listen: (fn) => { local = fn; }, close: () => { if (leader) { leader.stop(); } if (host) { host.destroy(); host = null; } ch.close(); } };
+        ch.onmessage = (e) => {
+          const f = e && e.data;
+          if (!f || typeof f !== 'object' || typeof f.from !== 'string' || f.from.length > MAX_ID_LENGTH) { return; }
+          if (f.to === 'leader') { if (host) { host.frame(f.from, f); } return; }
+          if ((f.to === me || f.to === '*') && local) { local(f); }
+        };
+        leader = new Leader({ name: 'drishti-events.leader.' + key, env: env, onLead: () => {
+          const hostId = me + ':' + events.clock.now().toString(36);
+          host = new HubHost({ id: hostId, address: address, options: o, clock: events.clock, env: env, auth: o.auth,
+            post: (cid, f) => { if (cid === me) { Promise.resolve().then(() => { if (local) { local(f); } }); } else { ch.postMessage(Object.assign({ to: cid, from: me }, f)); } } });
+          ch.postMessage({ t: 'leader', to: '*', from: me, host: hostId });
+          Promise.resolve().then(() => { if (local) { local({ t: 'leader', host: hostId }); } });
+        } });
+        new HubClient(events, link, { mode: 'leader', auth: o.auth });
+        leader.start();
+        return 'leader';
+      }
+      return false;
+    }
+    function serveSharedWorker(scope, o) {
+      const opts = Object.assign({}, o);
+      let host = null, n = 0;
+      const ports = new Map();
+      const clock = opts.clock || null;
+      scope.onconnect = (e) => {
+        const port = e.ports[0], cid = 'port:' + (++n);
+        ports.set(cid, port);
+        port.onmessage = (ev) => {
+          const f = ev && ev.data;
+          if (!f || typeof f !== 'object') { return; }
+          if (f.t === 'join' && !host) {
+            if (!f.options || typeof f.options !== 'object') { return; }
+            host = new HubHost({ id: 'worker:' + Date.now().toString(36), address: f.address, options: f.options, env: opts.env || {},
+              clock: clock || systemClock(), post: (id, fr) => { const p = ports.get(id); if (p) { p.postMessage(fr); } },
+              onEmpty: () => { host.conn.close(); host.destroy(); host = null; } });
+          }
+          if (f.t === 'bye') { ports.delete(cid); }
+          if (host) { host.frame(cid, f); }
+        };
+        if (port.start) { port.start(); }
+      };
+      return { host: () => host };
+    }
+    return { "HUB_TIMING": HUB_TIMING, "HubHost": HubHost, "HubClient": HubClient, "workerAddress": workerAddress, "shareConnection": shareConnection, "serveSharedWorker": serveSharedWorker };
+  })();
+  /* ---- src/drishti_mock.js ---- */
+  __m["src/drishti_mock.js"] = (function () {
+    var serveSharedWorker = __m["src/drishti_shared-hub.js"].serveSharedWorker;
+    class MockTabs {
+      constructor(o) {
+        this.o = Object.assign({ worker: true }, o);
+        /** @private */ this.channels = new Map();
+        /** @private */ this.locks = new Map();
+        /** @private */ this.workers = new Map();
+        this.posted = 0;
+      }
+      _later(fn) {
+        if (this.o.clock) { this.o.clock.setTimeout(fn, 0); } else { Promise.resolve().then(fn); }
+      }
+      tab(extra) {
+        const mock = this;
+        const tab = { closed: false, channels: new Set(), ports: new Set() };
+        class Channel {
+          constructor(name) {
+            this.name = String(name);
+            this.onmessage = null;
+            this.closed = false;
+            this.tab = tab;
+            tab.channels.add(this);
+            if (!mock.channels.has(this.name)) { mock.channels.set(this.name, new Set()); }
+            mock.channels.get(this.name).add(this);
+          }
+          postMessage(data) {
+            if (this.closed) { throw new Error('InvalidStateError: the channel is closed'); }
+            const copy = clone(data);
+            mock.channels.get(this.name).forEach((c) => {
+              if (c === this) { return; }
+              mock.posted++;
+              mock._later(() => { if (!c.closed && c.onmessage) { c.onmessage({ data: clone(copy) }); } });
+            });
+          }
+          close() { this.closed = true; const set = mock.channels.get(this.name); if (set) { set.delete(this); } tab.channels.delete(this); }
+        }
+        const locks = { request: (name, a, b) => mock._lock(tab, String(name), typeof a === 'function' ? a : b) };
+        const env = Object.assign({ BroadcastChannel: Channel, locks: locks, window: {} }, extra);
+        if (this.o.worker) {
+          env.SharedWorker = function SharedWorker(url, opts) {
+            const name = (opts && opts.name) || String(url);
+            const w = mock._worker(name);
+            const pair = ports(mock);
+            tab.ports.add(pair[0]);
+            mock._later(() => w.scope.onconnect({ ports: [pair[1]] }));
+            this.port = pair[0];
+          };
+        }
+        env.close = () => mock.close(env);
+        env._tab = tab;
+        return env;
+      }
+      _worker(name) {
+        let w = this.workers.get(name);
+        if (!w) {
+          const scope = { onconnect: null };
+          w = { scope: scope, served: serveSharedWorker(scope, { clock: this.o.clock, env: this.o.workerEnv || {} }) };
+          this.workers.set(name, w);
+        }
+        return w;
+      }
+      workerHost(name) {
+        const w = name ? this.workers.get(name) : this.workers.values().next().value;
+        return w ? w.served.host() : null;
+      }
+      _lock(tab, name, fn) {
+        let l = this.locks.get(name);
+        if (!l) { l = { holder: null, queue: [] }; this.locks.set(name, l); }
+        return new Promise((resolve, reject) => {
+          l.queue.push({ tab: tab, fn: fn, resolve: resolve, reject: reject });
+          this._grant(name);
+        });
+      }
+      _grant(name) {
+        const l = this.locks.get(name);
+        if (!l || l.holder) { return; }
+        while (l.queue.length && l.queue[0].tab.closed) { l.queue.shift().reject(new Error('AbortError: the tab closed')); }
+        const next = l.queue.shift();
+        if (!next) { return; }
+        l.holder = next;
+        let out;
+        try { out = Promise.resolve(next.fn({ name: name, mode: 'exclusive' })); } catch (e) { out = Promise.reject(e); }
+        const free = () => { if (l.holder === next) { l.holder = null; this._later(() => this._grant(name)); } };
+        next.free = free;
+        out.then((v) => { free(); next.resolve(v); }, (e) => { free(); next.reject(e); });
+      }
+      close(env) {
+        const tab = env._tab;
+        if (!tab || tab.closed) { return; }
+        tab.closed = true;
+        tab.channels.forEach((c) => c.close());
+        tab.ports.forEach((p) => p.close());
+        this.locks.forEach((l, name) => {
+          if (l.holder && l.holder.tab === tab) { l.holder.free(); }
+          l.queue = l.queue.filter((q) => q.tab !== tab);
+          this._grant(name);
+        });
+      }
+    }
+    function ports(mock) {
+      const make = () => ({ onmessage: null, other: null, closed: false,
+        postMessage(data) {
+          if (this.closed || !this.other) { return; }
+          const to = this.other, copy = clone(data);
+          mock.posted++;
+          mock._later(() => { if (!to.closed && to.onmessage) { to.onmessage({ data: copy }); } });
+        },
+        start() {},
+        close() { this.closed = true; } });
+      const a = make(), b = make();
+      a.other = b; b.other = a;
+      return [a, b];
+    }
+    function clone(v) { return v === undefined ? undefined : (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v))); }
+    return { "MockTabs": MockTabs };
+  })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
     var coreSegment = __lib("drishti-core").segment;
     var create = __m["src/drishti_events-hub.js"].createEvents;
     var Connection = __m["src/drishti_connection.js"].Connection, eventsEndpoint = __m["src/drishti_connection.js"].eventsEndpoint;
+    var shareConnection = __m["src/drishti_shared-hub.js"].shareConnection;
     function segment(text) { return coreSegment(text); }
     function connect(url, options) {
       let address = url, o = options;
@@ -2246,11 +3041,13 @@
       if (address === undefined || address === null || address === '') { address = eventsEndpoint() || null; }
       const events = create(o);
       if (address) {
-        try { new Connection(events, address, o); } catch (e) { events.destroy(); throw e; }
+        try {
+          if (!(o && o.share && shareConnection(events, address, o))) { new Connection(events, address, o); }
+        } catch (e) { events.destroy(); throw e; }
       }
       return events;
     }
-    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "SEQUENCE_LIMITS": __m["src/drishti_sequence.js"].SEQUENCE_LIMITS, "Sequencer": __m["src/drishti_sequence.js"].Sequencer, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink, "OUTBOX_DEFAULTS": __m["src/drishti_outbox.js"].OUTBOX_DEFAULTS, "Outbox": __m["src/drishti_outbox.js"].Outbox, "memoryStore": __m["src/drishti_outbox.js"].memoryStore, "indexedDbStore": __m["src/drishti_outbox.js"].indexedDbStore };
+    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "SEQUENCE_LIMITS": __m["src/drishti_sequence.js"].SEQUENCE_LIMITS, "Sequencer": __m["src/drishti_sequence.js"].Sequencer, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink, "OUTBOX_DEFAULTS": __m["src/drishti_outbox.js"].OUTBOX_DEFAULTS, "Outbox": __m["src/drishti_outbox.js"].Outbox, "memoryStore": __m["src/drishti_outbox.js"].memoryStore, "indexedDbStore": __m["src/drishti_outbox.js"].indexedDbStore, "TABS_VERSION": __m["src/drishti_tabs.js"].TABS_VERSION, "TabsScope": __m["src/drishti_tabs.js"].TabsScope, "Leader": __m["src/drishti_tabs.js"].Leader, "HUB_TIMING": __m["src/drishti_shared-hub.js"].HUB_TIMING, "HubHost": __m["src/drishti_shared-hub.js"].HubHost, "HubClient": __m["src/drishti_shared-hub.js"].HubClient, "serveSharedWorker": __m["src/drishti_shared-hub.js"].serveSharedWorker, "workerAddress": __m["src/drishti_shared-hub.js"].workerAddress, "MockTabs": __m["src/drishti_mock.js"].MockTabs };
   })();
   return Object.freeze(Object.assign({ library: "drishti-events", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

@@ -19,6 +19,13 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **drishti-events** (eventing step E7, tabs): the `tabs` scope over a `BroadcastChannel` named by the `namespace` (frames checked before
+  use; `$` topics never leave), request and reply across tabs (the first tab that answers; a cancel reaches it), `signOut()` told to every
+  tab. The shared hub: `connect(url, { share: true, namespace })` gives all the tabs one server connection, held by a `SharedWorker`
+  (`drishti_events-worker.js`, option `worker`) or else the leader tab (a Web Lock; the next tab takes over and resumes by sequence), else
+  each tab connects for itself; one server subscription per pattern, retained values for a late tab, publishes and requests relayed,
+  `auth` asked of a tab; `$events.state` says `shared` and `mode`. `MockTabs` joins several `Events` in one page as tabs (channel, locks,
+  worker). The build writes a library's **parts** (files beside its bundle, from the manifest's `parts`); the release tree ships them.
 - **drishti-events** (step E4): the Sequencer is wired into the connection (order, repeats, gaps with a `replay` frame, `after` on a `sub`, resume,
   `$events.gap`, a `resync` notice with the subscription `recovering`); `Sequencer` and `SEQUENCE_LIMITS` are exported.
 - **drishti-data**: `FeedMonitor` and `feedBadge` are removed (the sequencer's `stats` replace the monitor; the badge returns as `statusBadge` in step 9).

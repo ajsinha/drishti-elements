@@ -215,6 +215,25 @@ export class Sequencer {
   }
 
   /**
+   * Takes positions heard elsewhere (the tabs of a shared hub that took over): a stream not yet known here resumes after them.
+   * @param {Object<string, {epoch: ?string, seq: number}>} positions
+   * @returns {number} how many streams were taken
+   */
+  seed(positions) {
+    let n = 0;
+    Object.keys(positions || {}).forEach((name) => {
+      const p = positions[name];
+      if (!p || typeof p.seq !== 'number' || !isFinite(p.seq)) { return; }
+      const s = this.state(name);
+      if (s.last !== null) { return; }
+      s.last = p.seq;
+      s.epoch = p.epoch != null ? String(p.epoch) : null;
+      n++;
+    });
+    return n;
+  }
+
+  /**
    * Forgets the numbering (a new session with no resume): positions are empty, held messages are dropped.
    * @returns {void}
    */

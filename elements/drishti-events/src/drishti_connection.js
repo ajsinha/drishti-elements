@@ -31,8 +31,8 @@
    The sequencer is the seam of step 4 (order, duplicates, gaps, replay, resume): accept(message, deliver) between a msg frame and the
    Events, after(subscription) for a sub frame's resume positions, subscribed(subscription, subd), gap(frame) and forget(). Until it is
    given, messages pass straight through. */
-import { ELEMENTS_VERSION, endpoint } from '../../drishti-core/src/drishti_index.js';
-import { EventError, makeMessage } from './drishti_envelope.js';
+import { ELEMENTS_VERSION, endpoint, isTopic } from '../../drishti-core/src/drishti_index.js';
+import { EventError, makeMessage, matches } from './drishti_envelope.js';
 import { Backoff, Heartbeat } from './drishti_timing.js';
 import { PROTOCOL_VERSION, SUBPROTOCOL, CLOSE_CODES, decodeFrames, checkFrame, messageOf, rawMessage, encodeFrames } from './drishti_protocol.js';
 import { websocketTransport } from './drishti_transport-ws.js';
@@ -69,6 +69,8 @@ export const BUFFERED_LIMIT = 1048576;
  * @property {string} [subprotocol='events.v1'] the WebSocket sub-protocol's name
  * @property {import('./drishti_outbox.js').OutboxOptions} [outbox] the offline queue (persist, bounds, overflow, store)
  * @property {string} [namespace] differs per application and signed-in person: the queue's database and the tabs' channel carry it
+ * @property {boolean} [share=false] the application's tabs share one connection (a SharedWorker, else the leader tab); needs a namespace
+ * @property {(string|boolean)} [worker] the shared hub's worker file (default drishti_events-worker.js beside the bundle; false: no worker)
  * @property {number} [idleCloseMs] a page hidden for longer than this gives its connection back and takes it again when shown (off by
  *   default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume)
  * @property {string[]} [events] raw SSE: the event names that carry values (default every name for fetch, message for EventSource)
@@ -140,7 +142,10 @@ class ConnectionSequencer {
 
   after(sub, s) {
     const all = this.seq.positions(), out = {};
-    Object.keys(s.streams || {}).forEach((k) => { if (all[k]) { out[k] = all[k]; } });
+    const known = Object.keys(s.streams || {});
+    if (known.length) { known.forEach((k) => { if (all[k]) { out[k] = all[k]; } }); return out; }
+    // a subscription the server has not answered yet (a new shared hub taking over): the streams named like its pattern
+    Object.keys(all).forEach((k) => { if (isTopic(k) && matches(sub.pattern, k)) { out[k] = all[k]; } });
     return out;
   }
 

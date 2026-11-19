@@ -25,6 +25,7 @@ import { EventError, TimeoutError, AbortError, makeMessage, isMessage, IdMaker, 
   patternsOverlap, specificity, Kinds } from './drishti_envelope.js';
 import { systemClock } from './drishti_timing.js';
 import { Subscription } from './drishti_subscription.js';
+import { TabsScope, broadcastChannelOf } from './drishti_tabs.js';
 
 /** The scopes a message travels in. */
 export const SCOPES = Object.freeze(['page', 'tabs', 'server']);
@@ -106,6 +107,10 @@ const PAGE_REPLIERS = [];
  * @property {string} [source='page'] the source named on this page's messages
  * @property {Object<string, number>} [limits] the ceilings (DEFAULT_LIMITS)
  * @property {AbortSignal} [signal] ends the whole Events (a component's life)
+ * @property {string} [namespace] differs per application and signed-in person: the tabs' channel, the shared hub and the queue's
+ *   database carry it, so a second person on the same origin shares nothing
+ * @property {boolean} [tabs=true] false: no 'tabs' scope (it is there wherever the browser has a BroadcastChannel)
+ * @property {Object} [env] stand-ins for the browser's classes (BroadcastChannel, SharedWorker, locks, WebSocket, ...) in tests
  * @property {function(Error, Object): void} [onError] also told of every error published on $events.error
  */
 
@@ -139,6 +144,7 @@ export class Events {
     this.page = new ScopedEvents(this, 'page');
     this.tabs = new ScopedEvents(this, 'tabs');
     this.server = new ScopedEvents(this, 'server');
+    if (this.o.tabs !== false && broadcastChannelOf(this.o.env)) { this._attach('tabs', new TabsScope(this, { namespace: this.o.namespace, env: this.o.env })); }
     if (this.o.signal) { onAbort(this.o.signal, () => this.destroy()); }
   }
 
@@ -217,6 +223,8 @@ export class Events {
    */
   _attach(name, adapter) {
     this._adapters.set(name, adapter);
+    const tabs = this._adapters.get('tabs');
+    if (name === 'server' && tabs && tabs._open) { tabs._open(); }           // a sign-out in another tab must reach this one's server scope
     this._rescope();
     return () => { if (this._adapters.get(name) === adapter) { this._adapters.delete(name); this._rescope(); } };
   }
@@ -577,6 +585,19 @@ export class Events {
   signOut() {
     const work = [];
     this._adapters.forEach((a) => { if (a.signOut) { work.push(a.signOut()); } });
+    return Promise.all(work).then(() => undefined);
+  }
+
+  /**
+   * Another tab said the person signed out: every scope but that one forgets (the queue, the stream positions).
+   * @param {string} from the scope that told
+   * @returns {Promise<void>}
+   * @private
+   */
+  _signOutHere(from) {
+    const work = [];
+    this._adapters.forEach((a, name) => { if (name !== from && a.signOut) { work.push(a.signOut()); } });
+    this._emitOwn('$events.auth', { reason: 'signed-out', ok: false, from: from });
     return Promise.all(work).then(() => undefined);
   }
 

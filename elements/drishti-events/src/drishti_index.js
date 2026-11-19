@@ -20,6 +20,7 @@
 import { segment as coreSegment } from '../../drishti-core/src/drishti_index.js';
 import { createEvents as create } from './drishti_events-hub.js';
 import { Connection, eventsEndpoint } from './drishti_connection.js';
+import { shareConnection } from './drishti_shared-hub.js';
 
 export { SCOPES, OWN_TOPICS, DEFAULT_LIMITS, Events, ScopedEvents, Topic, createEvents, covers } from './drishti_events-hub.js';
 export { SUBSCRIPTION_STATES, Subscription } from './drishti_subscription.js';
@@ -31,6 +32,9 @@ export { SEQUENCE_LIMITS, Sequencer } from './drishti_sequence.js';
 export { parseSse, readSse } from './drishti_transport-sse.js';
 export { OVERFLOW_RULES, HIDDEN_DELIVERY_MS, Conflater, GridSink } from './drishti_flow.js';
 export { OUTBOX_DEFAULTS, Outbox, memoryStore, indexedDbStore } from './drishti_outbox.js';
+export { TABS_VERSION, TabsScope, Leader } from './drishti_tabs.js';
+export { HUB_TIMING, HubHost, HubClient, serveSharedWorker, workerAddress } from './drishti_shared-hub.js';
+export { MockTabs } from './drishti_mock.js';
 
 /**
  * Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.
@@ -41,7 +45,8 @@ export function segment(text) { return coreSegment(text); }
 
 /**
  * An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no
- * configured events endpoint, the page and its tabs only. Nothing has to be awaited: subscriptions are sent when the connection opens,
+ * configured events endpoint, the page and its tabs only. With share: true (and a namespace) the application's tabs share one connection:
+ * a SharedWorker holds it, else the leader tab, else each tab connects for itself. Nothing has to be awaited: subscriptions are sent when the connection opens,
  * publishes wait for it, and every reconnect restores both.
  * @param {(string|function(): string|Object)} [url] the server's address, a function asked at every connect, or a provider with
  *   transport(context) (the mock server); default the endpoint configure({ endpoints: { events } }) names
@@ -54,7 +59,9 @@ export function connect(url, options) {
   if (address === undefined || address === null || address === '') { address = eventsEndpoint() || null; }
   const events = create(o);
   if (address) {
-    try { new Connection(events, address, o); } catch (e) { events.destroy(); throw e; }
+    try {
+      if (!(o && o.share && shareConnection(events, address, o))) { new Connection(events, address, o); }
+    } catch (e) { events.destroy(); throw e; }
   }
   return events;
 }

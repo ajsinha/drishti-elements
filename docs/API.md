@@ -19720,6 +19720,16 @@ The server's answer to a `sub` (`subd`): the streams as they stand now, and whet
 
 Returns `string[]`: the streams that must resync.
 
+##### `Sequencer.seed(positions)`
+
+Takes positions heard elsewhere (the tabs of a shared hub that took over): a stream not yet known here resumes after them.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `positions` | `Object&lt;string, {epoch: ?string, seq: number}&gt;` |  |
+
+Returns `number`: how many streams were taken.
+
 ##### `Sequencer.reset()`
 
 Forgets the numbering (a new session with no resume): positions are empty, held messages are dropped.
@@ -19978,6 +19988,309 @@ The IndexedDB store of an application (and a signed-in person: the namespace), o
 
 Returns `?OutboxStore`.
 
+### drishti_tabs.js
+
+#### `TABS_VERSION`
+
+The version of the tab frames.
+
+#### class `TabsScope`
+
+The 'tabs' scope of an Events: an adapter over one BroadcastChannel, opened when first used.
+
+##### `new TabsScope(events, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events it serves |
+| `[o]` | `{namespace: string, env: Object}` |  |
+
+##### `TabsScope.publish(m)`
+
+Sends a message to the other tabs.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+
+Returns `Promise&lt;{acked: boolean}&gt;`.
+
+##### `TabsScope.request(m, o)`
+
+Asks the other tabs; the first answer wins (the Events times it out). Aborting tells the tab that works on it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `o` | `{signal: AbortSignal}` |  |
+
+Returns `Promise&lt;Object&gt;`.
+
+##### `TabsScope.subscribe()`
+
+Listening needs the channel open; nothing is asked of anyone.
+
+Returns `boolean`: false: active at once.
+
+##### `TabsScope.unsubscribe()`
+
+Nothing to give back.
+
+Returns `void`.
+
+##### `TabsScope.reply(pattern, fn)`
+
+Answers requests from the other tabs.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `fn` | `function(Object): *` |  |
+
+Returns `function(): void`.
+
+##### `TabsScope.signOut()`
+
+Tells the other tabs the person signed out (each empties its queue and forgets its stream positions).
+
+Returns `Promise&lt;void&gt;`.
+
+##### `TabsScope.metrics()`
+
+The scope's figures.
+
+Returns `Object`.
+
+##### `TabsScope.destroy()`
+
+Closes the channel.
+
+Returns `void`.
+
+#### class `Leader`
+
+The leader among the tabs of one namespace: the tab holding a Web Lock. When it closes, the next tab waiting takes over.
+
+##### `new Leader(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{name: string, env: Object, onLead: function(): void}` |  |
+
+##### `Leader.start()`
+
+Waits for the lock; onLead runs when this tab leads (held until stop()).
+
+Returns `void`.
+
+##### `Leader.stop()`
+
+Gives the lock back (the next tab leads).
+
+Returns `void`.
+
+### drishti_shared-hub.js
+
+#### `HUB_TIMING`
+
+How often a tab tells the hub it is alive, and how long the hub waits before it forgets a silent tab.
+
+#### class `HubHost`
+
+The hub: one Connection serving many tabs (in a SharedWorker or the leader tab).
+
+##### `new HubHost(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{address: *, options: Object, clock: Object, env: Object, id: string, post: function(string, Object): void, auth: function(Object): Promise&lt;Object&gt;}` | post(clientId, frame) sends to a tab; auth (optional) answers auth in place |
+
+##### `HubHost.frame(cid, f)`
+
+A frame from a tab.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `cid` | `string` | the tab |
+| `f` | `Object` |  |
+
+Returns `void`.
+
+##### `HubHost.destroy()`
+
+Closes the connection; the tabs are told.
+
+Returns `void`.
+
+#### class `HubClient`
+
+A tab's side of the shared hub: the 'server' scope of its Events.
+
+##### `new HubClient(events, link, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the tab's Events |
+| `link` | `{post: function(Object): void, listen: function(function(Object): void): void, close: function(): void}` |  |
+| `o` | `{mode: string, auth: Function, headers: *, clock: Object}` |  |
+
+##### `HubClient.subscribe(sub)`
+
+Holds a subscription at the hub.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `boolean`: true: it waits for the hub's answer.
+
+##### `HubClient.unsubscribe(sub)`
+
+Gives a subscription back.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `void`.
+
+##### `HubClient.pending(sub)`
+
+Whether a subscription still waits for the hub.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `boolean`.
+
+##### `HubClient.publish(m, o)`
+
+Publishes through the hub; resolves when the server acknowledges. Kept until then, and sent again (same id) if the hub changes.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `o` | `Object` |  |
+
+Returns `Promise&lt;{acked: boolean}&gt;`.
+
+##### `HubClient.request(m, o)`
+
+Asks the server through the hub. Aborting tells the hub (which tells the server).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `o` | `{timeoutMs: number, signal: AbortSignal}` |  |
+
+Returns `Promise&lt;Object&gt;`.
+
+##### `HubClient.flush()`
+
+Sends what waits at the hub now.
+
+Returns `Promise&lt;number&gt;`.
+
+##### `HubClient.clearOutbox()`
+
+Empties the hub's queue.
+
+Returns `Promise&lt;number&gt;`.
+
+##### `HubClient.signOut()`
+
+The person signs out: the hub's queue and positions are forgotten, and so are this tab's.
+
+Returns `Promise&lt;void&gt;`.
+
+##### `HubClient.reconnect()`
+
+Opens the shared connection again now.
+
+Returns `void`.
+
+##### `HubClient.close()`
+
+Closes the shared connection (for every tab).
+
+Returns `void`.
+
+##### `HubClient.metrics()`
+
+The figures: the hub's (as last heard) and this tab's.
+
+Returns `Object`.
+
+##### `HubClient.destroy()`
+
+Leaves the hub.
+
+Returns `void`.
+
+#### `serveSharedWorker(scope, o)`
+
+Serves the shared hub inside a SharedWorker: every tab's port joins the one HubHost of this worker (the worker's name carries the namespace and the address).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `scope` | `Object` | the worker's global (self) |
+| `[o]` | `{clock: Object, env: Object}` |  |
+
+Returns `{host: function(): ?HubHost}`.
+
+#### `workerAddress(o)`
+
+The address of the hub's worker file: the option, else beside the loaded bundle.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `Object` |  |
+
+Returns `?string`.
+
+### drishti_mock.js
+
+#### class `MockTabs`
+
+Tabs in one page.
+
+##### `new MockTabs(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{clock: Object, worker: boolean}` | clock: delivery on its timers; worker: false leaves the SharedWorker out (the leader tab is then the hub) |
+
+##### `MockTabs.tab(extra)`
+
+The environment of one more tab: give it to createEvents or connect as env.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[extra]` | `Object` | more of the environment (a WebSocket stand-in, ...) |
+
+Returns `Object`: env, with close() to close the tab.
+
+##### `MockTabs.workerHost(name)`
+
+The hub a mock SharedWorker holds (tests look inside), or null.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[name]` | `string` | default the first worker |
+
+Returns `?Object`.
+
+##### `MockTabs.close(env)`
+
+Closes a tab: its channels and ports close, its locks are released (the next tab waiting takes them).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `env` | `Object` | a tab's environment |
+
+Returns `void`.
+
 ### drishti_index.js
 
 #### `segment(text)`
@@ -19992,7 +20305,7 @@ Returns `string`.
 
 #### `connect(url, options)`
 
-An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no configured events endpoint, the page and its tabs only. Nothing has to be awaited: subscriptions are sent when the connection opens, publishes wait for it, and every reconnect restores both.
+An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no configured events endpoint, the page and its tabs only. With share: true (and a namespace) the application's tabs share one connection: a SharedWorker holds it, else the leader tab, else each tab connects for itself. Nothing has to be awaited: subscriptions are sent when the connection opens, publishes wait for it, and every reconnect restores both.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -20020,6 +20333,8 @@ The options of connect (with those of an Events: routes, clock, limits, signal, 
 | `[subprotocol='events.v1']` | `string` | the WebSocket sub-protocol's name |
 | `[outbox]` | `import('./drishti_outbox.js').OutboxOptions` | the offline queue (persist, bounds, overflow, store) |
 | `[namespace]` | `string` | differs per application and signed-in person: the queue's database and the tabs' channel carry it |
+| `[share=false]` | `boolean` | the application's tabs share one connection (a SharedWorker, else the leader tab); needs a namespace |
+| `[worker]` | `(string\|boolean)` | the shared hub's worker file (default drishti_events-worker.js beside the bundle; false: no worker) |
 | `[idleCloseMs]` | `number` | a page hidden for longer than this gives its connection back and takes it again when shown (off by default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume) |
 | `[events]` | `string[]` | raw SSE: the event names that carry values (default every name for fetch, message for EventSource) |
 | `[topicOf]` | `function(*, Object): string` | raw: the topic of a value (default 'feed') |
@@ -20133,6 +20448,9 @@ The options of an Events.
 | `[source='page']` | `string` | the source named on this page's messages |
 | `[limits]` | `Object&lt;string, number&gt;` | the ceilings (DEFAULT_LIMITS) |
 | `[signal]` | `AbortSignal` | ends the whole Events (a component's life) |
+| `[namespace]` | `string` | differs per application and signed-in person: the tabs' channel, the shared hub and the queue's database carry it, so a second person on the same origin shares nothing |
+| `[tabs=true]` | `boolean` | false: no 'tabs' scope (it is there wherever the browser has a BroadcastChannel) |
+| `[env]` | `Object` | stand-ins for the browser's classes (BroadcastChannel, SharedWorker, locks, WebSocket, ...) in tests |
 | `[onError]` | `function(Error, Object): void` | also told of every error published on $events.error |
 
 #### `GridSinkOptions` : `Object`

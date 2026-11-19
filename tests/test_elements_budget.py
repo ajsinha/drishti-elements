@@ -27,8 +27,8 @@ CSS = Path(__file__).resolve().parent.parent / "css"
 # the chart again for the generic kinds (segmented scatter, matrix, lollipop, 3D trace, heatmap tracks)
 BUNDLES = {"drishti-core": 180_000, "drishti-inputs": 290_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
            "drishti-data": 42_000, "drishti-chart": 320_000, "drishti-graph": 165_000,
-           "drishti-events": 150_000}  # drishti-events: E2, E3 and E5 measured 108,000 with typed JSDoc (the design's 110,000 assumed
-#                                     less); raised for E4 and E6 (about 130,000); step 12 settles it (the mock may become its own file)
+           "drishti-events": 185_000}  # drishti-events: E2, E3 and E5 measured 108,000 with typed JSDoc (the design's 110,000 assumed
+#                                     less); raised for E4 and E6 (about 130,000) and E7 (tabs, the shared hub: about 171,000); step 12 settles it
 SHEETS = {"drishti_states.css": 4_000, "drishti_command-palette.css": 5_000, "drishti_dock.css": 5_000, "drishti_chips.css": 5_000}
 
 
@@ -47,3 +47,19 @@ def test_every_library_has_a_budget():
     import json
     libs = set(json.loads((ELEMENTS / "drishti_elements.json").read_text(encoding="utf-8"))["libraries"])
     assert libs == set(BUNDLES), sorted(libs ^ set(BUNDLES))
+
+
+# a library's parts (files beside its bundle, loaded only when needed): bytes
+PARTS = {"drishti-events/drishti_events-worker.js": 8_000}
+
+
+@pytest.mark.parametrize("part,budget", sorted(PARTS.items()))
+def test_a_part_stays_under_its_budget(part, budget):
+    assert (ELEMENTS / part).stat().st_size <= budget, part
+
+
+def test_every_part_has_a_budget():
+    import json
+    libs = json.loads((ELEMENTS / "drishti_elements.json").read_text(encoding="utf-8"))["libraries"]
+    parts = {f"{n}/{p['file']}" for n, spec in libs.items() for p in (spec.get("parts") or {}).values()}
+    assert parts == set(PARTS), sorted(parts ^ set(PARTS))

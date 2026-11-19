@@ -803,6 +803,13 @@ Where the build had to choose, or the API above changed, the choice and its reas
 | E6 | A page takes back a reload's leftovers when its connect says `outbox: { persist: true }`, gives a `store`, or `outbox: { restore: true }`; they go before the page's own | a page that never persists opens no database; a reload's messages were made first |
 | E6 | The Web Lock is held while the leftovers wait for their acknowledgements (at most 10 s) | a second tab that takes the lock next finds them gone from the disk |
 | E6 | `signOut()` tells the other tabs through the tabs scope's own `signOut` (step 7 gives it) | the tabs scope does not exist before step 7 |
+| E7 | An `Events` has the `tabs` scope wherever a `BroadcastChannel` exists (`tabs: false` leaves it out); the channel opens on first use, or when a server scope is attached | a sign-out or a request from another tab must reach a page that has only connected |
+| E7 | Frames between tabs are JSON text (`{ v: 1, t, from, ... }`), checked like a server's (version, type, topic, id, size) | text has a size to check and cannot carry anything but data |
+| E7 | A request to the tabs is answered by the first tab with a matching replier; tabs with none stay silent, so nobody answering is a timeout | a tab cannot know how many others exist |
+| E7 | The hub runs in a `SharedWorker` only when the options can travel there (no function but `auth` and `headers`, which a tab answers); otherwise the leader tab | raw mode's mapping functions and a mock server live in the page |
+| E7 | Each tab keeps its own pipeline (conflation, frames, buffers) and its own unacknowledged publishes (sent again with the same id when the hub changes); the hub holds one subscription per pattern and the retained values | one pipeline per listener, as without the hub; a server takes an id once |
+| E7 | A new hub resumes from the positions the tabs report when they join (`Sequencer.seed`); a `sub` the server has not answered yet carries the positions of the streams its pattern names | the leader that closed took its positions with it |
+| E7 | The worker file is a build **part** (`parts` in the manifest): a classic script beside the bundle that reaches the library through its entry and, in a worker, loads the bundles with `importScripts` | one build, no second tool; the inspector is the next part |
 
 ---
 
