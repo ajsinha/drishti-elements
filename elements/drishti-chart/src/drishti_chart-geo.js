@@ -21,7 +21,7 @@
    grows downwards, as on a screen; the engine draws the shapes with an identity projection. No tiles, no map service: nothing leaves
    the network. Pure functions and a loader with an injected fetch, so Node tests read the same files. */
 import { url as drishtiUrl } from '../../drishti-core/src/drishti_index.js';
-import { prepareRegionLevel } from './drishti_chart-regions.js';
+import { prepareRegionLevel, bounds } from './drishti_chart-regions.js';
 
 const RAD = Math.PI / 180;
 
@@ -99,17 +99,6 @@ export function holdAntimeridian(g) {
 
 /** @private every outer ring of a geometry */
 function outerRings(g) { return g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map((p) => p[0]) : []; }
-
-/**
- * The box of points [[x, y], ...]: [minX, minY, maxX, maxY].
- * @param {number[][]} pts
- * @returns {number[]}
- */
-export function bounds(pts) {
-  const b = [Infinity, Infinity, -Infinity, -Infinity];
-  pts.forEach((p) => { b[0] = Math.min(b[0], p[0]); b[1] = Math.min(b[1], p[1]); b[2] = Math.max(b[2], p[0]); b[3] = Math.max(b[3], p[1]); });
-  return b;
-}
 
 /** @private a ring's area in square degrees (shoelace, absolute) */
 function ringArea(r) { let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { a += (r[j][0] + r[i][0]) * (r[j][1] - r[i][1]); } return Math.abs(a / 2); }
@@ -280,7 +269,14 @@ export function createGeoLoader(o) {
   o = o || {};
   if (!o.base) { throw new Error('createGeoLoader: the maps folder is required (option base, e.g. "/vendor/echarts/maps/")'); }
   const base = o.base.replace(/\/?$/, '/');
-  const get = o.fetchJson || ((url) => fetch(drishtiUrl(url), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error('map ' + url + ': ' + r.status); } return r.json(); }));
+  const get = o.fetchJson || ((url) => {
+    /* a page opened from the file system cannot read files (the browser refuses fetch for file:): said in words, nothing asked */
+    const here = typeof location !== 'undefined' ? location.href : '';
+    if (/^file:/i.test(here ? new URL(drishtiUrl(url), here).href : String(url))) {
+      return Promise.reject(new Error('map ' + url + ': the shapes cannot be read from the file system; open the page from a web server'));
+    }
+    return fetch(drishtiUrl(url), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error('map ' + url + ': ' + r.status); } return r.json(); });
+  });
   const cache = { world: null, regions: {}, levels: {} }, loads = [];
   const fetched = (file) => { loads.push(file); return Promise.resolve().then(() => get(base + file)); };
   return {

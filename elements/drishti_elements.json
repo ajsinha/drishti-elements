@@ -98,7 +98,8 @@
         "vendor/echarts/echarts.min.js"
       ],
       "assets": [
-        "vendor/echarts/maps/"
+        "vendor/echarts/maps/",
+        "vendor/echarts-gl/"
       ]
     },
     "drishti-graph": {

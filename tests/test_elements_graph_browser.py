@@ -31,6 +31,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -166,14 +168,19 @@ def test_canvas_zoom_pan_fit_minimap_click_lasso_drag_pin_tooltip_keys_and_the_t
         assert sorted(await pg.evaluate(f"() => {G}.selection()")) == ["GRP-1", "GRP-2"]
         assert "2 selected" in await pg.locator(".dn-insp .dn-ttl").text_content()
         assert await pg.evaluate("() => window.__harness.graphs.inspector.tables.grid.model.rowCount()") == 2   # the selection table follows
-        # drag a node: it moves and is pinned
+        # drag a node: it moves and is pinned (towards the canvas's middle, so the move never leaves the canvas whatever the layout drew)
+        await pg.evaluate(f"() => {G}.P.canvas.scrollIntoView({{ block: 'center' }})")   # a focus that scrolls the page mid-drag would move the reading
+        x, y = await node_xy(pg, "inspector", "GRP-1")
+        mid = await pg.evaluate(f"() => {{ const r = {G}.P.canvas.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }}")
+        dx, dy = (60 if x < mid[0] else -60), (30 if y < mid[1] else -30)
+        s0 = await pg.evaluate(f"() => {G}.toScreen('GRP-1')")
         await pg.mouse.move(x, y)
         await pg.mouse.down()
-        await pg.mouse.move(x + 60, y + 30, steps=4)
+        await pg.mouse.move(x + dx, y + dy, steps=4)
         await pg.mouse.up()
         assert await pg.evaluate(f"() => {G}.model.node('GRP-1').pinned") is True
-        p = await node_xy(pg, "inspector", "GRP-1")
-        assert abs(p[0] - x - 60) < 2 and abs(p[1] - y - 30) < 2
+        s1 = await pg.evaluate(f"() => {G}.toScreen('GRP-1')")                                  # on the canvas: a line above it that changes
+        assert abs(s1["x"] - s0["x"] - dx) < 2 and abs(s1["y"] - s0["y"] - dy) < 2, (s0, s1, dx, dy)   # height moves the canvas, not the node
         await pg.click("#g-inspector .dn-seg-b[data-layout='circular']")
         await pg.wait_for_function(f"() => {G}.state().layout === 'circular' && {G}.layoutMs !== null")
         await pg.wait_for_timeout(500)                                                            # wait-ok: the layout's animation runs; a pinned node must not move through it
@@ -242,7 +249,7 @@ def test_inspector_explain_expand_collapse_hide_path_groups_encodings_and_types(
         await pg.click("#g-inspector [data-act='clearpath']")
         assert await pg.evaluate(f"() => {G}.pathNow()") is None
         # group by country, open a group
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='group']", "country")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='group']", "country")
         await pg.wait_for_function(f"() => {G}.groupCount() >= 6")
         groups = await pg.evaluate(f"() => {G}.groupCount()")
         grp = await pg.evaluate(f"() => {G}.visibleNodes().find((n) => n.members).id")
@@ -250,11 +257,11 @@ def test_inspector_explain_expand_collapse_hide_path_groups_encodings_and_types(
         assert "a group of" in await pg.locator(".dn-insp .dn-sub").text_content()
         await pg.click(".dn-insp [data-act='open']")
         assert await pg.evaluate(f"() => {G}.groupCount()") == groups - 1
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='group']", "")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='group']", "")
         # colour by a measure: a ramp in the legend; size off
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='colour']", "mtm")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='colour']", "mtm")
         assert await pg.locator(".dn-rail .dn-ramp").count() == 1
-        await pg.select_option("#g-inspector .dn-rail [data-ctl='size']", "")
+        await choose(pg, "#g-inspector .dn-rail [data-ctl='size']", "")
         assert await pg.locator(".dn-rail .dn-sizes").count() == 0
         # types filtered from the rail
         t0 = await pg.evaluate(f"() => {G}.visibleNodes().length")
@@ -387,7 +394,7 @@ def test_five_thousand_nodes_and_twenty_thousand_edges(browsers):
     async def body(pg):
         big = await pg.evaluate("() => { const g = window.__harness.graphs.big, t0 = performance.now(); g.zoomBy(1.1); g.drawNow(); return Object.assign({}, window.__harness.big, { redrawMs: Math.round(performance.now() - t0), stats: g.stats() }); }")
         assert big["stats"]["nodes"] == 5000 and big["stats"]["edges"] > 19000
-        assert big["layoutMs"] < 20000 and big["redrawMs"] < 1000, big
+        assert big["layoutMs"] is not None and big["layoutMs"] < 20000 and big["redrawMs"] < 1000, big      # None: the layout did not end in 20 s
         print("\n# drishti-graph, 5,000 nodes / 20,000 edges in the browser:", big)
         await shot(pg, "drishti-graph-5000.png")
     run(browsers, body, "view=big")

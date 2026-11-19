@@ -26,7 +26,7 @@
     id: 'states', title: 'States: empty, loading, error, stale', about: 'drishti_states.js', types: ['StateOptions'],
     summary: 'The four states every component shows in place of its content, drawn one way: empty (and why), a loading skeleton, an error with a fix, stale figures with their age. Reduced motion stills the skeleton.',
     extra: [{ name: 'state', control: { kind: 'select', values: ['empty', 'loading', 'error', 'stale'] }, desc: 'The state shown.' },
-      { name: 'compact', control: { kind: 'checkbox' }, desc: 'A row in a list or a cell, not a panel.' }],
+      { name: 'compact', control: { kind: 'switch' }, desc: 'A row in a list or a cell, not a panel.' }],
     values: { state: 'error', compact: false, text: 'The VaR could not be computed.' },
     examples: [{ title: 'Error with a fix', values: {} }, { title: 'Loading skeleton', values: { state: 'loading' } }, { title: 'Stale', values: { state: 'stale', text: 'These figures are old.' } },
       { title: 'Empty', values: { state: 'empty', text: 'No trades match this filter.' } }],
@@ -240,6 +240,6 @@
       el.options = { mapsBase: ctx.mapsBase, placeData: (level) => Promise.resolve(rowsFor(level)), height: 440 };
       return { target: el, element: el, ready: Promise.resolve(), destroy: () => { if (el.chart) { el.chart.destroy(); } el.remove(); } };
     },
-    code: () => ({ js: "const spec = { kind: 'map', level: 'continents', place: 'code', data: { rows: byContinent },   // rows from the server, grouped by the same world-regions.yaml\n  metrics: [{ field: 'ead', format: 'money' }] };\nchart.spec = spec;\nchart.options = { placeData: (level) => fetch('/api/exposure?by=' + level).then((r) => r.json()) };", element: '<drishti-chart id="chart"></drishti-chart>' })
+    code: () => ({ js: "import { Chart } from '/elements/drishti-chart/src/drishti_index.js';   // the library (new Chart(el, spec)); it registers <drishti-chart> too\nconst chart = document.getElementById('chart');\nconst spec = { kind: 'map', level: 'continents', place: 'code', data: { rows: byContinent },   // rows from the server, grouped by the same world-regions.yaml\n  metrics: [{ field: 'ead', format: 'money' }] };\nchart.spec = spec;\nchart.options = { placeData: (level) => fetch('/api/exposure?by=' + level).then((r) => r.json()) };", element: '<drishti-chart id="chart"></drishti-chart>' })
   }));
 }(typeof window !== 'undefined' ? window : null));

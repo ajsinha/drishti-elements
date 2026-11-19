@@ -15,7 +15,7 @@
 -->
 # Drishti Elements
 
-<p align="center"><img src="brand/drishti_elements-logo.svg" alt="Drishti Elements" height="64"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="brand/drishti_elements-logo-light.svg"><img src="brand/drishti_elements-logo.svg" alt="Drishti Elements" height="64"></picture></p>
 
 **Drishti Elements** is a set of plain JavaScript libraries for data-heavy screens: a grid with a pivot, charts and maps, inputs and forms, a data
 client, trees, graphs and a designer kit. No framework, no build step, no CDN, and no server needed.

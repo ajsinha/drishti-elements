@@ -30,3 +30,22 @@ tree built from a tag (`python3 tools/elements/cli.py dist`).
 - **drishti-tree 2.4.0**: hierarchies as an indented tree grid, an org chart, a sunburst and an icicle, with measures, search, an edit mode that proposes moves, and the outline of an authoring screen.
 - **drishti-graph 2.4.0**: networks on a canvas with force, layered, radial, circular and grouped layouts, paths, groups, selection and an adjacency table.
 - **drishti-designer 2.4.0**: the designer kit: the layout canvas, palette, inspector, outline, YAML pane, undo and redo, and the designer shell.
+
+Also in 2.4.0:
+
+- **drishti-chart**: heatmap tracks, category cells and the overview strip; a scatter's segments, top labels and surface; the
+  rectangle brush; frames with a slider and Play; box plots from given figures; the kinds `segmented`, `matrix`, `lollipop` and `trace3d`
+  (on the vendored ECharts GL, loaded the first time, drawn flat or as its table without WebGL). Each has a gallery page and Node tests.
+- **drishti-core**: `Tour`, a page walked in steps (marks for what each step says and shows, back, at and next controls).
+- **drishti-grid**: Escape closes Explain whatever came before it (a pending focus follow never reopens a closed Explain).
+- **drishti-inputs**: the query builder's choices on drishti-inputs' Select; the selection chip's history as buttons.
+- **Build**: a host's own libraries (`build.py --root --manifest`) require this project's bundles under Node by their path from the
+  library's folder, and a host's manifest may leave the version out (this project's is used).
+- **Vendor**: ECharts GL 2.1.0 (BSD-3-Clause, one local change without eval, `vendor/echarts-gl/PATCHED.md`).
+- **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
+  its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
+- **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script
+  tag: the resize and chips sheets), and knows a sheet the page links by a relative address as the same sheet.
+- **drishti-chart**: the map shapes are not asked for from a page opened from the file system (the browser refuses it); the map says so.
+- **Gallery**: the States entry draws again (its compact switch); the documentation's Playground page works from the file system too.
+- **Brand**: a light logo for dark backgrounds (`brand/drishti_elements-logo-light.svg`), used by the README in dark mode.

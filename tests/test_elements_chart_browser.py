@@ -32,6 +32,8 @@ from pathlib import Path
 
 import pytest
 
+from browser_harness import choose
+
 pytestmark = pytest.mark.spread
 
 STATIC = Path(__file__).resolve().parents[1]
@@ -210,12 +212,12 @@ def test_the_studio_rail_spec_and_options(browsers):
         await pg.wait_for_function("() => document.querySelector('.dc-spec').textContent.indexOf('\"kind\": \"bar\"') >= 0")
         assert await pg.locator(".dc-studio-table tbody tr").count() == 6
         await pg.click(".dc-tab[data-tab='options']")
-        await pg.select_option("[data-opt='stack']", "percent")
+        await choose(pg, "[data-opt='stack']", "percent")
         await pg.wait_for_function("() => document.querySelector('.dc-spec').textContent.indexOf('\"percent\"') >= 0")
         assert await pg.evaluate("() => window.__harness.charts.studio.engine.getOption().yAxis[0].max") == 100
-        await pg.select_option("[data-opt='orient']", "horizontal")
+        await choose(pg, "[data-opt='orient']", "horizontal")
         assert await pg.evaluate("() => window.__harness.charts.studio.engine.getOption().yAxis[0].type") == "category"
-        await pg.select_option("[data-opt='density']", "terminal")
+        await choose(pg, "[data-opt='density']", "terminal")
         assert await pg.get_attribute("#c-studio", "data-density") == "terminal"
         await pg.click(".dc-rail-k[data-kind='map']")
         await pg.wait_for_function("() => window.__harness.charts.studio.map && window.__harness.charts.studio.map.geo")
@@ -253,7 +255,7 @@ def test_the_world_map_ranking_drill_into_the_states_and_canada_and_back(browser
         assert await pg.evaluate("() => window.__harness.charts.map.engine.getOption().geo[0].regions.filter((r) => r.name.indexOf('__frame_') === 0).length") == 2
         await shot(pg, "drishti-chart-map-usa.png")
         # the metric picker
-        await pg.select_option(".dc-metric", index=2)
+        await choose(pg, ".dc-metric", index=2)
         assert (await pg.get_attribute("#c-map .dc-canvas", "aria-label")).startswith("Map of Counterparties by region")
         assert await ev(pg, "metricChanged") == 1
         # back, then Canada by a double-click on the map

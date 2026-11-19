@@ -94,16 +94,33 @@
   /** The page written in the sandbox: tokens and bundles inlined, the error reporter, then the person's code; the code is named drishti-playground-code.js, so an error thrown in a library still finds its line in it. */
   async function compose(g, libs, html, js) {
     const M = g.E.core.manifest(), base = new URL('../elements/', location.href).href, stat = new URL('../', location.href).href;
-    const names = closure(M, libs), css = [text(stat + 'css/drishti_tokens.css')], scripts = [];
+    const names = closure(M, libs), css = [stat + 'css/drishti_tokens.css'], scripts = [];
     names.forEach((n) => {
       const L = M.libraries[n];
-      (L.css || []).forEach((c) => css.push(text(new URL(c, stat).href)));
-      (L.scripts || []).forEach((c) => scripts.push(text(new URL(c, stat).href)));
-      scripts.push(text(base + n + '/drishti_' + n.replace('drishti-', '') + '.js'));
+      (L.css || []).forEach((c) => css.push(new URL(c, stat).href));
+      (L.scripts || []).forEach((c) => scripts.push(new URL(c, stat).href));
+      scripts.push(base + M.libraries[n].bundle);
     });
-    const [sheets, codes] = await Promise.all([Promise.all(css), Promise.all(scripts)]);
-    const headTop = '<!doctype html><html data-theme="' + (g.doc.documentElement.getAttribute('data-theme') || 'terminal') + '"><head><meta charset="utf-8"><style>' + sheets.join('\n') + '</style></head><body>' + html +
-      '\n<script>' + codes.join('\n;\n').replace(/<\/script/gi, '<\\/script') + '\n<\/script>\n<script>var failed=false;function at(x){var m=/drishti-playground-code\.js:(\d+)/.exec(x&&x.stack||"");return m?+m[1]:0;}function rep(m,own,l){failed=true;parent.postMessage({type:"drishti-playground-error",message:String(m),own:own,line:l},"*");}window.addEventListener("error",function(e){var own=/drishti-playground-code\.js$/.test(e.filename||"");rep(e.message,own,own?e.lineno:at(e.error));});window.addEventListener("unhandledrejection",function(e){rep(e.reason&&e.reason.message||e.reason,false,at(e.reason));});<\/script>\n<script>';
+    /* the code editor's engine is loaded by the editor the first time (the loader names its address); the sandbox can load nothing, so
+       a page that makes an editor gets CodeMirror with the libraries */
+    if (names.indexOf('drishti-inputs') >= 0 && /CodeEditor|CodeDiff|drishti-code/.test(html + js)) {
+      css.push(stat + 'vendor/codemirror/codemirror.css');
+      scripts.splice(1, 0, stat + 'vendor/codemirror/codemirror.js');
+    }
+    /* served: the files inlined (the sandbox's policy allows no network); from the file system a page cannot read files (fetch is
+       refused), so the sandbox names them and reads them itself, as a file:// page may */
+    const esc = (u) => u.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    let head, libsCode;
+    if (location.protocol === 'file:') {
+      head = css.map((u) => '<link rel="stylesheet" href="' + esc(u) + '">').join('');
+      libsCode = scripts.map((u) => '<script src="' + esc(u) + '"><\/script>').join('\n');
+    } else {
+      const [sheets, codes] = await Promise.all([Promise.all(css.map(text)), Promise.all(scripts.map(text))]);
+      head = '<style>' + sheets.join('\n') + '</style>';
+      libsCode = '<script>' + codes.join('\n;\n').replace(/<\/script/gi, '<\\/script') + '\n<\/script>';
+    }
+    const headTop = '<!doctype html><html data-theme="' + (g.doc.documentElement.getAttribute('data-theme') || 'terminal') + '"><head><meta charset="utf-8">' + head + '</head><body>' + html +
+      '\n' + libsCode + '\n<script>var failed=false;function at(x){var m=/drishti-playground-code\.js:(\d+)/.exec(x&&x.stack||"");return m?+m[1]:0;}function rep(m,own,l){failed=true;parent.postMessage({type:"drishti-playground-error",message:String(m),own:own,line:l},"*");}window.addEventListener("error",function(e){var own=/drishti-playground-code\.js$/.test(e.filename||"");rep(e.message,own,own?e.lineno:at(e.error));});window.addEventListener("unhandledrejection",function(e){rep(e.reason&&e.reason.message||e.reason,false,at(e.reason));});<\/script>\n<script>';
     const html2 = headTop + js + '\n//# sourceURL=drishti-playground-code.js\n<\/script>\n<script>setTimeout(function(){if(!failed){parent.postMessage({type:"drishti-playground-ok"},"*");}},60);<\/script></body></html>';
     return { html: html2 };
   }
@@ -180,7 +197,9 @@
       const page = await compose(g, libs, ed.html.getValue(), ed.js.getValue());
       if (my !== seq) { return; }
       const f = doc.createElement('iframe');
-      f.setAttribute('sandbox', 'allow-scripts');
+      /* served: a sandbox with no origin of its own. From the file system a sandboxed frame may not read the libraries' files at all; the
+         page is the person's own file there, its frame a file of its own (the browser keeps each file apart), so it runs unsandboxed */
+      if (location.protocol !== 'file:') { f.setAttribute('sandbox', 'allow-scripts'); }
       f.setAttribute('title', 'The element, drawn from the code below');
       f.className = 'gx-page-frame';
       f.style.visibility = 'hidden';
