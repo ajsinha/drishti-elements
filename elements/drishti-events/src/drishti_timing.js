@@ -146,3 +146,76 @@ export function testClock(o) {
   };
   return clock;
 }
+
+/**
+ * Exponential back-off with full jitter: attempt n waits a random time up to min(max, base * factor^n), never under half the base, and
+ * never under a floor a server advised (bye's afterMs, SSE's retry:).
+ */
+export class Backoff {
+  /**
+   * @param {{baseMs: number, maxMs: number, factor: number, jitter: boolean, random: function(): number}} [o] baseMs default 500; maxMs
+   *   default 30,000; factor default 2; jitter default true; random: the clock's
+   */
+  constructor(o) {
+    this.o = Object.assign({ baseMs: 500, maxMs: 30000, factor: 2, jitter: true, random: Math.random }, o);
+    /** @type {number} attempts since the last connection held */
+    this.attempt = 0;
+  }
+
+  /**
+   * The wait before the next attempt (and the attempt counted).
+   * @param {number} [floorMs] a server's advice: wait at least this
+   * @returns {number} ms
+   */
+  next(floorMs) {
+    const cap = Math.min(this.o.maxMs, this.o.baseMs * Math.pow(this.o.factor, this.attempt));
+    this.attempt++;
+    const wait = Math.round(this.o.jitter ? Math.max(this.o.baseMs / 2, cap * this.o.random()) : cap);
+    return Math.max(wait, Number(floorMs) || 0);
+  }
+
+  /**
+   * A connection held: the next wait starts small again.
+   * @returns {void}
+   */
+  reset() { this.attempt = 0; }
+}
+
+/**
+ * A watchdog on the clock: beat() on every sign of life; when none comes for timeoutMs, onTimeout runs (once until the next beat).
+ */
+export class Heartbeat {
+  /**
+   * @param {{timeoutMs: number, onTimeout: function(): void, clock: Clock}} o timeoutMs 0: no watch
+   */
+  constructor(o) {
+    this.o = Object.assign({ clock: systemClock() }, o);
+    this.timer = null;
+    /** @type {number} the clock's time of the last beat */
+    this.last = 0;
+  }
+
+  /**
+   * A sign of life: the watch starts again.
+   * @returns {void}
+   */
+  beat() {
+    this.last = this.o.clock.now();
+    if (!this.o.timeoutMs) { return; }
+    this.stop();
+    this.timer = this.o.clock.setTimeout(() => { this.timer = null; this.o.onTimeout(); }, this.o.timeoutMs);
+  }
+
+  /**
+   * Watches with a new timeout (a server's figure from its welcome).
+   * @param {number} ms
+   * @returns {void}
+   */
+  setTimeoutMs(ms) { this.o.timeoutMs = ms; if (this.timer !== null) { this.beat(); } }
+
+  /**
+   * Stops watching.
+   * @returns {void}
+   */
+  stop() { if (this.timer !== null) { this.o.clock.clearTimeout(this.timer); this.timer = null; } }
+}

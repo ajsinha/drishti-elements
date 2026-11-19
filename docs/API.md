@@ -28,7 +28,7 @@ version above (not Drishti's own).
 | [drishti-grid](#drishti-grid) | The grid: its engine (columns, row models, virtual scrolling, pivot, selection, export, keyboard) and its look (Grid and &lt;drishti-grid&gt; in three layouts and three densities), cell editing with undo, paste, write-back and four eyes, and the AG Grid-style adapter (createGridFromAgOptions) |
 | [drishti-tree](#drishti-tree) | The tree: hierarchies as an org chart, an indented tree with measures (on drishti-grid's tree data), a sunburst and an icicle; expand and collapse, search with breadcrumbs, measures on nodes with non-additive ones (◆) asked of the server and never summed, Explain, re-parenting in an edit mode that proposes the move for four eyes, the outline of an authoring screen (marks, a hiding filter, a designer's selection followed both ways, moves by drag or Alt+arrows), export, keyboard and ARIA |
 | [drishti-designer](#drishti-designer) | The designer kit: the layout canvas over a layout model (grid or flow: place, move, resize with snap, multi-select, align, distribute, z-order, groups, copy and paste, a phone's order, the keys, undo and redo on one command stack), the palette, the inspector (a form from a schema), the outline (drishti-tree's, drag to re-order or re-parent), the YAML pane kept in step with the model both ways (completion and lint from a JSON Schema) and the designer shell (three panes, Visual / YAML / Both, versions, Validate, Preview, History, Impact, Propose for review) |
-| [drishti-data](#drishti-data) | Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live), the live client over SSE and WebSocket with reconnect, heartbeat, resume and backpressure, and the Arrow client |
+| [drishti-data](#drishti-data) | Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live: any feed, a drishti-events subscription among them), backpressure into a grid, and the Arrow client |
 | [drishti-chart](#drishti-chart) | The chart: one engine-neutral spec over the vendored ECharts (the general kinds, the maps from world to every country's first-level regions, the card and studio modes, the map's ranking and table modes), Explain on any mark, the data table, export, linked selection and live updates; Vega-Lite translated into the spec |
 | [drishti-graph](#drishti-graph) | The graph: networks cyclic or acyclic on a canvas for thousands of nodes; force (seeded), layered (DAG), radial, circular and grouped layouts; zoom, pan, minimap and fit; neighbours expanded on demand; the shortest path; groups collapsed by an attribute and filters by type; size and colour by a measure with a legend; pin, multi-select and lasso; a selection panel with Explain; linked selection; export (PNG, SVG, data); keyboard and an adjacency table; live updates; the lineage preset; the view's graph panel |
 | [drishti-events](#drishti-events) | Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests) |
@@ -14776,52 +14776,6 @@ One of the header's actions.
 
 Bundle `elements/drishti-data/drishti_data.js`, global `Drishti.elements.data`; requires drishti-core.
 
-### drishti_backoff.js
-
-#### class `Backoff`
-
-Exponential back-off with full jitter: attempt n waits a random time up to min(max, base * factor^n).
-
-##### `new Backoff(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `[o]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean, random: function(): number}` | baseMs default 500; maxMs default 30,000; factor default 2; jitter default true; random: for tests |
-
-##### `Backoff.next()`
-
-The wait before the next attempt (and the attempt counted).
-
-Returns `number`: ms.
-
-##### `Backoff.reset()`
-
-A connection held: the next wait starts small again.
-
-Returns `void`.
-
-#### class `Heartbeat`
-
-A watchdog: beat() on every message; when none comes for timeoutMs, onTimeout runs (once until the next beat).
-
-##### `new Heartbeat(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `o` | `{timeoutMs: number, onTimeout: function(): void, setTimeout: Function, clearTimeout: Function}` | the timer functions: for tests |
-
-##### `Heartbeat.beat()`
-
-A sign of life: the watch starts again.
-
-Returns `void`.
-
-##### `Heartbeat.stop()`
-
-Stops watching.
-
-Returns `void`.
-
 ### drishti_backpressure.js
 
 #### class `TransactionSink`
@@ -14853,7 +14807,7 @@ Returns `Promise&lt;void&gt;`.
 
 #### `pipeToGrid(feed, grid, o)`
 
-Wires a feed (a LiveClient, or any {subscribe}) into a grid through a TransactionSink.
+Wires a feed (a drishti-events subscription, or any {subscribe}) into a grid through a TransactionSink.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -14862,77 +14816,6 @@ Wires a feed (a LiveClient, or any {subscribe}) into a grid through a Transactio
 | `[o]` | `{getRowId: function(Object): string, maxInFlight: number, highWater: number, onStats: function(Object): void}` |  |
 
 Returns `{sink: TransactionSink, stop: function(): void}`.
-
-### drishti_live-client.js
-
-#### `LIVE_STATES`
-
-The client's states.
-
-#### class `LiveClient`
-
-A live connection with reconnect, heartbeat and resume.
-
-##### `new LiveClient(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `o` | `LiveClientOptions` |  |
-
-##### `LiveClient.on(name, fn)`
-
-Listens to the client's own events: state, error, message.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `name` | `string` |  |
-| `fn` | `function(Object, string): void` |  |
-
-Returns `function(): void`.
-
-##### `LiveClient.subscribe(fn)`
-
-Receives every message (the connection opens with the first subscriber and closes with the last).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `fn` | `function(Object): void` |  |
-
-Returns `function(): void`: unsubscribes.
-
-##### `LiveClient.open()`
-
-Opens the connection (subscribe does it).
-
-Returns `void`.
-
-##### `LiveClient.reconnect()`
-
-Opens again now (a person pressed Reconnect).
-
-Returns `void`.
-
-##### `LiveClient.close()`
-
-Closes the connection and stops trying.
-
-Returns `void`.
-
-##### `LiveClient.destroy()`
-
-Closes and forgets the page's online listener.
-
-Returns `void`.
-
-#### `parseSse(text)`
-
-Reads Server-Sent Events from text (the fetch transport, and anything else that has the raw stream): the whole events and what is left for the next chunk. An event: its name (default message), its data lines joined by new lines, its id; a comment line alone is a sign of life.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `text` | `string` |  |
-
-Returns `{events: Array&lt;{event: string, data: string, id: ?string, comment: boolean}&gt;, rest: string}`.
 
 ### drishti_arrow.js
 
@@ -15225,7 +15108,7 @@ Returns `void`.
 
 ##### `FeedMonitor.attach(client)`
 
-Feeds the monitor from a live client (drishti-data's LiveClient).
+Feeds the monitor from a feed (any {subscribe}, a drishti-events subscription among them).
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -15303,7 +15186,7 @@ Returns `DataSource & {frame: function(): Promise&lt;Object&gt;}`.
 
 #### `liveSource(source, feed)`
 
-A source with a live feed: getRows from the source, subscribe from the feed (a LiveClient), so a grid connects both.
+A source with a live feed: getRows from the source, subscribe from the feed (a drishti-events subscription, or any {subscribe}), so a grid connects both.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -15324,18 +15207,6 @@ Every row a request matches, a page at a time up to a limit (what a chart reads 
 
 Returns `Promise&lt;{rows: Object[], rowCount: number, truncated: boolean}&gt;`.
 
-### drishti_index.js
-
-#### `live(o)`
-
-A live client (new LiveClient(o)).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `o` | `import('./drishti_live-client.js').LiveClientOptions` |  |
-
-Returns `import('./drishti_live-client.js').LiveClient`.
-
 ### Types of drishti-data
 
 #### `FeedMonitorOptions` : `Object`
@@ -15345,29 +15216,6 @@ Returns `import('./drishti_live-client.js').LiveClient`.
 | `[seqOf]` | `function(Object): ?number` | the sequence number of a message (default: message.seq) |
 | `[staleMs=15000]` | `number` | quiet for this long is stale (0: never) |
 | `[now]` | `function(): number` | the clock (default Date.now) |
-
-#### `LiveClientOptions` : `Object`
-
-| Name | Type | Meaning |
-|---|---|---|
-| `url` | `(string\|function(): string)` | the feed's address (http(s) for SSE, ws(s) for a WebSocket), or a function asked at every connect |
-| `[transport]` | `('sse'\|'websocket'\|'fetch')` | default: websocket for ws:// and wss://, else sse; fetch: SSE read with fetch |
-| `[headers]` | `(Object&lt;string, string&gt;\|function({status: number}): (Object&lt;string, string&gt;\|Promise&lt;Object&lt;string, string&gt;&gt;))` | fetch: the request's headers, or a function of the last failure (status 401 after a refused token) that answers them |
-| `[credentials='same-origin']` | `string` | fetch: the request's credentials |
-| `[eventField]` | `string` | each message gets its SSE event name under this field (when it has none of its own) |
-| `[fetch]` | `Function` | fetch: for tests |
-| `[heartbeatMs=45000]` | `number` | no message for this long: reconnect (0: no watchdog) |
-| `[pingMs]` | `number` | WebSocket: send {"type":"ping"} this often (default heartbeatMs / 3) |
-| `[backoff]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean}` |  |
-| `[resumeParam='lastEventId']` | `string` | SSE: the parameter that carries the last event id |
-| `[events]` | `string[]` | SSE event names that carry messages (default ['message']) |
-| `[withCredentials=false]` | `boolean` |  |
-| `[protocols]` | `string[]` | WebSocket sub-protocols |
-| `[EventSource]` | `Function` | for tests or a polyfill |
-| `[WebSocket]` | `Function` | for tests |
-| `[window]` | `Object` | the window (online and offline events; default the page's) |
-| `[setTimeout]` | `Function` | the clock's timer functions (a fake clock in tests; default the page's or the worker's) |
-| `[clearTimeout]` | `Function` |  |
 
 #### `RowRequest` : `Object`
 
@@ -19285,6 +19133,280 @@ A seeded random function (mulberry32): the same seed, the same numbers.
 
 Returns `function(): number`.
 
+#### class `Backoff`
+
+Exponential back-off with full jitter: attempt n waits a random time up to min(max, base * factor^n), never under half the base, and never under a floor a server advised (bye's afterMs, SSE's retry:).
+
+##### `new Backoff(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean, random: function(): number}` | baseMs default 500; maxMs default 30,000; factor default 2; jitter default true; random: the clock's |
+
+##### `Backoff.next(floorMs)`
+
+The wait before the next attempt (and the attempt counted).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[floorMs]` | `number` | a server's advice: wait at least this |
+
+Returns `number`: ms.
+
+##### `Backoff.reset()`
+
+A connection held: the next wait starts small again.
+
+Returns `void`.
+
+#### class `Heartbeat`
+
+A watchdog on the clock: beat() on every sign of life; when none comes for timeoutMs, onTimeout runs (once until the next beat).
+
+##### `new Heartbeat(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{timeoutMs: number, onTimeout: function(): void, clock: Clock}` | timeoutMs 0: no watch |
+
+##### `Heartbeat.beat()`
+
+A sign of life: the watch starts again.
+
+Returns `void`.
+
+##### `Heartbeat.setTimeoutMs(ms)`
+
+Watches with a new timeout (a server's figure from its welcome).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `Heartbeat.stop()`
+
+Stops watching.
+
+Returns `void`.
+
+### drishti_connection.js
+
+#### `CONNECTION_STATES`
+
+The connection's states.
+
+#### `SECRET_PARAMS`
+
+Query parameters an address may not carry: a secret travels in auth or headers, never in an address.
+
+#### class `Connection`
+
+The connection to a server: the 'server' scope of an Events.
+
+##### `new Connection(events, address, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events it serves |
+| `address` | `(string\|function(): string\|Object)` | the server's address, a function asked at every connect, or a provider with transport(context) (the mock server) |
+| `[o]` | `ConnectOptions` |  |
+
+##### `Connection.subscribe(sub)`
+
+Holds a subscription at the server ('sub' now when open, and after every reconnect).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` | a Subscription |
+
+Returns `boolean`: true: it waits for the server's answer.
+
+##### `Connection.unsubscribe(sub)`
+
+Gives a subscription back.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `void`.
+
+##### `Connection.pending(sub)`
+
+Whether a subscription still waits for the server.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `boolean`.
+
+##### `Connection.publish(m, o)`
+
+Publishes a message to the server: sent now, or held (in order) until the connection opens; resolves when acknowledged.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` | the message |
+| `o` | `Object` | the publish's options |
+
+Returns `Promise&lt;{acked: boolean}&gt;`.
+
+##### `Connection.request(m, o)`
+
+Sends a request and waits for its answer (res); the Events times it out. Aborting tells the server (cancel).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` | the message |
+| `o` | `{timeoutMs: number, signal: AbortSignal}` |  |
+
+Returns `Promise&lt;Object&gt;`: the answer, a message.
+
+##### `Connection.flush()`
+
+Sends what waits now (it is sent on its own when the connection opens).
+
+Returns `Promise&lt;number&gt;`: how many were sent.
+
+##### `Connection.clearOutbox()`
+
+Empties the queue: what waits is not sent (each publish rejects).
+
+Returns `Promise&lt;number&gt;`: how many were dropped.
+
+##### `Connection.signOut()`
+
+The person signs out: the queue emptied, the stream positions forgotten.
+
+Returns `Promise&lt;void&gt;`.
+
+##### `Connection.reconnect()`
+
+Opens again now (a person pressed Reconnect; also after close or refused).
+
+Returns `void`.
+
+##### `Connection.close()`
+
+Closes and stops trying (a WebSocket says bye first).
+
+Returns `void`.
+
+##### `Connection.destroy()`
+
+Closes, rejects what waits and forgets the page's listeners.
+
+Returns `void`.
+
+##### `Connection.metrics()`
+
+The connection's figures.
+
+Returns `Object`.
+
+#### `checkAddress(url)`
+
+Throws when an address names a secret in its query (a token, a key, a password...), and says how to send it instead.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `url` | `string` |  |
+
+Returns `string`: the address.
+
+#### `base64url(text)`
+
+A token as base64url (a WebSocket sub-protocol's characters).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+### drishti_protocol.js
+
+#### `PROTOCOL_VERSION`
+
+The protocol's version.
+
+#### `SUBPROTOCOL`
+
+The WebSocket sub-protocol of version 1 (a host that needs its own name gives the option subprotocol).
+
+#### `CLIENT_FRAMES`
+
+The frames a client sends.
+
+#### `SERVER_FRAMES`
+
+The frames a server sends.
+
+#### `ERROR_CODES`
+
+The protocol's own error codes (a server may send any other code of its own).
+
+#### `CLOSE_CODES`
+
+WebSocket close codes: 4400 a bad frame, 4401 not authenticated, 4403 forbidden, 4408 no hello in time, 4429 too fast, 4500 the server's fault.
+
+#### `encodeFrames(frames)`
+
+One frame or a batch, as the text a transport sends.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `frames` | `Object[]` |  |
+
+Returns `string`.
+
+#### `decodeFrames(text, o)`
+
+Reads a transport message: its frames, or why it was dropped (too-large, not-json, not-a-frame). A frame of an unknown type is kept with unknown: true (to be counted and ignored).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+| `[o]` | `{maxBytes: number}` | maxBytes default 1 MB |
+
+Returns `{frames: Object[], bytes: number, error: ?string}`.
+
+#### `checkFrame(f)`
+
+Checks a server's frame before use: true, or what is wrong in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `f` | `Object` |  |
+
+Returns `(true\|string)`.
+
+### drishti_transport-sse.js
+
+#### `parseSse(text)`
+
+Reads Server-Sent Events from text: the whole events and what is left for the next chunk.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `{events: SseEvent[], rest: string}`.
+
+#### `readSse(response, o)`
+
+The events of a fetch answer that streams Server-Sent Events, as an async iterator (ends with the answer, or when the signal fires).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `response` | `Response` |  |
+| `[o]` | `{signal: AbortSignal}` |  |
+
+Returns `AsyncIterable&lt;SseEvent&gt;`.
+
 ### drishti_index.js
 
 #### `segment(text)`
@@ -19299,16 +19421,39 @@ Returns `string`.
 
 #### `connect(url, options)`
 
-An Events. With no address: the page (and its tabs) only.
+An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no configured events endpoint, the page and its tabs only. Nothing has to be awaited: subscriptions are sent when the connection opens, publishes wait for it, and every reconnect restores both.
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `[url]` | `string` | the server's address |
-| `[options]` | `import('./drishti_events-hub.js').EventsOptions` |  |
+| `[url]` | `(string\|function(): string\|Object)` | the server's address, a function asked at every connect, or a provider with transport(context) (the mock server); default the endpoint configure({ endpoints: { events } }) names |
+| `[options]` | `(import('./drishti_events-hub.js').EventsOptions\|import('./drishti_connection.js').ConnectOptions)` |  |
 
 Returns `import('./drishti_events-hub.js').Events`.
 
 ### Types of drishti-events
+
+#### `ConnectOptions` : `Object`
+
+The options of connect (with those of an Events: routes, clock, limits, signal, ...).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[transport]` | `('websocket'\|'sse'\|'fetch'\|function(Object): Object)` | default by the address: ws: and wss: a WebSocket, else fetch when auth or headers are given, else sse (EventSource); or a function making a transport (a stand-in, the mock server) |
+| `[protocol=1]` | `(1\|'raw')` | raw: a server that only sends its own JSON (each value a message by topicOf, seqOf, idOf, keyOf, kindOf) |
+| `[auth]` | `function({reason: string, status: number}): Promise&lt;{token: string, expiresAt: number}&gt;` | asked before every connect ('connect'), a minute before the token runs out ('expiring') and once after a refusal ('refused') |
+| `[wsAuth='hello']` | `('hello'\|'subprotocol'\|'cookie')` | how a WebSocket carries the token: in the first frame, as a second sub-protocol (bearer.&lt;token, base64url&gt;), or not at all (the site's cookie) |
+| `[headers]` | `(Object&lt;string, string&gt;\|function(): Object&lt;string, string&gt;)` | fetch: more headers |
+| `[credentials='same-origin']` | `string` | fetch and EventSource ('include': cross-site cookies) |
+| `[heartbeatMs]` | `number` | silence allowed before the connection is taken as dead (1.5 times this); default the server's figure from welcome, else 45,000; EventSource cannot see comment lines, so its watch is on only when this is given |
+| `[backoff]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean}` |  |
+| `[subprotocol='events.v1']` | `string` | the WebSocket sub-protocol's name |
+| `[events]` | `string[]` | raw SSE: the event names that carry values (default every name for fetch, message for EventSource) |
+| `[topicOf]` | `function(*, Object): string` | raw: the topic of a value (default 'feed') |
+| `[seqOf]` | `function(*, Object): number` | raw |
+| `[idOf]` | `function(*, Object): string` | raw |
+| `[keyOf]` | `function(*, Object): string` | raw |
+| `[kindOf]` | `function(*, Object): string` | raw (default the SSE event's name) |
+| `[env]` | `{WebSocket: Function, EventSource: Function, fetch: Function, window: Object}` | the browser's classes and window (stand-ins in tests; default the page's) |
 
 #### `Message` : `Object`
 
@@ -19416,6 +19561,35 @@ The options of an Events.
 | `[signal]` | `AbortSignal` | ends the whole Events (a component's life) |
 | `[onError]` | `function(Error, Object): void` | also told of every error published on $events.error |
 
+#### `RawMapping` : `Object`
+
+How raw mode turns a server's own JSON into messages.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[topicOf]` | `function(*, {event: string, id: ?string}): string` | default: one topic, 'feed' |
+| `[seqOf]` | `function(*, {event: string, id: ?string}): (number\|undefined)` | default: the value's seq, when a number |
+| `[idOf]` | `function(*, {event: string, id: ?string}): (string\|undefined)` | default: the SSE event id, else the value's id |
+| `[keyOf]` | `function(*, {event: string, id: ?string}): (string\|undefined)` | default: none |
+| `[kindOf]` | `function(*, {event: string, id: ?string}): (string\|undefined)` | default: the SSE event name (other than message) |
+
+#### `SequencerOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `clock` | `import('./drishti_timing.js').Clock` | the one clock (timers and the time of the last message) |
+| `[gapWaitMs=2000]` | `number` | how long held messages wait for a replay |
+| `[maxHeld=5000]` | `number` | held messages per stream |
+| `[maxStreams=5000]` | `number` | streams remembered |
+| `[idWindow=2048]` | `number` | ids remembered for messages with no seq |
+| `[canReplay=true]` | `boolean` | whether the server offers replay (welcome.can); without it a gap resyncs at once |
+| `[onReplay]` | `function({stream: string, epoch: ?string, from: number, to: number}): void` | asks the server to send a range again |
+| `[onGap]` | `function({stream: string, from: number, to: number, recoverable: boolean}): void` | a range that will not arrive |
+| `[onResync]` | `function({stream: string, reason: string}): void` | the stream's state must be asked for again |
+| `[onRelease]` | `function(Object[]): void` | messages released later than the call that held them (a replay arrived, or the wait ended) |
+| `[onStale]` | `function({stream: string, quietMs: number}): void` | a watched stream was quiet for too long |
+| `[onFresh]` | `function(): void` | a stale stream spoke again |
+
 #### `Clock` : `Object`
 
 The clock every part of the library reads.
@@ -19448,3 +19622,50 @@ A clock a test moves by hand.
 | `runAll` | `function(number): number` | runs timers until none is left (at most `limit`, default 100,000, so a timer that sets itself again cannot hang a test); answers how many ran |
 | `setHidden` | `function(boolean): void` | hides or shows the page (a hidden page gets no frames) |
 | `pending` | `function(): number` | how many timers wait |
+
+#### `SseEvent` : `Object`
+
+An SSE event.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `event` | `string` | its name (default message) |
+| `data` | `string` | its data lines joined by new lines |
+| `id` | `?string` | its id (the cursor) |
+| `comment` | `boolean` | a comment line alone (a sign of life) |
+| `retry` | `(number\|undefined)` | the server's advice on how long to wait before reconnecting, ms |
+
+#### `TransportContext` : `Object`
+
+What a transport is given (the connection makes it for each attempt).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `url` | `string` | the address (for SSE in protocol 1, the events address: /stream and /send are under it) |
+| `protocol` | `(1\|'raw')` |  |
+| `env` | `{WebSocket: Function, EventSource: Function, fetch: Function}` | the browser's classes (stand-ins in tests) |
+| `headers` | `Object&lt;string, string&gt;` | fetch: the request's headers (the token's included) |
+| `credentials` | `string` | fetch: 'same-origin' by default |
+| `protocols` | `string[]` | WebSocket: the sub-protocols |
+| `lastEventId` | `?string` | SSE: the last cursor heard |
+| `hello` | `Object` | SSE (protocol 1): the hello frame |
+| `subs` | `Object[]` | SSE (protocol 1): the sub frames of the subscriptions held |
+| `events` | `string[]` | raw SSE: the event names that carry messages |
+| `session` | `function(): ?string` | the session the server named (for /send) |
+| `onOpen` | `function(): void` |  |
+| `onText` | `function(string, {event: string, id: ?string}): void` | a transport message |
+| `onComment` | `function(): void` | an SSE comment line (a heartbeat) |
+| `onRetry` | `function(number): void` | SSE's retry: field |
+| `onBinary` | `function(): void` | a binary frame (dropped) |
+| `onClose` | `function({code: number, status: number, reason: string}): void` | the transport ended (once) |
+
+#### `Transport` : `Object`
+
+A transport: sends frames, closes.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `kind` | `string` | 'websocket', 'sse' or 'fetch' |
+| `send` | `function(Object[]): Promise&lt;void&gt;` |  |
+| `close` | `function(number): void` |  |
+| `bufferedAmount` | `function(): number` | bytes the transport has not sent yet |

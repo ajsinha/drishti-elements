@@ -121,7 +121,7 @@ export class TransactionSink {
 }
 
 /**
- * Wires a feed (a LiveClient, or any {subscribe}) into a grid through a TransactionSink.
+ * Wires a feed (a drishti-events subscription, or any {subscribe}) into a grid through a TransactionSink.
  * @param {{subscribe: function(function(Object): void): function(): void}} feed
  * @param {Object} grid a drishti-grid Grid or GridModel
  * @param {{getRowId: function(Object): string, maxInFlight: number, highWater: number, onStats: function(Object): void}} [o]

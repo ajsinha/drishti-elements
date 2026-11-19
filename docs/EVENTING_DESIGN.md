@@ -775,6 +775,26 @@ and 8: the API, the connection, reliability and the mock) is 19.5 days.
 | Q11 | Ship the first usable release (19.5 days) before the tabs, queue and inspector steps? | Yes: hosts can start adopting while the rest is built. |
 | Q12 | May the request and reply calls also be offered server to client (a server asks the page)? | Not in version 1. |
 
+### 10.4 Decisions made while building
+
+Where the build had to choose, or the API above changed, the choice and its reason (folded into USING, DESIGN and CONTRACTS by step 12).
+
+| Step | Decision | Why |
+|---|---|---|
+| E2 | `share(pattern, { to })` **adds** a scope to the pattern's route (selections reach the tabs and still the page); the `off()` it answers takes it away | the design's own example (section 1.3) keeps selections in the page |
+| E2 | Given `routes` replace the defaults; a topic no given route matches takes the default | one rule; a host lists only what differs |
+| E2 | A subscription hears the union of the scopes of every route its pattern overlaps (`events.scopesOf(pattern)`); `events.routeOf(topic)` answers a publish's scopes | a listener on `>` hears the page's `ui.>` and the server's rest |
+| E2 | `Subscription.subscribe(fn)` (the feed) gives `fn(data, message)`; `byKind` handlers get `(data, message)`, `'*'` takes the kinds no handler names; `latestAll()` added; `scopes` says what it hears | a grid's `connectLive` and `liveSource` take the data of a feed, as before |
+| E2 | Page-scope requests are answered by any `Events` of the page through one registry; the request message carries `signal` (aborted when the requester gives up) | the page has one bus; a replier can stop work nobody waits for |
+| E2 | A message delivered despite its check (`onInvalid: 'deliver'`) carries `invalid` (the words) | "marked" needed a field |
+| E2 | The library's own topics live on each `Events`' own bus, not the shared page bus | two `Events` in a page each have their own state; a component's lone `*` listener never hears them |
+| E3 | `connect(url)`'s first attempt waits for the end of the current task | a page that listens to `$events.state` or subscribes right after `connect()` hears `connecting`, and an `EventSource` opens with its subscriptions in its address |
+| E3 | `connect()` with no address uses the configured `events` endpoint, and with none is the page and its tabs only (no error) | section 2.1's "`connect()` (no server)" and section 1.3's endpoint, both kept |
+| E3 | Option `env` (`WebSocket`, `EventSource`, `fetch`, `window`, `document`) and `transport` as a function, or an address object with `transport(context)` | the tests' stand-ins and the mock server (step 8) plug in without a second code path |
+| E3 | `EventSource` cannot see SSE comment lines: its heartbeat watch is on only when `heartbeatMs` is given | otherwise a quiet stream would be taken as dead every 67 s |
+| E3 | Raw mode's watchdog is `heartbeatMs` itself (not 1.5 times); raw over `EventSource` reads the event names in `events` (default `message`) | the behaviour of the deleted `LiveClient`, which raw mode replaces |
+| E3 | A sent request is not sent again after a reconnect (it fails on its timeout); an unacknowledged publish is (idempotent ids) | a request may have effects; a publish's id makes a second sending harmless |
+
 ---
 
 ## 11. A library that names no host

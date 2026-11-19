@@ -32,7 +32,8 @@ a second copy from growing beside them (section 9).
 | **drishti-inputs** | date and range pickers with holiday calendars, the switch, the tree picker, the multi-select, the combobox, forms from a schema with four eyes, the filter bar, the code editor, the formula input | core |
 | **drishti-chart** | one engine-neutral spec over the vendored ECharts, the general kinds, the maps, the card and studio modes, Explain on any mark, the data table, export, linked selection, live updates, Vega-Lite translated into the spec | core, inputs |
 | **drishti-grid** | the grid and its pivot in three layouts, tree data, ranges, cell editing, the live-set mode, export, the AG Grid-style adapter | core, inputs, chart |
-| **drishti-data** | one data-source contract (memory, REST pages, server-side rows, Arrow, live), the live client, the Arrow client | core |
+| **drishti-data** | one data-source contract (memory, REST pages, server-side rows, Arrow, live), the Arrow client | core |
+| **drishti-events** | events in the page, across tabs and with a server (WebSocket, Server-Sent Events): topics with wildcards, publish and subscribe, request and reply, streams, routes, reconnect and resume; the one home of every connection to a server | core |
 | **drishti-tree** | hierarchies in four modes of one component: the tree grid, the org chart, the sunburst, the icicle; measures with non-additive ones asked of the host; an edit mode that proposes moves; the outline of an authoring screen | core, inputs, grid |
 | **drishti-graph** | networks on a canvas for thousands of nodes: force, layered, radial, circular and grouped layouts, paths, groups, selection, an adjacency table | core, inputs, grid |
 | **drishti-designer** | the designer kit: the layout canvas over a layout model, palette, inspector, outline, YAML pane, undo and redo on one command stack, the designer shell | core, inputs, tree |

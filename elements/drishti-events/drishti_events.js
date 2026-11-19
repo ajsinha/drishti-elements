@@ -239,7 +239,839 @@
       };
       return clock;
     }
-    return { "systemClock": systemClock, "seededRandom": seededRandom, "testClock": testClock };
+    class Backoff {
+      constructor(o) {
+        this.o = Object.assign({ baseMs: 500, maxMs: 30000, factor: 2, jitter: true, random: Math.random }, o);
+        this.attempt = 0;
+      }
+      next(floorMs) {
+        const cap = Math.min(this.o.maxMs, this.o.baseMs * Math.pow(this.o.factor, this.attempt));
+        this.attempt++;
+        const wait = Math.round(this.o.jitter ? Math.max(this.o.baseMs / 2, cap * this.o.random()) : cap);
+        return Math.max(wait, Number(floorMs) || 0);
+      }
+      reset() { this.attempt = 0; }
+    }
+    class Heartbeat {
+      constructor(o) {
+        this.o = Object.assign({ clock: systemClock() }, o);
+        this.timer = null;
+        this.last = 0;
+      }
+      beat() {
+        this.last = this.o.clock.now();
+        if (!this.o.timeoutMs) { return; }
+        this.stop();
+        this.timer = this.o.clock.setTimeout(() => { this.timer = null; this.o.onTimeout(); }, this.o.timeoutMs);
+      }
+      setTimeoutMs(ms) { this.o.timeoutMs = ms; if (this.timer !== null) { this.beat(); } }
+      stop() { if (this.timer !== null) { this.o.clock.clearTimeout(this.timer); this.timer = null; } }
+    }
+    return { "systemClock": systemClock, "seededRandom": seededRandom, "testClock": testClock, "Backoff": Backoff, "Heartbeat": Heartbeat };
+  })();
+  /* ---- src/drishti_protocol.js ---- */
+  __m["src/drishti_protocol.js"] = (function () {
+    var isTopic = __lib("drishti-core").isTopic;
+    var makeMessage = __m["src/drishti_envelope.js"].makeMessage, MAX_ID_LENGTH = __m["src/drishti_envelope.js"].MAX_ID_LENGTH;
+    const PROTOCOL_VERSION = 1;
+    const SUBPROTOCOL = 'events.v1';
+    const CLIENT_FRAMES = Object.freeze(['hello', 'sub', 'unsub', 'pub', 'req', 'cancel', 'replay', 'auth', 'ping', 'bye']);
+    const SERVER_FRAMES = Object.freeze(['welcome', 'subd', 'msg', 'ok', 'res', 'err', 'gap', 'auth', 'pong', 'bye']);
+    const ERROR_CODES = Object.freeze(['auth.required', 'auth.expired', 'forbidden', 'topic.invalid', 'topic.unknown', 'limit.subs',
+      'limit.rate', 'limit.size', 'timeout', 'no.responder', 'replay.unavailable', 'version', 'slow', 'restart', 'internal']);
+    const CLOSE_CODES = Object.freeze({ badFrame: 4400, unauthenticated: 4401, forbidden: 4403, noHello: 4408, tooFast: 4429, serverFault: 4500 });
+    function encodeFrames(frames) { return JSON.stringify(frames.length === 1 ? frames[0] : frames); }
+    function byteLength(text) {
+      let n = 0;
+      for (let i = 0; i < text.length; i++) {
+        const c = text.charCodeAt(i);
+        n += c < 0x80 ? 1 : c < 0x800 ? 2 : (c >= 0xD800 && c <= 0xDBFF) ? (i++, 4) : 3;
+      }
+      return n;
+    }
+    function decodeFrames(text, o) {
+      const max = (o && o.maxBytes) || 1048576;
+      const s = String(text);
+      const bytes = s.length * 3 <= max ? s.length : byteLength(s);
+      if (bytes > max) { return { frames: [], bytes: bytes, error: 'too-large' }; }
+      let v;
+      try { v = JSON.parse(s); } catch (e) { return { frames: [], bytes: bytes, error: 'not-json' }; }
+      const list = Array.isArray(v) ? v : [v];
+      const frames = [];
+      for (const f of list) {
+        if (!f || typeof f !== 'object' || Array.isArray(f) || typeof f.t !== 'string') { return { frames: [], bytes: bytes, error: 'not-a-frame' }; }
+        if (SERVER_FRAMES.indexOf(f.t) < 0) { frames.push({ t: f.t, unknown: true }); continue; }
+        frames.push(f);
+      }
+      return { frames: frames, bytes: bytes, error: null };
+    }
+    function checkFrame(f) {
+      const id = (x) => (typeof x === 'string' || typeof x === 'number') && String(x).length <= MAX_ID_LENGTH;
+      switch (f.t) {
+        case 'msg':
+          if (!isTopic(f.topic)) { return 'a msg frame names no valid topic'; }
+          if (!id(f.id)) { return 'a msg frame has no id (or one longer than 64)'; }
+          if (f.seq !== undefined && !(typeof f.seq === 'number' && isFinite(f.seq))) { return 'a msg frame\'s seq is not a number'; }
+          return true;
+        case 'subd': case 'ok': return id(f.id) ? true : 'a ' + f.t + ' frame has no id';
+        case 'res': return id(f.re) ? true : 'a res frame has no re';
+        case 'welcome': return typeof f.v === 'number' ? true : 'a welcome frame has no version';
+        case 'err': case 'bye': return typeof f.code === 'string' ? true : 'an ' + f.t + ' frame has no code';
+        case 'gap': return typeof f.stream === 'string' ? true : 'a gap frame names no stream';
+        default: return true;
+      }
+    }
+    function messageOf(f, now) {
+      return makeMessage({ id: String(f.id), topic: f.topic, data: f.data === undefined ? null : f.data, time: typeof f.time === 'number' ? f.time : now,
+        source: typeof f.source === 'string' ? f.source : 'server', seq: f.seq, stream: f.stream !== undefined ? String(f.stream) : undefined,
+        key: f.key != null ? String(f.key) : undefined,
+        kind: typeof f.kind === 'string' ? f.kind : undefined, re: f.re, meta: f.meta && typeof f.meta === 'object' ? f.meta : undefined,
+        retained: f.retained ? true : undefined, replayed: f.replayed ? true : undefined, scope: 'server', receivedAt: now });
+    }
+    function rawMessage(value, meta, map, newId, now) {
+      const v = value && typeof value === 'object' ? value : {};
+      const topic = map.topicOf ? map.topicOf(value, meta) : 'feed';
+      const seq = map.seqOf ? map.seqOf(value, meta) : (typeof v.seq === 'number' ? v.seq : undefined);
+      const id = map.idOf ? map.idOf(value, meta) : (meta.id ? meta.id : (v.id !== undefined && v.id !== null ? String(v.id) : undefined));
+      const kind = map.kindOf ? map.kindOf(value, meta) : (meta.event && meta.event !== 'message' ? meta.event : undefined);
+      const key = map.keyOf ? map.keyOf(value, meta) : undefined;
+      return makeMessage({ id: id !== undefined ? String(id) : newId(), topic: topic, data: value === undefined ? null : value, time: now,
+        source: 'server', seq: seq, key: key != null ? String(key) : undefined, kind: kind, scope: 'server', receivedAt: now });
+    }
+    return { "PROTOCOL_VERSION": PROTOCOL_VERSION, "SUBPROTOCOL": SUBPROTOCOL, "CLIENT_FRAMES": CLIENT_FRAMES, "SERVER_FRAMES": SERVER_FRAMES, "ERROR_CODES": ERROR_CODES, "CLOSE_CODES": CLOSE_CODES, "encodeFrames": encodeFrames, "byteLength": byteLength, "decodeFrames": decodeFrames, "checkFrame": checkFrame, "messageOf": messageOf, "rawMessage": rawMessage };
+  })();
+  /* ---- src/drishti_transport-ws.js ---- */
+  __m["src/drishti_transport-ws.js"] = (function () {
+    var EventError = __m["src/drishti_envelope.js"].EventError;
+    var encodeFrames = __m["src/drishti_protocol.js"].encodeFrames;
+    function websocketTransport(ctx) {
+      const WS = ctx.env.WebSocket || globalThis.WebSocket;
+      if (!WS) { throw new EventError('transport.missing', 'this page has no WebSocket'); }
+      const ws = new WS(ctx.url, ctx.protocols && ctx.protocols.length ? ctx.protocols : undefined);
+      let ended = false;
+      const end = (info) => { if (!ended) { ended = true; ctx.onClose(info); } };
+      ws.addEventListener('open', () => { if (!ended) { ctx.onOpen(); } });
+      ws.addEventListener('message', (e) => {
+        if (ended) { return; }
+        if (typeof e.data !== 'string') { ctx.onBinary(); return; }
+        ctx.onText(e.data, { event: 'message', id: null });
+      });
+      ws.addEventListener('close', (e) => end({ code: (e && e.code) || 1006, status: 0, reason: (e && e.reason) || 'the socket closed' }));
+      ws.addEventListener('error', () => { /* a close follows */ });
+      return {
+        kind: 'websocket',
+        raw: ws,
+        send: (frames) => {
+          if (ended) { return Promise.reject(new EventError('not.connected', 'the socket is closed')); }
+          ws.send(encodeFrames(frames));
+          return Promise.resolve();
+        },
+        close: (code) => { ended = true; try { ws.close(code || 1000); } catch (e) { /* closed already */ } },
+        bufferedAmount: () => ws.bufferedAmount || 0
+      };
+    }
+    return { "websocketTransport": websocketTransport };
+  })();
+  /* ---- src/drishti_transport-sse.js ---- */
+  __m["src/drishti_transport-sse.js"] = (function () {
+    var EventError = __m["src/drishti_envelope.js"].EventError;
+    var SERVER_FRAMES = __m["src/drishti_protocol.js"].SERVER_FRAMES;
+    function parseSse(text) {
+      const events = [];
+      const blocks = String(text).replace(/\r\n?/g, '\n').split('\n\n');
+      const rest = blocks.pop();
+      blocks.forEach((b) => {
+        let event = 'message', id = null, comment = false, retry;
+        const data = [];
+        b.split('\n').forEach((line) => {
+          if (line === '') { return; }
+          if (line[0] === ':') { comment = true; return; }
+          const at = line.indexOf(':'), field = at < 0 ? line : line.slice(0, at);
+          let value = at < 0 ? '' : line.slice(at + 1);
+          if (value[0] === ' ') { value = value.slice(1); }
+          if (field === 'event') { event = value; } else if (field === 'data') { data.push(value); } else if (field === 'id') { id = value; }
+          else if (field === 'retry' && /^\d+$/.test(value)) { retry = Number(value); }
+        });
+        if (data.length || comment || retry !== undefined) { events.push({ event: event, data: data.join('\n'), id: id, comment: comment && !data.length, retry: retry }); }
+      });
+      return { events: events, rest: rest };
+    }
+    function readSse(response, o) {
+      const signal = o && o.signal;
+      return {
+        [Symbol.asyncIterator]: async function* events() {
+          if (!response || !response.body || !response.body.getReader) { throw new EventError('sse.unreadable', 'the answer has no body to read as a stream'); }
+          const reader = response.body.getReader(), dec = new TextDecoder();
+          let buf = '';
+          try {
+            for (;;) {
+              if (signal && signal.aborted) { return; }
+              const r = await reader.read();
+              if (r.done) { break; }
+              const got = parseSse(buf + dec.decode(r.value, { stream: true }));
+              buf = got.rest;
+              for (const e of got.events) { yield e; }
+            }
+            const tail = parseSse(buf + dec.decode() + '\n\n');
+            for (const e of tail.events) { yield e; }
+          } finally {
+            try { reader.releaseLock(); } catch (e) { /* released */ }
+          }
+        }
+      };
+    }
+    function withParams(url, params) {
+      const q = params.filter((p) => p[1] !== null && p[1] !== undefined && p[1] !== '').map((p) => encodeURIComponent(p[0]) + '=' + encodeURIComponent(p[1]));
+      return q.length ? url + (url.indexOf('?') >= 0 ? '&' : '?') + q.join('&') : url;
+    }
+    function under(url, part) {
+      const at = url.indexOf('?'), base = at < 0 ? url : url.slice(0, at), q = at < 0 ? '' : url.slice(at);
+      return base.replace(/\/+$/, '') + '/' + part + q;
+    }
+    function postFrames(ctx, frames) {
+      if (ctx.protocol !== 1) { return Promise.reject(new EventError('protocol', 'a raw stream takes nothing from the page (protocol 1 sends to <events>/send)')); }
+      const F = ctx.env.fetch || globalThis.fetch;
+      if (!F) { return Promise.reject(new EventError('transport.missing', 'this page has no fetch')); }
+      const session = ctx.session();
+      if (!session) { return Promise.reject(new EventError('not.connected', 'the server has not named a session yet')); }
+      return Promise.resolve(F(under(ctx.url, 'send'), { method: 'POST', credentials: ctx.credentials,
+        headers: Object.assign({ 'Content-Type': 'application/json' }, ctx.headers, { 'Events-Session': session }), body: JSON.stringify(frames) }))
+        .then((res) => { if (!res.ok) { throw new EventError(res.status === 401 ? 'auth.required' : res.status === 403 ? 'forbidden' : 'send.failed', '<events>/send answered ' + res.status, { status: res.status }); } });
+    }
+    function eventSourceTransport(ctx) {
+      const Source = ctx.env.EventSource || globalThis.EventSource;
+      if (!Source) { throw new EventError('transport.missing', 'this page has no EventSource'); }
+      const params = ctx.protocol === 1 ? ctx.subs.map((s) => ['topic', s.topic]) : [];
+      params.push(['lastEventId', ctx.lastEventId]);
+      const address = withParams(ctx.protocol === 1 ? under(ctx.url, 'stream') : ctx.url, params);
+      const es = new Source(address, { withCredentials: ctx.credentials === 'include' });
+      let ended = false;
+      const end = (info) => { if (!ended) { ended = true; try { es.close(); } catch (e) { /* closed */ } ctx.onClose(info); } };
+      const names = ctx.protocol === 1 ? SERVER_FRAMES : (ctx.events && ctx.events.length ? ctx.events : ['message']);
+      const on = (e) => { if (!ended) { ctx.onText(e.data, { event: e.type, id: e.lastEventId || null }); } };
+      names.forEach((n) => es.addEventListener(n, on));
+      es.addEventListener('open', () => { if (!ended) { ctx.onOpen(); } });
+      es.addEventListener('error', () => end({ code: 0, status: 0, reason: es.readyState === 2 ? 'the stream was refused or closed' : 'the stream dropped' }));
+      return {
+        kind: 'sse',
+        raw: es,
+        address: address,
+        send: (frames) => postFrames(ctx, frames),
+        close: () => { ended = true; names.forEach((n) => es.removeEventListener(n, on)); try { es.close(); } catch (e) { /* closed */ } },
+        bufferedAmount: () => 0
+      };
+    }
+    function fetchTransport(ctx) {
+      const F = ctx.env.fetch || globalThis.fetch;
+      if (!F) { throw new EventError('transport.missing', 'this page has no fetch'); }
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      let ended = false;
+      const end = (info) => { if (!ended) { ended = true; if (ctrl) { ctrl.abort(); } ctx.onClose(info); } };
+      const headers = Object.assign({ Accept: 'text/event-stream' }, ctx.headers);
+      if (ctx.lastEventId) { headers['Last-Event-ID'] = ctx.lastEventId; }
+      const init = { headers: headers, credentials: ctx.credentials, cache: 'no-store', signal: ctrl ? ctrl.signal : undefined };
+      let address = ctx.url;
+      if (ctx.protocol === 1) {
+        address = under(ctx.url, 'stream');
+        init.method = 'POST';
+        headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify({ hello: ctx.hello, subs: ctx.subs });
+      }
+      const run = async () => {
+        const res = await F(address, init);
+        if (ended) { return; }
+        if (!res.ok) { end({ code: 0, status: res.status, reason: 'the stream answered ' + res.status }); return; }
+        ctx.onOpen();
+        for await (const e of readSse(res, { signal: ctrl ? ctrl.signal : null })) {
+          if (ended) { return; }
+          if (e.retry !== undefined) { ctx.onRetry(e.retry); }
+          if (e.comment) { ctx.onComment(); continue; }
+          if (e.data === '' && e.retry !== undefined) { continue; }
+          if (ctx.protocol === 1 || !ctx.events || !ctx.events.length || ctx.events.indexOf(e.event) >= 0) { ctx.onText(e.data, { event: e.event, id: e.id }); }
+        }
+        end({ code: 0, status: 0, reason: 'the stream ended' });
+      };
+      run().catch((e) => end({ code: 0, status: 0, reason: (e && e.message) || 'the stream failed' }));
+      return {
+        kind: 'fetch',
+        raw: ctrl,
+        send: (frames) => postFrames(ctx, frames),
+        close: () => { ended = true; if (ctrl) { ctrl.abort(); } },
+        bufferedAmount: () => 0
+      };
+    }
+    return { "parseSse": parseSse, "readSse": readSse, "postFrames": postFrames, "eventSourceTransport": eventSourceTransport, "fetchTransport": fetchTransport };
+  })();
+  /* ---- src/drishti_connection.js ---- */
+  __m["src/drishti_connection.js"] = (function () {
+    var ELEMENTS_VERSION = __lib("drishti-core").ELEMENTS_VERSION, endpoint = __lib("drishti-core").endpoint;
+    var EventError = __m["src/drishti_envelope.js"].EventError, makeMessage = __m["src/drishti_envelope.js"].makeMessage;
+    var Backoff = __m["src/drishti_timing.js"].Backoff, Heartbeat = __m["src/drishti_timing.js"].Heartbeat;
+    var PROTOCOL_VERSION = __m["src/drishti_protocol.js"].PROTOCOL_VERSION, SUBPROTOCOL = __m["src/drishti_protocol.js"].SUBPROTOCOL, CLOSE_CODES = __m["src/drishti_protocol.js"].CLOSE_CODES, decodeFrames = __m["src/drishti_protocol.js"].decodeFrames, checkFrame = __m["src/drishti_protocol.js"].checkFrame, messageOf = __m["src/drishti_protocol.js"].messageOf, rawMessage = __m["src/drishti_protocol.js"].rawMessage, encodeFrames = __m["src/drishti_protocol.js"].encodeFrames;
+    var websocketTransport = __m["src/drishti_transport-ws.js"].websocketTransport;
+    var eventSourceTransport = __m["src/drishti_transport-sse.js"].eventSourceTransport, fetchTransport = __m["src/drishti_transport-sse.js"].fetchTransport;
+    const CONNECTION_STATES = Object.freeze(['idle', 'connecting', 'open', 'reconnecting', 'offline', 'refused', 'closed']);
+    const SECRET_PARAMS = Object.freeze(['token', 'access_token', 'jwt', 'key', 'apikey', 'secret', 'password', 'auth', 'signature']);
+    const TRANSPORTS = { websocket: websocketTransport, sse: eventSourceTransport, fetch: fetchTransport };
+    function checkAddress(url) {
+      const at = String(url).indexOf('?');
+      if (at < 0) { return url; }
+      const names = String(url).slice(at + 1).split('#')[0].split('&').map((p) => decodeURIComponent(p.split('=')[0] || '').toLowerCase());
+      const bad = names.find((n) => SECRET_PARAMS.indexOf(n) >= 0);
+      if (bad) {
+        throw new EventError('address.secret', 'the address names a secret (' + bad + '=) in its query, where logs and proxies keep it: give it to ' +
+          'connect\'s auth option (a token) or headers instead');
+      }
+      return url;
+    }
+    class Connection {
+      constructor(events, address, o) {
+        this.events = events;
+        this.o = Object.assign({ wsAuth: 'hello', credentials: 'same-origin', subprotocol: SUBPROTOCOL }, o);
+        this.clock = events.clock;
+        this.address = address;
+        if (typeof address === 'string') { checkAddress(address); }
+        /** @type {(1|'raw')} */ this.protocol = this.o.protocol === 'raw' ? 'raw' : PROTOCOL_VERSION;
+        if (this.o.protocol !== undefined && this.o.protocol !== 'raw' && this.o.protocol !== PROTOCOL_VERSION) {
+          throw new EventError('version', 'this client speaks protocol 1 (or raw); asked for ' + this.o.protocol);
+        }
+        /** @type {string} */ this.transportKind = this._pickTransport();
+        this.env = Object.assign({}, this.o.env);
+        this.win = this.env.window || (typeof window !== 'undefined' ? window : null);
+        /** @type {string} */ this.state = 'idle';
+        this.backoff = new Backoff(Object.assign({}, this.o.backoff, { random: this.clock.random }));
+        this.heartbeatMs = this.o.heartbeatMs || 45000;
+        this.heart = new Heartbeat({ clock: this.clock, timeoutMs: 0, onTimeout: () => this._dropped({ reason: 'no message or heartbeat for ' + Math.round(this.heartbeatMs * 1.5 / 1000) + ' s' }) });
+        /** @type {?string} */ this.session = null;
+        /** @type {string[]} */ this.can = [];
+        /** @type {Object} */ this.serverLimits = {};
+        /** @type {?string} */ this.lastEventId = null;
+        this.subs = new Map();
+        this.bySub = new Map();
+        this.nextSub = 1;
+        this.acks = new Map();
+        this.queue = [];
+        this.reqs = new Map();
+        this.token = null;
+        this.tokenExpiresAt = 0;
+        this.refusals = 0;
+        this.attempt = 0;
+        this.floorMs = 0;
+        this.stopped = false;
+        this.transport = null;
+        this.timers = { retry: null, ping: null, refresh: null, rescope: null };
+        /** @type {Object} */ this.sequencer = null;
+        this.stats = { connects: 0, reconnects: 0, openedAt: 0, connectedMs: 0, framesIn: 0, framesOut: 0, bytesIn: 0, unknown: 0, bad: 0,
+          rtt: null, rtts: [], offset: null, published: 0, acked: 0, retried: 0, failed: 0 };
+        this._onOnline = () => { if (this.state === 'offline' || this.state === 'reconnecting') { this._connectNow('connect'); } };
+        this._onVisible = () => { const d = this.env.document || (typeof document !== 'undefined' ? document : null); if (d && d.visibilityState === 'visible' && this.state === 'reconnecting') { this._connectNow('connect'); } };
+        if (this.win && this.win.addEventListener) { this.win.addEventListener('online', this._onOnline); }
+        const doc = this.env.document || (typeof document !== 'undefined' ? document : null);
+        if (doc && doc.addEventListener) { doc.addEventListener('visibilitychange', this._onVisible); }
+        this.detach = events._attach('server', this);
+        Promise.resolve().then(() => { if (this.state === 'idle' && !this.stopped) { this._connectNow('connect'); } });
+      }
+      _pickTransport() {
+        const t = this.o.transport;
+        if (typeof t === 'function') { return 'custom'; }
+        if (this.address && typeof this.address === 'object' && typeof this.address.transport === 'function') { return 'custom'; }
+        if (t) {
+          if (!TRANSPORTS[t]) { throw new EventError('transport.invalid', 'no transport ' + t + ' (websocket, sse, fetch)'); }
+          return t;
+        }
+        const url = typeof this.address === 'function' ? String(this.address()) : String(this.address || '');
+        if (/^wss?:/i.test(url)) { return 'websocket'; }
+        return this.o.auth || this.o.headers ? 'fetch' : 'sse';
+      }
+      _url() {
+        const u = typeof this.address === 'function' ? String(this.address()) : (typeof this.address === 'string' ? this.address : '');
+        if (u) { checkAddress(u); }
+        return u;
+      }
+      _setState(state, extra) {
+        if (this.state === state && state !== 'reconnecting') { return; }
+        const was = this.state;
+        if (was === 'open' && this.stats.openedAt) { this.stats.connectedMs += this.clock.now() - this.stats.openedAt; this.stats.openedAt = 0; }
+        this.state = state;
+        if (state === 'open') { this.stats.openedAt = this.clock.now(); }
+        this.events._emitOwn('$events.state', Object.assign({ state: state, was: was, attempt: this.backoff.attempt, waitMs: null, reason: null,
+          transport: this.transportKind, shared: false, resumed: false }, extra));
+      }
+      _connectNow(reason, status) {
+        if (this.stopped) { return; }
+        this.clock.clearTimeout(this.timers.retry);
+        this.timers.retry = null;
+        this._teardown();
+        this._setState('connecting', { attempt: this.backoff.attempt });
+        this.stats.connects++;
+        const attempt = ++this.attempt;
+        const go = () => { if (attempt === this.attempt && !this.stopped) { this._openTransport(); } };
+        if (this.o.auth && this.o.wsAuth !== 'cookie') {
+          this._askAuth(reason, status).then(go, (e) => {
+            if (attempt !== this.attempt) { return; }
+            this._refuse('auth', 'the auth function failed: ' + ((e && e.message) || String(e)));
+          });
+        } else { go(); }
+      }
+      _askAuth(reason, status) {
+        return Promise.resolve().then(() => this.o.auth({ reason: reason || 'connect', status: status || 0 })).then((a) => {
+          if (!a || typeof a.token !== 'string') { throw new EventError('auth.invalid', 'auth answered no token'); }
+          this.token = a.token;
+          this.tokenExpiresAt = Number(a.expiresAt) || 0;
+          this.events._emitOwn('$events.auth', { reason: reason || 'connect', ok: true, expiresAt: this.tokenExpiresAt || null });
+          return a;
+        });
+      }
+      _headers() {
+        const h = typeof this.o.headers === 'function' ? this.o.headers() : (this.o.headers || {});
+        const out = Object.assign({}, h);
+        if (this.token && this.transportKind !== 'websocket') { out.Authorization = 'Bearer ' + this.token; }
+        return out;
+      }
+      _hello() {
+        const f = { t: 'hello', v: PROTOCOL_VERSION, client: 'drishti-events/' + ELEMENTS_VERSION };
+        if (this.session) { f.session = this.session; }
+        if (this.token && this.transportKind !== 'websocket') { return f; }
+        if (this.token && this.o.wsAuth === 'hello') { f.token = this.token; }
+        return f;
+      }
+      _openTransport(swapping) {
+        let ctx;
+        try {
+          ctx = this._context();
+          const make = this.transportKind === 'custom' ? (typeof this.o.transport === 'function' ? this.o.transport : (c) => this.address.transport(c)) : TRANSPORTS[this.transportKind];
+          const t = make(ctx);
+          ctx.transport = t;
+          if (swapping) { this.swap = { old: swapping, next: t }; } else { this.transport = t; }
+        } catch (e) {
+          if (e && e.code === 'address.secret') { this._refuse('address.secret', e.detail); return; }
+          this._dropped({ reason: (e && e.message) || String(e), code: 0 });
+        }
+      }
+      _context() {
+        const url = this._url();
+        const ctx = {
+          url: url, protocol: this.protocol, env: this.env, credentials: this.o.credentials, lastEventId: this.lastEventId,
+          headers: this._headers(), events: this.o.events || null, session: () => this.session,
+          protocols: this.protocol === 1 ? [this.o.subprotocol].concat(this.token && this.o.wsAuth === 'subprotocol' ? ['bearer.' + base64url(this.token)] : []) : [],
+          hello: this._hello(), subs: this.protocol === 1 && this._inAddress() ? Array.from(this.subs.values()).map((s) => { s.held = true; return this._subFrame(s); }) : [],
+          clock: this.clock
+        };
+        const live = () => ctx.transport && (ctx.transport === this.transport || (this.swap && ctx.transport === this.swap.next));
+        ctx.onOpen = () => { if (live()) { this._transportOpen(ctx); } };
+        ctx.onText = (text, meta) => { if (live() || (this.swap && ctx.transport === this.swap.old)) { this._text(text, meta, ctx); } };
+        ctx.onComment = () => { if (live()) { this.heart.beat(); } };
+        ctx.onRetry = (ms) => { this.floorMs = ms; };
+        ctx.onBinary = () => { this.stats.bad++; this.events._drop('invalid', null, null, 'a binary frame (reserved in version 1)'); };
+        ctx.onClose = (info) => {
+          if (this.swap && ctx.transport === this.swap.old) { return; }
+          if (this.swap && ctx.transport === this.swap.next) { const old = this.swap.old; this.swap = null; this.transport = old; return; }
+          if (ctx.transport === this.transport) { this._dropped(info); }
+        };
+        return ctx;
+      }
+      _transportOpen(ctx) {
+        this.heart.beat();
+        if (this.protocol === 'raw') { this._opened({ resumed: this.lastEventId !== null }); return; }
+        if (ctx.transport.kind === 'websocket' || this.transportKind === 'custom') {
+          ctx.transport.send([this._hello()]).catch(() => undefined);
+        }
+      }
+      _text(text, meta, ctx) {
+        this.heart.beat();
+        if (meta && meta.id) { this.lastEventId = meta.id; }
+        if (this.protocol === 'raw') { this._raw(text, meta); return; }
+        const got = decodeFrames(text, { maxBytes: this.events.limits.frameBytes });
+        this.stats.bytesIn += got.bytes;
+        if (got.error) {
+          this.stats.bad++;
+          this.events._drop(got.error === 'too-large' ? 'too-large' : 'invalid', null, null, got.error === 'too-large' ? 'a frame of ' + got.bytes + ' bytes (the limit is ' +
+            this.events.limits.frameBytes + ')' : 'a transport message that is not a frame (' + got.error + ')');
+          return;
+        }
+        got.frames.forEach((f) => {
+          this.stats.framesIn++;
+          if (f.unknown) { this.stats.unknown++; return; }
+          const ok = checkFrame(f);
+          if (ok !== true) { this.stats.bad++; this.events._drop('invalid', null, null, ok); return; }
+          try { this._frame(f, ctx); } catch (e) { this.events._error(e, { where: 'frame', frame: f.t }); }
+        });
+      }
+      _raw(text, meta) {
+        let v;
+        try { v = typeof text === 'string' ? JSON.parse(text) : text; } catch (e) {
+          this.stats.bad++;
+          this.events._drop('invalid', null, null, 'the feed sent text that is not JSON: ' + String(text).slice(0, 80));
+          return;
+        }
+        const m = rawMessage(v, meta || { event: 'message', id: null }, this.o, () => this.events.ids.next(), this.clock.now());
+        this._deliver(m);
+      }
+      _deliver(m) {
+        if (this.sequencer) { this.sequencer.accept(m, (x) => this.events._receive(x)); } else { this.events._receive(m); }
+      }
+      _frame(f, ctx) {
+        switch (f.t) {
+          case 'welcome': this._welcome(f, ctx); break;
+          case 'subd': {
+            const s = this.subs.get(Number(f.id)) || this.subs.get(f.id);
+            if (!s) { return; }
+            s.streams = f.streams || {};
+            if (this.sequencer) { this.sequencer.subscribed(s.sub, f); }
+            if (s.sub.state !== 'recovering') { s.sub._setState('active'); }
+            break;
+          }
+          case 'msg': this._deliver(messageOf(f, this.clock.now())); break;
+          case 'ok': {
+            const a = this.acks.get(String(f.id));
+            if (a) { this.acks.delete(String(f.id)); this.stats.acked++; a.resolve({ acked: true }); }
+            break;
+          }
+          case 'res': {
+            const r = this.reqs.get(String(f.re));
+            if (!r) { return; }
+            this.reqs.delete(String(f.re));
+            if (f.error) { r.reject(new EventError(String(f.error.code || 'error'), String(f.error.detail || ''))); return; }
+            const now = this.clock.now();
+            r.resolve(makeMessage({ id: f.id !== undefined ? String(f.id) : this.events.ids.next(), topic: r.frame.topic, data: f.data === undefined ? null : f.data,
+              time: typeof f.time === 'number' ? f.time : now, source: typeof f.source === 'string' ? f.source : 'server', re: String(f.re), kind: f.kind, scope: 'server', receivedAt: now }));
+            break;
+          }
+          case 'err': this._err(f); break;
+          case 'gap':
+            if (this.sequencer && this.sequencer.gap) { this.sequencer.gap(f); } else { this.events._emitOwn('$events.gap', { stream: f.stream, from: f.from, to: f.to, recoverable: !!f.recoverable }); }
+            break;
+          case 'auth':
+            if (f.need) { this._refresh(); } else if (f.expiresAt) { this.tokenExpiresAt = Number(f.expiresAt); this._scheduleRefresh(); }
+            break;
+          case 'pong': {
+            if (typeof f.ts !== 'number') { return; }
+            const now = this.clock.now(), rtt = Math.max(0, now - f.ts);
+            this.stats.rtt = rtt;
+            this.stats.rtts.push(rtt);
+            if (this.stats.rtts.length > 64) { this.stats.rtts.shift(); }
+            if (typeof f.time === 'number') { this.stats.offset = f.time - (f.ts + rtt / 2); }
+            break;
+          }
+          case 'bye': this._bye(f); break;
+          default: break;
+        }
+      }
+      _welcome(f, ctx) {
+        if (f.v !== PROTOCOL_VERSION) { this._refuse('version', 'the server speaks protocol ' + f.v + '; this client speaks ' + PROTOCOL_VERSION); return; }
+        this.session = typeof f.session === 'string' ? f.session : this.session;
+        this.can = Array.isArray(f.can) ? f.can.map(String) : [];
+        this.serverLimits = f.limits && typeof f.limits === 'object' ? f.limits : {};
+        if (typeof f.heartbeatMs === 'number' && f.heartbeatMs > 0) { this.heartbeatMs = this.o.heartbeatMs || f.heartbeatMs; }
+        if (f.tokenExpiresAt) { this.tokenExpiresAt = Number(f.tokenExpiresAt); }
+        if (this.swap && ctx.transport === this.swap.next) {
+          const old = this.swap.old;
+          this.swap = null;
+          this.transport = ctx.transport;
+          try { old.close(); } catch (e) { /* closed */ }
+          this._scheduleRefresh();
+          return;
+        }
+        this._opened({ resumed: !!f.resumed });
+      }
+      _opened(info) {
+        if (this.stats.connects > 1) { this.stats.reconnects++; }
+        this.backoff.reset();
+        this.refusals = 0;
+        this.floorMs = 0;
+        const watch = this.transportKind === 'sse' && !this.o.heartbeatMs ? 0 : Math.round(this.heartbeatMs * (this.protocol === 'raw' ? 1 : 1.5));
+        this.heart.setTimeoutMs(watch);
+        this.heart.beat();
+        this._setState('open', { resumed: !!info.resumed });
+        if (this.protocol === 1) {
+          const unsent = Array.from(this.subs.values()).filter((s) => !s.held);
+          if (unsent.length && this.transportKind === 'sse') { this._rescope(); }
+          else if (unsent.length) { unsent.forEach((s) => { s.held = true; }); this._send(unsent.map((s) => this._subFrame(s))); }
+          this._resend();
+          this._ping();
+          this._scheduleRefresh();
+        } else {
+          this.subs.forEach((s) => s.sub._setState('active'));
+        }
+      }
+      _resend() {
+        const frames = [];
+        this.acks.forEach((a) => { if (a.sent) { this.stats.retried++; frames.push(a.frame); } });
+        const q = this.queue;
+        this.queue = [];
+        q.forEach((x) => { frames.push(x.frame); if (x.ack) { x.ack.sent = true; } else { x.resolve({ acked: false }); } });
+        this.reqs.forEach((r) => { if (!r.sent) { r.sent = true; frames.push(r.frame); } });
+        if (frames.length) { this._send(frames); }
+      }
+      _err(f) {
+        const words = String(f.detail || f.code);
+        if (f.id !== undefined && f.id !== null) {
+          const s = this.subs.get(Number(f.id)) || this.subs.get(f.id);
+          if (s) { s.sub._setState('refused', f.code + ': ' + words); this._forgetSub(s.sub); return; }
+          const a = this.acks.get(String(f.id));
+          if (a) {
+            if (f.retry === false || !retryable(f.code)) { this.acks.delete(String(f.id)); this.stats.failed++; a.reject(new EventError(f.code, words, { retry: false })); }
+            return;
+          }
+          const r = this.reqs.get(String(f.id));
+          if (r) { this.reqs.delete(String(f.id)); r.reject(new EventError(f.code, words)); return; }
+          return;
+        }
+        if (f.code === 'auth.expired' || f.code === 'auth.required') { this._authRefused(401, words); return; }
+        this.events._error(new EventError(f.code, words), { where: 'server' });
+      }
+      _bye(f) {
+        const r = f.reconnect;
+        if (f.code === 'auth.expired' || f.code === 'auth.required') { this._authRefused(401, String(f.detail || f.code)); return; }
+        if (r === false || f.code === 'forbidden' || f.code === 'version') { this._refuse(f.code, String(f.detail || 'the server said goodbye')); return; }
+        if (r && typeof r.afterMs === 'number') { this.floorMs = r.afterMs; }
+        this._dropped({ reason: 'the server closed: ' + (f.detail || f.code), code: 1000 });
+      }
+      _refuse(code, words) {
+        this.stopped = true;
+        this._stopTimers();
+        this._teardown();
+        this._setState('refused', { reason: words, code: code });
+        this.subs.forEach((s) => { if (s.sub.state === 'pending') { s.sub._setState('refused', words); } });
+      }
+      _authRefused(status, words) {
+        if (this.o.auth && this.o.wsAuth !== 'cookie' && this.refusals === 0) {
+          this.refusals++;
+          this.events._emitOwn('$events.auth', { reason: 'refused', ok: false, detail: words });
+          this._stopTimers();
+          this._teardown();
+          this._connectNow('refused', status);
+          return;
+        }
+        this._refuse('auth', 'not signed in: ' + words);
+      }
+      _dropped(info) {
+        const i = info || {};
+        this._stopTimers();
+        this._teardown();
+        if (this.stopped) { return; }
+        const code = i.code || 0, status = i.status || 0;
+        if (code === CLOSE_CODES.badFrame || code === CLOSE_CODES.forbidden || status === 403 || status === 400 || status === 404 || status === 405) {
+          this._refuse(code === CLOSE_CODES.badFrame || status === 400 ? 'invalid' : status === 404 || status === 405 ? 'not.found' : 'forbidden',
+            i.reason + (status ? ' (HTTP ' + status + ')' : code ? ' (close ' + code + ')' : ''));
+          return;
+        }
+        if (code === CLOSE_CODES.unauthenticated || status === 401) { this._authRefused(401, i.reason || 'refused'); return; }
+        this.subs.forEach((s) => { s.held = false; });
+        const nav = this.win && this.win.navigator;
+        if (nav && nav.onLine === false) { this._setState('offline', { reason: i.reason || 'the browser is offline' }); return; }
+        const wait = this.backoff.next(this.floorMs);
+        this._setState('reconnecting', { waitMs: wait, reason: i.reason || 'the connection dropped' });
+        this.timers.retry = this.clock.setTimeout(() => { this.timers.retry = null; this._connectNow('connect'); }, wait);
+      }
+      _teardown() {
+        this.heart.stop();
+        if (this.swap) { try { this.swap.next.close(); } catch (e) { /* closed */ } this.swap = null; }
+        if (this.transport) { const t = this.transport; this.transport = null; try { t.close(1000); } catch (e) { /* closed */ } }
+      }
+      _stopTimers() {
+        ['ping', 'refresh', 'rescope'].forEach((k) => { if (this.timers[k] !== null) { this.clock.clearTimeout(this.timers[k]); this.timers[k] = null; } });
+      }
+      _ping() {
+        if (!this.transport || this.transport.kind !== 'websocket') { return; }
+        const every = Math.max(1000, Math.round(this.heartbeatMs / 3));
+        const tick = () => {
+          this.timers.ping = null;
+          if (this.state !== 'open' || !this.transport) { return; }
+          this._send([{ t: 'ping', ts: this.clock.now() }]);
+          this.timers.ping = this.clock.setTimeout(tick, every);
+        };
+        this.timers.ping = this.clock.setTimeout(tick, every);
+      }
+      _scheduleRefresh() {
+        if (this.timers.refresh !== null) { this.clock.clearTimeout(this.timers.refresh); this.timers.refresh = null; }
+        if (!this.o.auth || !this.tokenExpiresAt || this.o.wsAuth === 'cookie') { return; }
+        const wait = Math.max(0, this.tokenExpiresAt - 60000 - this.clock.now());
+        this.timers.refresh = this.clock.setTimeout(() => { this.timers.refresh = null; this._refresh(); }, wait);
+      }
+      _refresh() {
+        if (this.state !== 'open' || !this.o.auth) { return; }
+        this._askAuth('expiring').then(() => {
+          if (this.state !== 'open' || !this.transport) { return; }
+          if (this.transport.kind === 'fetch') { this._openTransport(this.transport); return; }
+          this._send([{ t: 'auth', token: this.token }]);
+        }, (e) => this.events._error(e, { where: 'auth' }));
+      }
+      _send(frames) {
+        if (!this.transport || this.state !== 'open') { return Promise.resolve(false); }
+        this.stats.framesOut += frames.length;
+        return this.transport.send(frames).then(() => true, (e) => { this.events._error(e, { where: 'send' }); return false; });
+      }
+      _inAddress() { return this.transportKind === 'sse' || this.transportKind === 'fetch'; }
+      _subFrame(s) {
+        const f = { t: 'sub', id: s.id, topic: s.sub.pattern };
+        const o = s.sub.o;
+        if (o.retained) { f.retained = true; }
+        if (o.conflate && o.conflate.server) { f.conflate = Object.assign({ key: true }, o.conflate.server); }
+        const after = this.sequencer && o.from !== 'now' ? this.sequencer.after(s.sub, s) : undefined;
+        if (after && Object.keys(after).length) { f.after = after; }
+        return f;
+      }
+      subscribe(sub) {
+        if (this.bySub.has(sub)) { return this.protocol === 1; }
+        const s = { id: this.nextSub++, sub: sub, streams: {} };
+        this.subs.set(s.id, s);
+        this.bySub.set(sub, s);
+        if (this.protocol === 'raw') { if (this.state === 'open') { sub._setState('active'); return false; } return true; }
+        if (this.state === 'open') {
+          if (this.transportKind === 'sse') { this._rescope(); } else { s.held = true; this._send([this._subFrame(s)]); }
+        }
+        return true;
+      }
+      unsubscribe(sub) {
+        const s = this.bySub.get(sub);
+        if (!s) { return; }
+        this._forgetSub(sub);
+        if (this.protocol === 1 && this.state === 'open') {
+          if (this.transportKind === 'sse') { this._rescope(); } else { this._send([{ t: 'unsub', id: s.id }]); }
+        }
+      }
+      _forgetSub(sub) {
+        const s = this.bySub.get(sub);
+        if (!s) { return; }
+        this.bySub.delete(sub);
+        this.subs.delete(s.id);
+        if (this.sequencer && this.sequencer.unsubscribed) { this.sequencer.unsubscribed(sub, s); }
+      }
+      pending(sub) { return this.bySub.has(sub) && sub.state === 'pending'; }
+      _rescope() {
+        if (this.timers.rescope !== null) { return; }
+        this.timers.rescope = this.clock.setTimeout(() => { this.timers.rescope = null; if (this.state === 'open') { this._connectNow('connect'); } }, 0);
+      }
+      publish(m, o) {
+        if (this.protocol === 'raw') { return Promise.reject(new EventError('protocol', 'publishing needs the events protocol; this connection is raw (it only listens)')); }
+        if (this.state === 'open' && this.can.length && this.can.indexOf('publish') < 0) {
+          return Promise.reject(new EventError('not.offered', 'the server takes no publishes (its welcome does not offer publish)'));
+        }
+        const frame = { t: 'pub', id: m.id, topic: m.topic, data: m.data, time: m.time };
+        if (m.key !== undefined) { frame.key = m.key; }
+        if (m.kind !== undefined) { frame.kind = m.kind; }
+        if (m.meta !== undefined) { frame.meta = m.meta; }
+        const ack = !o || o.ack !== false;
+        if (!ack) { frame.ack = false; }
+        const size = encodeFrames([frame]).length;
+        if (size > (this.serverLimits.frameBytes || this.events.limits.frameBytes)) {
+          return Promise.reject(new EventError('limit.size', 'the message is ' + size + ' bytes; a frame is at most ' + (this.serverLimits.frameBytes || this.events.limits.frameBytes)));
+        }
+        this.stats.published++;
+        return new Promise((resolve, reject) => {
+          const entry = { frame: frame, resolve: resolve, reject: reject, sent: false };
+          if (this.state === 'open') {
+            if (ack) { entry.sent = true; this.acks.set(m.id, entry); }
+            this._send([frame]).then((ok) => { if (!ack) { if (ok) { resolve({ acked: false }); } else { reject(new EventError('not.connected', 'the message could not be sent')); } } });
+            return;
+          }
+          if (o && o.queue === false) { reject(new EventError('not.connected', 'not connected (' + this.state + '), and the publish asked not to wait')); return; }
+          if (this.state === 'refused' || this.state === 'closed') { reject(new EventError('not.connected', 'the connection is ' + this.state)); return; }
+          if (this.queue.length + this.acks.size >= this.events.limits.outboxMessages) {
+            reject(new EventError('limit.outbox', this.events.limits.outboxMessages + ' messages wait already (the limit)'));
+            return;
+          }
+          if (ack) { this.acks.set(m.id, entry); }
+          this.queue.push({ frame: frame, ack: ack ? entry : null, resolve: resolve });
+          if (o && o.signal) { o.signal.addEventListener('abort', () => this._unqueue(m.id, reject), { once: true }); }
+        });
+      }
+      _unqueue(id, reject) {
+        const i = this.queue.findIndex((x) => x.frame.id === id);
+        if (i < 0) { return; }
+        this.queue.splice(i, 1);
+        this.acks.delete(id);
+        reject(new EventError('aborted', 'the publish was given up before it was sent'));
+      }
+      request(m, o) {
+        if (this.protocol === 'raw') { return Promise.reject(new EventError('protocol', 'request and reply need the events protocol; this connection is raw')); }
+        if (this.state === 'refused' || this.state === 'closed') { return Promise.reject(new EventError('not.connected', 'the connection is ' + this.state)); }
+        const frame = { t: 'req', id: m.id, topic: m.topic, data: m.data, ttl: o.timeoutMs };
+        if (m.kind !== undefined) { frame.kind = m.kind; }
+        if (m.meta !== undefined) { frame.meta = m.meta; }
+        return new Promise((resolve, reject) => {
+          const r = { frame: frame, resolve: resolve, reject: reject, sent: false };
+          this.reqs.set(m.id, r);
+          if (this.state === 'open') { r.sent = true; this._send([frame]); }
+          if (o.signal) {
+            o.signal.addEventListener('abort', () => {
+              if (!this.reqs.has(m.id)) { return; }
+              this.reqs.delete(m.id);
+              if (r.sent) { this._send([{ t: 'cancel', id: m.id }]); }
+            }, { once: true });
+          }
+        });
+      }
+      flush() {
+        if (this.state !== 'open') { return Promise.resolve(0); }
+        const n = this.queue.length;
+        this._resend();
+        return Promise.resolve(n);
+      }
+      clearOutbox() {
+        const q = this.queue;
+        this.queue = [];
+        q.forEach((x) => { this.acks.delete(x.frame.id); (x.ack ? x.ack.reject : x.resolve)(new EventError('cleared', 'the queue was emptied before it was sent')); });
+        return Promise.resolve(q.length);
+      }
+      signOut() {
+        if (this.sequencer && this.sequencer.forget) { this.sequencer.forget(); }
+        this.lastEventId = null;
+        this.session = null;
+        return this.clearOutbox().then(() => undefined);
+      }
+      reconnect() {
+        this.stopped = false;
+        this.refusals = 0;
+        this.backoff.reset();
+        this._stopTimers();
+        this._connectNow('connect');
+      }
+      close() {
+        if (this.transport && this.state === 'open' && this.protocol === 1 && this.transport.kind === 'websocket') { this._send([{ t: 'bye' }]); }
+        this.stopped = true;
+        this.attempt++;
+        this.clock.clearTimeout(this.timers.retry);
+        this.timers.retry = null;
+        this._stopTimers();
+        this._teardown();
+        if (this.state !== 'idle' && this.state !== 'closed') { this._setState('closed'); }
+      }
+      destroy() {
+        this.close();
+        const gone = new EventError('closed', 'the connection was destroyed');
+        this.acks.forEach((a) => a.reject(gone));
+        this.acks.clear();
+        this.queue.forEach((x) => { if (!x.ack) { x.resolve({ acked: false }); } });
+        this.queue = [];
+        this.reqs.forEach((r) => r.reject(gone));
+        this.reqs.clear();
+        if (this.win && this.win.removeEventListener) { this.win.removeEventListener('online', this._onOnline); }
+        const doc = this.env.document || (typeof document !== 'undefined' ? document : null);
+        if (doc && doc.removeEventListener) { doc.removeEventListener('visibilitychange', this._onVisible); }
+      }
+      metrics() {
+        const r = this.stats.rtts.slice().sort((a, b) => a - b);
+        const q = (p) => (r.length ? r[Math.min(r.length - 1, Math.floor(p * r.length))] : null);
+        return { state: this.state, transport: this.transportKind, protocol: this.protocol, session: this.session, connects: this.stats.connects,
+          reconnects: this.stats.reconnects, connectedMs: this.stats.connectedMs + (this.stats.openedAt ? this.clock.now() - this.stats.openedAt : 0),
+          rtt: { last: this.stats.rtt, p50: q(0.5), p99: q(0.99) }, offset: this.stats.offset, framesIn: this.stats.framesIn, framesOut: this.stats.framesOut,
+          bytesIn: this.stats.bytesIn, unknownFrames: this.stats.unknown, badFrames: this.stats.bad,
+          out: { published: this.stats.published, acked: this.stats.acked, retried: this.stats.retried, failed: this.stats.failed, waiting: this.queue.length, unacked: this.acks.size },
+          requests: { pending: this.reqs.size } };
+      }
+    }
+    function retryable(code) { return ['limit.rate', 'slow', 'restart', 'internal', 'timeout'].indexOf(code) >= 0; }
+    function base64url(text) {
+      const bytes = new TextEncoder().encode(String(text));
+      let bin = '';
+      bytes.forEach((b) => { bin += String.fromCharCode(b); });
+      const b64 = typeof btoa === 'function' ? btoa(bin) : globalThis.Buffer.from(bin, 'binary').toString('base64');
+      return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function eventsEndpoint() { return endpoint('events'); }
+    return { "CONNECTION_STATES": CONNECTION_STATES, "SECRET_PARAMS": SECRET_PARAMS, "checkAddress": checkAddress, "Connection": Connection, "base64url": base64url, "eventsEndpoint": eventsEndpoint };
   })();
   /* ---- src/drishti_flow.js ---- */
   __m["src/drishti_flow.js"] = (function () {
@@ -779,12 +1611,19 @@
   __m["src/drishti_index.js"] = (function () {
     var coreSegment = __lib("drishti-core").segment;
     var create = __m["src/drishti_events-hub.js"].createEvents;
+    var Connection = __m["src/drishti_connection.js"].Connection, eventsEndpoint = __m["src/drishti_connection.js"].eventsEndpoint;
     function segment(text) { return coreSegment(text); }
     function connect(url, options) {
-      if (url && typeof url === 'object' && !options && !Array.isArray(url)) { return create(url); }
-      return create(options);
+      let address = url, o = options;
+      if (url && typeof url === 'object' && typeof url.transport !== 'function' && options === undefined) { o = url; address = undefined; }
+      if (address === undefined || address === null || address === '') { address = eventsEndpoint() || null; }
+      const events = create(o);
+      if (address) {
+        try { new Connection(events, address, o); } catch (e) { events.destroy(); throw e; }
+      }
+      return events;
     }
-    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom };
+    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse };
   })();
   return Object.freeze(Object.assign({ library: "drishti-events", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

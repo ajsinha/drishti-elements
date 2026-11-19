@@ -89,7 +89,7 @@ export class FeedMonitor {
   reset() { this.last = null; this.at = null; this.wasStale = false; this.gaps = []; this.stats = { received: 0, gaps: 0, missed: 0, outOfOrder: 0, repeats: 0 }; }
 
   /**
-   * Feeds the monitor from a live client (drishti-data's LiveClient).
+   * Feeds the monitor from a feed (any {subscribe}, a drishti-events subscription among them).
    * @param {{subscribe: function(function(Object): void): function(): void}} client
    * @returns {function(): void} stops
    */

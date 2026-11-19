@@ -72,8 +72,8 @@
       ]
     },
     "drishti-data": {
-      "title": "Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live), the live client over SSE and WebSocket with reconnect, heartbeat, resume and backpressure, and the Arrow client",
-      "summary": "One data-source contract (memory, REST, server-side rows, Arrow, live), the live client and the Arrow client",
+      "title": "Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live: any feed, a drishti-events subscription among them), backpressure into a grid, and the Arrow client",
+      "summary": "One data-source contract (memory, REST, server-side rows, Arrow, live) and the Arrow client",
       "entry": "src/drishti_index.js",
       "requires": [
         "drishti-core"

@@ -32,6 +32,24 @@ Each release lists what changed, by library. One version for every library: the 
   `shape({...})`, `events.page` / `events.tabs` / `events.server` pinned to a scope, the library's own events as `$events.*` topics
   (`$events.error`, `$events.drop`, `$events.subscription`), `EventError`, `TimeoutError` and `AbortError`, one clock for every timer
   (`systemClock()`, `testClock({ seed })`). Budget 110,000 bytes; no domain words (the generic libraries' guard).
+- **drishti-events** (eventing step E3, the connection): `connect(url, options)` opens a connection to any server that speaks the events
+  protocol, version 1 (`events.v1`: hello, welcome, sub, subd, msg, pub, ok, req, res, cancel, err, gap, auth, ping, pong, bye), over a
+  WebSocket, Server-Sent Events by `EventSource` (subscriptions and the resume position in the address), or Server-Sent Events read with
+  `fetch` (the token in `Authorization`, hello and subscriptions in the body, `Last-Event-ID`); clients' frames over SSE go to
+  `<events>/send`. `protocol: 'raw'` reads a server's own JSON (`topicOf`, `seqOf`, `idOf`, `keyOf`, `kindOf`). The state machine
+  (`idle`, `connecting`, `open`, `reconnecting`, `offline`, `refused`, `closed`, each change on `$events.state`), back-off with full jitter
+  on the clock (a server's advice a floor), the heartbeat watchdog and WebSocket pings (round trip and clock offset), refusals that stop
+  (close 4400 and 4403, HTTP 400, 403, 404, version, `bye` without reconnect), `auth` before every connect, once more after a refusal and
+  a minute before a token runs out (an `auth` frame, or a new stream resumed before the old one closes), `wsAuth` (`hello`,
+  `subprotocol`, `cookie`), the address guard (no secret in a query), subscriptions sent on open and after every reconnect, publishes
+  held in order while down and sent again until acknowledged, requests with `cancel`, hostile frames dropped and counted. `parseSse`
+  (now with `retry:`) and `readSse(response)`; `Backoff` and `Heartbeat` on the clock. `connect()` with no address uses the endpoint
+  `configure({ endpoints: { events } })` names.
+- **drishti-data** (breaking, 3.0.0): `LiveClient`, `LIVE_STATES`, `live()`, `parseSse`, `Backoff` and `Heartbeat` removed: connections
+  are drishti-events' (`connect(url, { protocol: 'raw' })` reads the same feeds; a subscription is a feed for `pipeToGrid`,
+  `liveSource` and `grid.connectLive`). Its budget is lowered to 42,000 bytes. The guard that only one library opens a WebSocket or an
+  `EventSource` now names drishti-events (and `BroadcastChannel`, `SharedWorker`). The gallery's live page is drishti-events'
+  "Connection" page; the inputs harness feeds its live grid through a drishti-events connection.
 - **drishti-grid**: the grid's style sheet restored in full (a change to it had kept only its last block, so the grid, its pivot wells and
   its side panel were drawn without their look); a guard test now fails when a library's class names lose their rules.
 - **drishti-core**: the loader adds a library's style sheets even when its bundle is on the page already (drishti-core by its script

@@ -227,36 +227,6 @@
     }
     return { "ARROW_MEDIA": ARROW_MEDIA, "ARROW_VENDOR": ARROW_VENDOR, "arrowLib": arrowLib, "readColumn": readColumn, "DataFrame": DataFrame, "fromArrow": fromArrow, "fromArrowTable": fromArrowTable, "fromJson": fromJson, "readResponse": readResponse, "fetchFrame": fetchFrame, "ArrowClient": ArrowClient };
   })();
-  /* ---- src/drishti_backoff.js ---- */
-  __m["src/drishti_backoff.js"] = (function () {
-    class Backoff {
-      constructor(o) {
-        this.o = Object.assign({ baseMs: 500, maxMs: 30000, factor: 2, jitter: true, random: Math.random }, o);
-        this.attempt = 0;
-      }
-      next() {
-        const cap = Math.min(this.o.maxMs, this.o.baseMs * Math.pow(this.o.factor, this.attempt));
-        this.attempt++;
-        return Math.round(this.o.jitter ? Math.max(this.o.baseMs / 2, cap * this.o.random()) : cap);
-      }
-      reset() { this.attempt = 0; }
-    }
-    class Heartbeat {
-      constructor(o) {
-        this.o = Object.assign({ setTimeout: (f, ms) => setTimeout(f, ms), clearTimeout: (t) => clearTimeout(t) }, o);
-        this.timer = null;
-        this.last = 0;
-      }
-      beat() {
-        this.last = Date.now();
-        if (!this.o.timeoutMs) { return; }
-        this.stop();
-        this.timer = this.o.setTimeout(() => { this.timer = null; this.o.onTimeout(); }, this.o.timeoutMs);
-      }
-      stop() { if (this.timer !== null) { this.o.clearTimeout(this.timer); this.timer = null; } }
-    }
-    return { "Backoff": Backoff, "Heartbeat": Heartbeat };
-  })();
   /* ---- src/drishti_backpressure.js ---- */
   __m["src/drishti_backpressure.js"] = (function () {
     class Pending {
@@ -452,175 +422,6 @@
     }
     return { "FeedMonitor": FeedMonitor, "feedBadge": feedBadge };
   })();
-  /* ---- src/drishti_live-client.js ---- */
-  __m["src/drishti_live-client.js"] = (function () {
-    var EventBus = __lib("drishti-core").EventBus;
-    var Backoff = __m["src/drishti_backoff.js"].Backoff, Heartbeat = __m["src/drishti_backoff.js"].Heartbeat;
-    const LIVE_STATES = Object.freeze(['idle', 'connecting', 'open', 'reconnecting', 'closed']);
-    class LiveClient {
-      constructor(o) {
-        if (!o || !o.url) { throw new Error('a live client needs the feed\'s url'); }
-        this.o = Object.assign({ heartbeatMs: 45000, resumeParam: 'lastEventId', events: ['message'] }, o);
-        this.transport = this.o.transport || (/^wss?:/i.test(this.url()) ? 'websocket' : 'sse');
-        if (['sse', 'websocket', 'fetch'].indexOf(this.transport) < 0) { throw new Error('no live transport ' + this.transport + ' (sse, websocket, fetch)'); }
-        this.lastStatus = 0;
-        this.events = new EventBus();
-        this.backoff = new Backoff(this.o.backoff);
-        this.later = this.o.setTimeout || ((f, ms) => setTimeout(f, ms));
-        this.cancel = this.o.clearTimeout || ((t) => clearTimeout(t));
-        this.heart = new Heartbeat({ timeoutMs: this.o.heartbeatMs, setTimeout: this.later, clearTimeout: this.cancel,
-          onTimeout: () => this.dropped(new Error('no message or heartbeat for ' + Math.round(this.o.heartbeatMs / 1000) + ' s')) });
-        this.subs = new Set();
-        this.state = 'idle';
-        this.lastEventId = null;
-        this.conn = null;
-        this.retry = 0;
-        this.stats = { messages: 0, connects: 0, reconnects: 0, heartbeats: 0 };
-        const win = this.o.window || (typeof window !== 'undefined' ? window : null);
-        this.win = win;
-        this.onOnline = () => { if (this.state === 'reconnecting') { this.connectNow(); } };
-        if (win && win.addEventListener) { win.addEventListener('online', this.onOnline); }
-      }
-      on(name, fn) { return this.events.on(name, fn); }
-      subscribe(fn) {
-        this.subs.add(fn);
-        if (this.state === 'idle' || this.state === 'closed') { this.open(); }
-        return () => { this.subs.delete(fn); if (!this.subs.size) { this.close(); } };
-      }
-      setState(s, extra) { this.state = s; this.events.emit('state', Object.assign({ state: s, attempt: this.backoff.attempt }, extra)); }
-      open() { this.stopped = false; this.connectNow(); }
-      url() { return typeof this.o.url === 'function' ? String(this.o.url()) : this.o.url; }
-      address() {
-        const u = this.url();
-        if (this.transport === 'websocket' || this.lastEventId === null) { return u; }
-        return u + (u.indexOf('?') >= 0 ? '&' : '?') + encodeURIComponent(this.o.resumeParam) + '=' + encodeURIComponent(this.lastEventId);
-      }
-      connectNow() {
-        this.cancel(this.retry);
-        this.teardown();
-        this.setState('connecting');
-        this.stats.connects++;
-        try { this.conn = this.transport === 'sse' ? this.sse() : this.transport === 'fetch' ? this.fetchSse() : this.ws(); }
-        catch (e) { this.dropped(e); }
-      }
-      sse() {
-        const Source = this.o.EventSource || globalThis.EventSource;
-        if (!Source) { throw new Error('this page has no EventSource'); }
-        const es = new Source(this.address(), { withCredentials: !!this.o.withCredentials });
-        const onMsg = (e) => this.received(e.data, e.lastEventId, e.type);
-        this.o.events.forEach((n) => es.addEventListener(n, onMsg));
-        es.addEventListener('heartbeat', () => this.alive());
-        es.addEventListener('open', () => this.opened());
-        es.addEventListener('error', () => { if (es.readyState === 2 || this.state !== 'open') { this.dropped(new Error('the live feed ' + this.o.url + ' failed')); } else { this.dropped(new Error('the live feed ' + this.o.url + ' dropped')); } });
-        return { close: () => { this.o.events.forEach((n) => es.removeEventListener(n, onMsg)); es.close(); }, raw: es };
-      }
-      ws() {
-        const WS = this.o.WebSocket || globalThis.WebSocket;
-        if (!WS) { throw new Error('this page has no WebSocket'); }
-        const ws = new WS(this.url(), this.o.protocols);
-        let ping = 0;
-        ws.addEventListener('open', () => {
-          if (this.lastEventId !== null) { ws.send(JSON.stringify({ type: 'resume', lastEventId: this.lastEventId })); }
-          const every = this.o.pingMs || (this.o.heartbeatMs ? Math.round(this.o.heartbeatMs / 3) : 0);
-          if (every) { ping = setInterval(() => { try { ws.send('{"type":"ping"}'); } catch (e) { /* closing */ } }, every); }
-          this.opened();
-        });
-        ws.addEventListener('message', (e) => this.received(e.data, null));
-        ws.addEventListener('close', (e) => { clearInterval(ping); if (!this.closing) { this.dropped(new Error('the live feed closed' + (e && e.code ? ' (' + e.code + ')' : ''))); } });
-        ws.addEventListener('error', () => { /* close follows */ });
-        return { close: () => { clearInterval(ping); this.closing = true; try { ws.close(); } catch (e) { /* already */ } this.closing = false; }, raw: ws };
-      }
-      fetchSse() {
-        const F = this.o.fetch || globalThis.fetch, ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        if (!F) { throw new Error('this page has no fetch'); }
-        let closed = false;
-        const run = async () => {
-          const hd = typeof this.o.headers === 'function' ? await this.o.headers({ status: this.lastStatus }) : (this.o.headers || {});
-          const res = await F(this.address(), { headers: Object.assign({ Accept: 'text/event-stream' }, hd), credentials: this.o.credentials || 'same-origin',
-            cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
-          if (!res.ok) { this.lastStatus = res.status; throw Object.assign(new Error('the live feed answered ' + res.status), { status: res.status }); }
-          this.lastStatus = 0;
-          this.opened();
-          const reader = res.body.getReader(), dec = new TextDecoder();
-          let buf = '';
-          for (;;) {
-            const r = await reader.read();
-            if (r.done || closed) { break; }
-            const got = parseSse(buf + dec.decode(r.value, { stream: true }));
-            buf = got.rest;
-            got.events.forEach((e) => {
-              if (e.event === 'heartbeat' || (e.data === '' && e.comment)) { this.alive(); return; }
-              if (this.o.events.indexOf(e.event) >= 0) { this.received(e.data, e.id, e.event); }
-            });
-          }
-          throw new Error('the live feed ' + this.url() + ' ended');
-        };
-        run().catch((e) => { if (!closed) { this.events.emit('error', { error: e, status: e.status || 0 }); this.dropped(e); } });
-        return { close: () => { closed = true; if (ctrl) { ctrl.abort(); } }, raw: ctrl };
-      }
-      opened() {
-        if (this.stats.connects > 1) { this.stats.reconnects++; }
-        this.backoff.reset();
-        this.heart.beat();
-        this.setState('open', { resumedFrom: this.lastEventId });
-      }
-      alive() { this.stats.heartbeats++; this.heart.beat(); }
-      received(data, eventId, eventName) {
-        this.heart.beat();
-        let m;
-        try { m = typeof data === 'string' ? JSON.parse(data) : data; }
-        catch (e) { this.events.emit('error', { error: new Error('the live feed sent text that is not JSON: ' + String(data).slice(0, 80)) }); return; }
-        if (!m || typeof m !== 'object') { return; }
-        if (m.type === 'heartbeat' || m.type === 'pong' || m.type === 'ping') { this.stats.heartbeats++; return; }
-        if (this.o.eventField && eventName && m[this.o.eventField] === undefined) { m[this.o.eventField] = eventName; }
-        const id = eventId || (m.eventId !== undefined ? m.eventId : m.seq !== undefined ? m.seq : null);
-        if (id !== null && id !== undefined && id !== '') { this.lastEventId = String(id); }
-        this.stats.messages++;
-        this.events.emit('message', { message: m });
-        this.subs.forEach((fn) => { try { fn(m); } catch (e) { this.events.emit('error', { error: e }); } });
-      }
-      dropped(err) {
-        this.heart.stop();
-        this.teardown();
-        if (this.stopped) { return; }
-        this.events.emit('error', { error: err });
-        const offline = this.win && this.win.navigator && this.win.navigator.onLine === false;
-        const wait = this.backoff.next();
-        this.setState('reconnecting', { waitMs: offline ? null : wait, offline: !!offline, error: err.message });
-        if (!offline) { this.retry = this.later(() => this.connectNow(), wait); }
-      }
-      teardown() { if (this.conn) { const c = this.conn; this.conn = null; c.close(); } }
-      reconnect() { this.stopped = false; this.backoff.reset(); this.connectNow(); }
-      close() {
-        this.stopped = true;
-        this.cancel(this.retry);
-        this.heart.stop();
-        this.teardown();
-        if (this.state !== 'idle') { this.setState('closed'); }
-      }
-      destroy() { this.close(); this.subs.clear(); if (this.win && this.win.removeEventListener) { this.win.removeEventListener('online', this.onOnline); } }
-    }
-    function parseSse(text) {
-      const events = [];
-      const blocks = String(text).replace(/\r\n?/g, '\n').split('\n\n');
-      const rest = blocks.pop();
-      blocks.forEach((b) => {
-        let event = 'message', id = null, comment = false;
-        const data = [];
-        b.split('\n').forEach((line) => {
-          if (line === '') { return; }
-          if (line[0] === ':') { comment = true; return; }
-          const at = line.indexOf(':'), field = at < 0 ? line : line.slice(0, at);
-          let value = at < 0 ? '' : line.slice(at + 1);
-          if (value[0] === ' ') { value = value.slice(1); }
-          if (field === 'event') { event = value; } else if (field === 'data') { data.push(value); } else if (field === 'id') { id = value; }
-        });
-        if (data.length || comment) { events.push({ event: event, data: data.join('\n'), id: id, comment: comment && !data.length }); }
-      });
-      return { events: events, rest: rest };
-    }
-    return { "LIVE_STATES": LIVE_STATES, "LiveClient": LiveClient, "parseSse": parseSse };
-  })();
   /* ---- src/drishti_sources.js ---- */
   __m["src/drishti_sources.js"] = (function () {
     var compareRows = __lib("drishti-core").compareRows, rowFilter = __lib("drishti-core").rowFilter, isBlank = __lib("drishti-core").isBlank;
@@ -755,9 +556,8 @@
   })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
-    var LiveClient = __m["src/drishti_live-client.js"].LiveClient;
-    function live(o) { return new LiveClient(o); }
-    return { "live": live, "Backoff": __m["src/drishti_backoff.js"].Backoff, "Heartbeat": __m["src/drishti_backoff.js"].Heartbeat, "TransactionSink": __m["src/drishti_backpressure.js"].TransactionSink, "pipeToGrid": __m["src/drishti_backpressure.js"].pipeToGrid, "LIVE_STATES": __m["src/drishti_live-client.js"].LIVE_STATES, "LiveClient": __m["src/drishti_live-client.js"].LiveClient, "parseSse": __m["src/drishti_live-client.js"].parseSse, "ARROW_MEDIA": __m["src/drishti_arrow.js"].ARROW_MEDIA, "ARROW_VENDOR": __m["src/drishti_arrow.js"].ARROW_VENDOR, "arrowLib": __m["src/drishti_arrow.js"].arrowLib, "readColumn": __m["src/drishti_arrow.js"].readColumn, "DataFrame": __m["src/drishti_arrow.js"].DataFrame, "fromArrow": __m["src/drishti_arrow.js"].fromArrow, "fromArrowTable": __m["src/drishti_arrow.js"].fromArrowTable, "fromJson": __m["src/drishti_arrow.js"].fromJson, "readResponse": __m["src/drishti_arrow.js"].readResponse, "fetchFrame": __m["src/drishti_arrow.js"].fetchFrame, "ArrowClient": __m["src/drishti_arrow.js"].ArrowClient, "binCounts": __m["src/drishti_data-compute.js"].binCounts, "DATA_WORKER": __m["src/drishti_data-worker-client.js"].DATA_WORKER, "frameFromWorker": __m["src/drishti_data-worker-client.js"].frameFromWorker, "DataWorker": __m["src/drishti_data-worker-client.js"].DataWorker, "FeedMonitor": __m["src/drishti_feed-monitor.js"].FeedMonitor, "feedBadge": __m["src/drishti_feed-monitor.js"].feedBadge, "rowRequest": __m["src/drishti_sources.js"].rowRequest, "memorySource": __m["src/drishti_sources.js"].memorySource, "restSource": __m["src/drishti_sources.js"].restSource, "serverSideSource": __m["src/drishti_sources.js"].serverSideSource, "arrowSource": __m["src/drishti_sources.js"].arrowSource, "liveSource": __m["src/drishti_sources.js"].liveSource, "readAll": __m["src/drishti_sources.js"].readAll };
+
+    return { "TransactionSink": __m["src/drishti_backpressure.js"].TransactionSink, "pipeToGrid": __m["src/drishti_backpressure.js"].pipeToGrid, "ARROW_MEDIA": __m["src/drishti_arrow.js"].ARROW_MEDIA, "ARROW_VENDOR": __m["src/drishti_arrow.js"].ARROW_VENDOR, "arrowLib": __m["src/drishti_arrow.js"].arrowLib, "readColumn": __m["src/drishti_arrow.js"].readColumn, "DataFrame": __m["src/drishti_arrow.js"].DataFrame, "fromArrow": __m["src/drishti_arrow.js"].fromArrow, "fromArrowTable": __m["src/drishti_arrow.js"].fromArrowTable, "fromJson": __m["src/drishti_arrow.js"].fromJson, "readResponse": __m["src/drishti_arrow.js"].readResponse, "fetchFrame": __m["src/drishti_arrow.js"].fetchFrame, "ArrowClient": __m["src/drishti_arrow.js"].ArrowClient, "binCounts": __m["src/drishti_data-compute.js"].binCounts, "DATA_WORKER": __m["src/drishti_data-worker-client.js"].DATA_WORKER, "frameFromWorker": __m["src/drishti_data-worker-client.js"].frameFromWorker, "DataWorker": __m["src/drishti_data-worker-client.js"].DataWorker, "FeedMonitor": __m["src/drishti_feed-monitor.js"].FeedMonitor, "feedBadge": __m["src/drishti_feed-monitor.js"].feedBadge, "rowRequest": __m["src/drishti_sources.js"].rowRequest, "memorySource": __m["src/drishti_sources.js"].memorySource, "restSource": __m["src/drishti_sources.js"].restSource, "serverSideSource": __m["src/drishti_sources.js"].serverSideSource, "arrowSource": __m["src/drishti_sources.js"].arrowSource, "liveSource": __m["src/drishti_sources.js"].liveSource, "readAll": __m["src/drishti_sources.js"].readAll };
   })();
   return Object.freeze(Object.assign({ library: "drishti-data", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

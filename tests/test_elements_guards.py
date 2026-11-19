@@ -79,7 +79,7 @@ def test_no_source_loads_anything_from_a_cdn():
 # ---- one implementation of each thing, in the libraries --------------------------------------------------------------------------------
 ONE = {
     "echarts": (re.compile(r"\becharts\s*\.\s*(?:init|getInstanceByDom|registerMap|connect|dispose|use)\b"), ("drishti-chart",)),
-    "live": (re.compile(r"\bnew\s+(?:[\w$.]*\.)?(?:EventSource|WebSocket)\b"), ("drishti-data", "drishti-core")),
+    "live": (re.compile(r"\bnew\s+(?:[\w$.]*\.)?(?:EventSource|WebSocket|BroadcastChannel|SharedWorker)\b"), ("drishti-events",)),
 }
 
 
