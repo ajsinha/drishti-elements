@@ -27,14 +27,14 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "elements" / "drishti_elements.json"
 RAW = json.loads(MANIFEST.read_text(encoding="utf-8"))
 VERSION = RAW["elements"]
-LIBS = "core|inputs|grid|chart|data|designer|graph|tree"
-NAMED = re.compile(r"\bdrishti-(?:%s) (\d+\.\d+\.\d+)" % LIBS)
+LIBS = "core|inputs|grid|chart|data|designer|graph|tree|events|views"
+NAMED = re.compile(r"\bdrishti-(?:%s) (\d+\.\d+\.\d+(?:-rc\.\d+)?)" % LIBS)
 SCANNED = ("elements", "gallery", "tools", "tests", "docs", "css", "README.md", "CHANGELOG.md")
 SKIPPED = ("tests/test_elements_version.py", "node_modules", "/vendor/", ".venv", "dist/", "gallery/drishti_catalogue.js", "docs/API.md", "CHANGELOG.md")
 
 
 def test_the_version_is_one_semver_and_no_library_has_its_own():
-    assert re.fullmatch(r"\d+\.\d+\.\d+", VERSION), VERSION
+    assert re.fullmatch(r"\d+\.\d+\.\d+(?:-rc\.\d+)?", VERSION), VERSION        # a release, or a release candidate
     assert [n for n, spec in RAW["libraries"].items() if "version" in spec] == []
 
 

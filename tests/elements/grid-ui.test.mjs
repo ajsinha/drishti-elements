@@ -183,7 +183,7 @@ test('the view\'s events are their own names; the bundle carries the visual laye
   assert.equal(G.defineGridElement(null, null), false);
   G.install({});
   const B = require('../../elements/drishti-grid/drishti_grid.js');
-  assert.match(B.version, /^\d+\.\d+\.\d+$/);
+  assert.match(B.version, /^\d+\.\d+\.\d+(-rc\.\d+)?$/);
   ['Grid', 'GridBase', 'defineGridElement', 'headerSpans', 'parseCommand', 'FlashTracker', 'renderExplain', 'Menu'].forEach((n) => assert.equal(typeof B[n], 'function', n));
   assert.throws(() => new B.Grid(null, {}), /needs an element/);
 });

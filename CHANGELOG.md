@@ -17,7 +17,9 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
-## Unreleased
+## 3.0.0-rc.1
+
+The first release candidate of 3.0.0: drishti-events steps E1 to E7 (the kernel, the connection, order and gaps, flow, the offline queue, the tabs and the shared hub). Breaking: see drishti-core and drishti-data below.
 
 - **drishti-events** (eventing step E7, tabs): the `tabs` scope over a `BroadcastChannel` named by the `namespace` (frames checked before
   use; `$` topics never leave), request and reply across tabs (the first tab that answers; a cancel reaches it), `signOut()` told to every
