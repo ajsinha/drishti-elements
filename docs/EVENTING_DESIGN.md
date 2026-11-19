@@ -815,6 +815,12 @@ Where the build had to choose, or the API above changed, the choice and its reas
 | E8 | A client that has heard no epoch for a stream sends `epoch: null` in `after` and `replay`; a server takes that as its current epoch only when the stream began in it | a stream born after the subscription is named first by a `msg`, which carries no epoch |
 | E8 | `recovered: false` without a stream the client asked about: the client forgets that stream's position and resyncs it | a restarted server that lost the log names no such stream, and its numbering starts again |
 | E8 | The conformance runner (`tools/events/conformance.mjs`) uses raw WebSocket clients, never the library's client; `requires` skips a vector whose capability the server's `welcome.can` lacks | a pass then says the server keeps the contract |
+| E9 | `metrics()` keeps its flat fields (`state`, `server`, `tabs`, `outbox`, `counters`) and adds the design's groups (`connection`, `in`, `out`, `drops`, `stores`); latency is marked approximate until the clock offset and three samples exist | one object for the inspector and a host's telemetry |
+| E9 | `$events.metrics` ticks only while someone listens to it (or `$events.>`), or when `onMetrics` is given; no timer otherwise | an idle page keeps no timer |
+| E9 | The recorder records arrival (`in`) and publishing (`out`); a page-scope publish is recorded as arriving in the publishing page; `recorder: false` turns it off, `recorder: { payloads: true }` keeps data | the page's own messages can be explained too |
+| E9 | `explain()` answers drishti-core's `ExplainResult` plus `failed` (the first failed step) and `ok` on each step; `value` is the first failure's words, or the delivery's | `renderExplain` draws the steps; a test reads `failed` |
+| E9 | `statusBadge` speaks through its own polite live region (the drawn state is `presentation`), at most once in five seconds, the countdown's seconds left out of what it says | a ticking countdown must not be announced every second |
+| E9 | The badge's look is the library's own sheet (`drishti_events.css`): a dot repeating the state's tone beside the words | every colour has a word beside it |
 
 ---
 

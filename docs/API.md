@@ -18994,6 +18994,16 @@ The figures so far (one plain object).
 
 Returns `Object`.
 
+##### `Events.explain(query)`
+
+Why a message did or did not reach this page's listeners, in words: the steps (a listener matched, the route, the subscription, the connection, arrival, validity, kept, the listener ran), the first that failed marked. Draw it with drishti-core's renderExplain.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `query` | `{topic: string, key: string, id: string, since: number}` |  |
+
+Returns `Object`: an ExplainResult (title, value, steps with ok, failed).
+
 ##### `Events.destroy()`
 
 Closes the connection, ends every subscription and request, stops answering: the Events is done.
@@ -20259,6 +20269,204 @@ The address of the hub's worker file: the option, else beside the loaded bundle.
 
 Returns `?string`.
 
+### drishti_metrics.js
+
+#### `BUCKETS`
+
+The upper bounds of the histogram's buckets, in milliseconds: 0.01 ms doubling to about 84 s, then one for the rest.
+
+#### class `Histogram`
+
+A histogram of durations in fixed log-scale buckets.
+
+##### `new Histogram()`
+
+An empty histogram.
+
+##### `Histogram.add(ms)`
+
+Counts one duration.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `Histogram.quantile(p)`
+
+The duration under which this share of the counts falls (a bucket's upper bound; the largest seen for the last bucket).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `p` | `number` | 0.5, 0.99 |
+
+Returns `?number`: null when nothing was counted.
+
+##### `Histogram.summary()`
+
+The figures a metrics object shows.
+
+Returns `{count: number, p50: ?number, p99: ?number, max: ?number}`.
+
+#### class `Rate`
+
+Counts per second over the last one and ten seconds (ten one-second slots).
+
+##### `new Rate(clock)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `clock` | `{now: function(): number}` |  |
+
+##### `Rate.add(n)`
+
+Counts n now.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[n=1]` | `number` |  |
+
+Returns `void`.
+
+##### `Rate.summary()`
+
+Per second over the last second (the one before this one) and the last ten.
+
+Returns `{total: number, perSecond1s: number, perSecond10s: number}`.
+
+### drishti_trace.js
+
+#### class `Recorder`
+
+A ring of message headers and what became of each, with the connection's and the subscriptions' changes beside them.
+
+##### `new Recorder(clock, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `clock` | `{now: function(): number}` |  |
+| `[o]` | `RecorderOptions` |  |
+
+##### `Recorder.record(m, dir, scope)`
+
+Records a message coming in or going out.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `dir` | `('in'\|'out')` |  |
+| `[scope]` | `string` |  |
+
+Returns `?Object`: the entry.
+
+##### `Recorder.delivered(m, pattern, listeners)`
+
+A message was delivered to a subscription's listeners.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `pattern` | `string` |  |
+| `listeners` | `number` |  |
+
+Returns `void`.
+
+##### `Recorder.dropped(m, reason, words, pattern)`
+
+A message stopped: the reason in a word and in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `?Object` |  |
+| `reason` | `string` |  |
+| `words` | `string` |  |
+| `pattern` | `?string` |  |
+
+Returns `void`.
+
+##### `Recorder.state(d)`
+
+The connection changed state.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `d` | `Object` | $events.state's data |
+
+Returns `void`.
+
+##### `Recorder.note(n)`
+
+Something beside the messages: a subscription's change, a gap, a listener's error.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `Object` | with type |
+
+Returns `void`.
+
+##### `Recorder.find(q)`
+
+The entries matching a filter, newest last.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[q]` | `{topic: string, key: string, id: string, since: number, dir: string}` | topic may be a pattern |
+
+Returns `Object[]`.
+
+##### `Recorder.clear()`
+
+Forgets everything recorded.
+
+Returns `void`.
+
+##### `Recorder.metrics()`
+
+The recorder's figures.
+
+Returns `{headers: number, max: number, payloads: boolean}`.
+
+#### `explainWhy(events, q)`
+
+Why a message did or did not reach the page's listeners: the steps in words, the first that failed marked.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events |
+| `q` | `{topic: string, key: string, id: string, since: number}` |  |
+
+Returns `import('../../drishti-core/src/drishti_explain.js').ExplainResult`: with failed: the first step that failed (or null) and steps' ok.
+
+### drishti_status.js
+
+#### `ANNOUNCE_EVERY_MS`
+
+How often the badge may speak, in milliseconds.
+
+#### `badgeView(st, f)`
+
+What the badge shows for a connection and its feeds: the state kit's kind, the words, and the button (pure: the tests read it).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `st` | `{state: string, waitMs: ?number, at: number, reason: ?string, suspended: boolean}` | the last $events.state (at: when) |
+| `f` | `{missed: number, waiting: number, now: number, server: boolean}` | missed: updates lost since the last Refresh; waiting: unsent publishes |
+
+Returns `{kind: string, text: string, detail: ?string, fix: ?string, tone: string}`: fix: 'reconnect', 'refresh' or null.
+
+#### `statusBadge(el, events, o)`
+
+Draws the connection's and the feeds' state into an element, and keeps it current.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` |  |
+| `events` | `Object` | an Events |
+| `[o]` | `{refresh: function(): void, tickMs: number}` | refresh: what Refresh does after missed updates (default: forget the count) |
+
+Returns `function(): void`: stops it.
+
 ### drishti_index.js
 
 #### `registerMock(address, server, only)`
@@ -20627,6 +20835,8 @@ The options of an Events.
 | `[tabs=true]` | `boolean` | false: no 'tabs' scope (it is there wherever the browser has a BroadcastChannel) |
 | `[env]` | `Object` | stand-ins for the browser's classes (BroadcastChannel, SharedWorker, locks, WebSocket, ...) in tests |
 | `[onError]` | `function(Error, Object): void` | also told of every error published on $events.error |
+| `[recorder]` | `(import('./drishti_trace.js').RecorderOptions\|boolean)` | the recorder behind explain and the inspector (false: off) |
+| `[onMetrics]` | `function(Object): void` | given events.metrics() once a second (a host's own telemetry) |
 
 #### `GridSinkOptions` : `Object`
 
@@ -20741,6 +20951,15 @@ A clock a test moves by hand.
 | `runAll` | `function(number): number` | runs timers until none is left (at most `limit`, default 100,000, so a timer that sets itself again cannot hang a test); answers how many ran |
 | `setHidden` | `function(boolean): void` | hides or shows the page (a hidden page gets no frames) |
 | `pending` | `function(): number` | how many timers wait |
+
+#### `RecorderOptions` : `Object`
+
+The options of the recorder.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[max=5000]` | `number` | the headers kept |
+| `[payloads=false]` | `boolean` | keep each message's data too (for the inspector; a developer's choice) |
 
 #### `SseEvent` : `Object`
 

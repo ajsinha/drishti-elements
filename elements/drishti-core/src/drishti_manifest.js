@@ -157,7 +157,9 @@ export const MANIFEST = Object.freeze({
       "requires": [
         "drishti-core"
       ],
-      "css": [],
+      "css": [
+        "elements/drishti-events/drishti_events.css"
+      ],
       "scripts": [],
       "module": "core"
     }

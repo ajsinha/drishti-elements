@@ -123,7 +123,9 @@
       "requires": [
         "drishti-core"
       ],
-      "css": [],
+      "css": [
+        "elements/drishti-events/drishti_events.css"
+      ],
       "parts": {
         "worker": {
           "file": "drishti_events-worker.js",

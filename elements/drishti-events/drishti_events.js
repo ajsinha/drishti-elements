@@ -1729,7 +1729,7 @@
   })();
   /* ---- src/drishti_subscription.js ---- */
   __m["src/drishti_subscription.js"] = (function () {
-    var EventError = __m["src/drishti_envelope.js"].EventError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isMessage = __m["src/drishti_envelope.js"].isMessage, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic;
+    var EventError = __m["src/drishti_envelope.js"].EventError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isMessage = __m["src/drishti_envelope.js"].isMessage, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic, matches = __m["src/drishti_envelope.js"].matches;
     var createFlow = __m["src/drishti_flow.js"].createFlow, GridSink = __m["src/drishti_flow.js"].GridSink;
     const SUBSCRIPTION_STATES = Object.freeze(['pending', 'active', 'recovering', 'refused', 'closed']);
     class Subscription {
@@ -1767,6 +1767,7 @@
         if (isOwnTopic(this.pattern)) {
           this._scopes = [];
           this._offs.push(ev._own.on(this.pattern, (m) => this._accept(m)));
+          if (matches(this.pattern, '$events.metrics') && ev._tickMetrics) { ev._tickMetrics(); }
           this._setState('active');
           return;
         }
@@ -1843,10 +1844,12 @@
         const ev = this.events, n = Array.isArray(item) ? item.length : 1;
         this.stats.delivered += n;
         ev.counters.delivered += n;
+        const t0 = now();
         this._fns.slice().forEach((f) => {
           try { f(item); } catch (e) { ev._error(e, { topic: Array.isArray(item) ? this.pattern : item.topic, where: 'listener', pattern: this.pattern }); }
         });
         if (this._iters.size) { (Array.isArray(item) ? item : [item]).forEach((m) => this._iters.forEach((it) => it.push(m))); }
+        if (ev._delivered) { ev._delivered(this, item, this._fns.length + this._iters.size, now() - t0); }
       }
       latest(key) { return key === undefined ? this._last : (this._latest.get(String(key)) || null); }
       latestAll() { return Array.from(this._latest.values()); }
@@ -1903,6 +1906,7 @@
         this.events._forget(this);
       }
     }
+    function now() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
     return { "SUBSCRIPTION_STATES": SUBSCRIPTION_STATES, "Subscription": Subscription };
   })();
   /* ---- src/drishti_tabs.js ---- */
@@ -2095,6 +2099,216 @@
     }
     return { "TABS_VERSION": TABS_VERSION, "wireOf": wireOf, "messageFromWire": messageFromWire, "broadcastChannelOf": broadcastChannelOf, "locksOf": locksOf, "TabsScope": TabsScope, "Leader": Leader };
   })();
+  /* ---- src/drishti_metrics.js ---- */
+  __m["src/drishti_metrics.js"] = (function () {
+    const BUCKETS = Object.freeze(Array.from({ length: 24 }, (x, i) => 0.01 * Math.pow(2, i)));
+    class Histogram {
+      constructor() {
+        /** @type {number[]} */ this.counts = new Array(BUCKETS.length + 1).fill(0);
+        /** @type {number} */ this.n = 0;
+        /** @type {number} */ this.max = 0;
+      }
+      add(ms) {
+        if (!(ms >= 0)) { return; }
+        let i = 0;
+        while (i < BUCKETS.length && ms > BUCKETS[i]) { i++; }
+        this.counts[i]++;
+        this.n++;
+        if (ms > this.max) { this.max = ms; }
+      }
+      quantile(p) {
+        if (!this.n) { return null; }
+        const want = Math.ceil(p * this.n);
+        let seen = 0;
+        for (let i = 0; i < this.counts.length; i++) {
+          seen += this.counts[i];
+          if (seen >= want) { return i < BUCKETS.length ? Math.min(BUCKETS[i], this.max) : this.max; }
+        }
+        return this.max;
+      }
+      summary() { return { count: this.n, p50: round(this.quantile(0.5)), p99: round(this.quantile(0.99)), max: this.n ? round(this.max) : null }; }
+    }
+    class Rate {
+      constructor(clock) {
+        this.clock = clock;
+        this.slots = new Array(10).fill(0);
+        this.at = Math.floor(clock.now() / 1000);
+        /** @type {number} */ this.total = 0;
+      }
+      _roll() {
+        const sec = Math.floor(this.clock.now() / 1000);
+        const gone = Math.min(10, sec - this.at);
+        for (let i = 1; i <= gone; i++) { this.slots[(this.at + i) % 10] = 0; }
+        if (gone > 0) { this.at = sec; }
+      }
+      add(n) { this._roll(); const k = n === undefined ? 1 : n; this.slots[this.at % 10] += k; this.total += k; }
+      summary() {
+        this._roll();
+        const last = this.slots[(this.at + 9) % 10];
+        const ten = this.slots.reduce((a, b) => a + b, 0) - this.slots[this.at % 10];
+        return { total: this.total, perSecond1s: last, perSecond10s: Math.round(ten / 9 * 10) / 10 };
+      }
+    }
+    function round(x) { return x === null || x === undefined ? null : Math.round(x * 1000) / 1000; }
+    return { "BUCKETS": BUCKETS, "Histogram": Histogram, "Rate": Rate };
+  })();
+  /* ---- src/drishti_trace.js ---- */
+  __m["src/drishti_trace.js"] = (function () {
+    var matches = __m["src/drishti_envelope.js"].matches;
+    class Recorder {
+      constructor(clock, o) {
+        this.clock = clock;
+        this.o = Object.assign({ max: 5000, payloads: false }, o);
+        /** @type {Object[]} oldest first */ this.list = [];
+        this.byId = new Map();
+        /** @type {Object[]} the connection's states, oldest first (bounded) */ this.states = [];
+        /** @type {Object[]} subscription changes, gaps and listener errors (bounded) */ this.notes = [];
+        this.paused = false;
+      }
+      record(m, dir, scope) {
+        if (this.paused || !m) { return null; }
+        const e = { at: this.clock.now(), dir: dir, scope: scope || m.scope || null, topic: m.topic, id: m.id || null, seq: m.seq, stream: m.stream,
+          key: m.key, kind: m.kind, time: m.time, delivered: 0, listeners: 0, dropped: null, retained: !!m.retained, replayed: !!m.replayed };
+        if (this.o.payloads) { e.data = m.data; }
+        this.list.push(e);
+        if (e.id) { this.byId.set(e.id + '|' + dir, e); }
+        if (this.list.length > this.o.max) {
+          const gone = this.list.shift();
+          if (gone.id && this.byId.get(gone.id + '|' + gone.dir) === gone) { this.byId.delete(gone.id + '|' + gone.dir); }
+        }
+        return e;
+      }
+      _entry(m, dir) {
+        if (!m) { return null; }
+        const e = m.id ? this.byId.get(m.id + '|' + (dir || 'in')) : null;
+        return e || this.record(m, dir || 'in');
+      }
+      delivered(m, pattern, listeners) {
+        const e = this.byId.get((m.id || '') + '|in');
+        if (!e) { return; }
+        e.delivered++;
+        e.listeners += listeners;
+        e.deliveredAt = this.clock.now();
+        (e.patterns || (e.patterns = [])).push(pattern);
+      }
+      dropped(m, reason, words, pattern) {
+        if (this.paused) { return; }
+        const e = m && m.topic ? this._entry(m, 'in') : null;
+        const d = { reason: reason, words: words || reason, pattern: pattern || null, at: this.clock.now() };
+        if (e) { (e.drops || (e.drops = [])).push(d); if (!e.dropped) { e.dropped = d; } return; }
+        this.note({ type: 'drop', reason: reason, words: d.words, pattern: d.pattern });
+      }
+      state(d) {
+        this.states.push({ at: this.clock.now(), state: d.state, reason: d.reason || null, waitMs: d.waitMs == null ? null : d.waitMs });
+        if (this.states.length > 500) { this.states.shift(); }
+      }
+      note(n) {
+        this.notes.push(Object.assign({ at: this.clock.now() }, n));
+        if (this.notes.length > 1000) { this.notes.shift(); }
+      }
+      find(q) {
+        const f = q || {};
+        return this.list.filter((e) => (!f.dir || e.dir === f.dir) && (!f.id || e.id === f.id) && (f.key === undefined || e.key === String(f.key)) &&
+          (!f.since || e.at >= f.since) && (!f.topic || e.topic === f.topic || safeMatch(f.topic, e.topic)));
+      }
+      clear() { this.list = []; this.byId.clear(); this.states = []; this.notes = []; }
+      metrics() { return { headers: this.list.length, max: this.o.max, payloads: !!this.o.payloads }; }
+    }
+    function safeMatch(p, t) { try { return matches(p, t); } catch (e) { return false; } }
+    function clockText(ms) {
+      const d = new Date(ms), p = (n, w) => String(n).padStart(w || 2, '0');
+      return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + '.' + p(d.getMilliseconds(), 3);
+    }
+    function num(n) { return Number(n).toLocaleString('en-US'); }
+    function explainWhy(events, q) {
+      const r = events.recorder, query = Object.assign({}, q), topic = query.topic || '';
+      const steps = [];
+      let failed = null;
+      const step = (label, ok, words) => {
+        const s = { label: label, value: words, ok: ok };
+        steps.push(s);
+        if (!ok && !failed) { failed = s; }
+        return ok;
+      };
+      const done = (value) => ({ title: 'Why: ' + (topic || query.id || 'a message'), value: value, steps: steps, failed: failed,
+        note: r.o.max ? 'From the last ' + num(r.list.length) + ' messages recorded.' : undefined });
+      const subs = Array.from(events._subs).filter((s) => topic && safeMatch(s.pattern, topic));
+      if (topic && !step('A listener matched', subs.length > 0, subs.length ? subs.map((s) => '`' + s.pattern + '`').join(', ') + ' match `' + topic + '`.'
+        : 'No subscription matches `' + topic + '`.' + nearest(events, topic))) { return done(failed.value); }
+      if (topic) {
+        const scopes = Array.from(new Set(subs.reduce((a, s) => a.concat(s.scopes), [])));
+        const route = events.routeOf(topic);
+        const reach = scopes.length > 0;
+        if (!step('The route reached that scope', reach, reach ? 'It is heard from ' + scopes.join(' and ') + (route.indexOf('server') < 0 && !events._adapter('server') ? '.' : '; `' + topic + '` is routed to ' + route.join(' and ') + '.')
+          : '`' + subs[0].pattern + '` hears no scope: it is routed to ' + route.join(' and ') + ', which this page does not have.')) { return done(failed.value); }
+        const refused = subs.find((s) => s.state === 'refused');
+        if (refused && subs.every((s) => s.state === 'refused' || s.state === 'closed')) {
+          const n = r.notes.filter((x) => x.type === 'subscription' && x.pattern === refused.pattern && x.state === 'refused').pop();
+          step('The subscription was active', false, '`' + refused.pattern + '` was refused' + (n ? ' at ' + clockText(n.at) : '') + ': ' + (refused.reason || 'no reason given') + '.');
+          return done(failed.value);
+        }
+        step('The subscription was active', true, subs.map((s) => '`' + s.pattern + '` is ' + s.state).join('; ') + '.');
+      }
+      const since = query.since || 0;
+      const down = downtime(r, since, events.clock.now());
+      if (events._adapter('server')) { step('The connection was open', !down.length || events.state === 'open', down.length ? down.map((d) => 'The connection was ' + d.state + ' from ' + clockText(d.from) + (d.to ? ' to ' + clockText(d.to) : ' until now') + (d.reason ? ' (' + d.reason + ')' : '') + '.').join(' ') : 'It was open throughout.'); }
+      const hits = r.find({ topic: topic || undefined, key: query.key, id: query.id, since: since, dir: 'in' });
+      if (!hits.length) {
+        const gaps = r.notes.filter((x) => x.type === 'gap' && x.at >= since && (!topic || x.stream === topic || safeMatch(x.stream + '.>', topic) || topic.indexOf(x.stream) === 0));
+        const words = gaps.length ? gaps.map((g) => 'Stream `' + g.stream + '` jumped from ' + num(g.from - 1) + ' to ' + num(g.to + 1) + '; ' + (g.recoverable ? 'a replay was asked.' : 'a replay was asked and answered `unavailable`.')).join(' ')
+          : 'Nothing on `' + (topic || query.id) + '`' + (query.key !== undefined ? ' with key `' + query.key + '`' : '') + ' arrived' + (since ? ' since ' + clockText(since) : '') + '.';
+        step('The message arrived', false, words);
+        return done(failed.value);
+      }
+      const e = hits[hits.length - 1];
+      step('The message arrived', true, 'At ' + clockText(e.at) + (e.seq !== undefined ? ', seq ' + num(e.seq) : '') + ' from ' + (e.scope || 'the page') + '.');
+      const drops = e.drops || [];
+      const invalid = drops.find((d) => d.reason === 'invalid');
+      if (!step('It was valid', !invalid || e.delivered > 0, invalid && !e.delivered ? invalid.words : 'Yes.')) { return done(failed.value); }
+      const lost = drops.find((d) => ['conflated', 'overflow', 'duplicate', 'filtered', 'expired', 'too-large', 'unrouted'].indexOf(d.reason) >= 0);
+      if (!e.delivered && lost) {
+        let words = lost.words;
+        if (lost.reason === 'conflated') {
+          const later = r.find({ topic: e.topic, key: e.key, dir: 'in' }).filter((x) => x.at >= e.at && x !== e && x.delivered);
+          if (later.length) { words = 'Conflated: replaced by ' + (later[0].seq !== undefined ? 'seq ' + num(later[0].seq) : 'a later message') + ' with the same key ' + Math.max(0, later[0].at - e.at) + ' ms later.'; }
+        }
+        step('It was kept', false, words);
+        return done(failed.value);
+      }
+      step('It was kept', true, 'Yes.');
+      const err = r.notes.filter((x) => x.type === 'error' && x.topic === e.topic && x.at >= e.at).pop();
+      if (err) { step('The listener ran', false, 'The listener threw: ' + err.detail + ' (see `$events.error`).'); return done(failed.value); }
+      if (!e.delivered) { step('The listener ran', false, 'It is waiting to be delivered (the subscription delivers per frame or on a timer).'); return done(failed.value); }
+      const after = e.time ? Math.max(0, e.deliveredAt - e.time) : null;
+      const words = 'Delivered at ' + clockText(e.deliveredAt) + ' to ' + e.listeners + (e.listeners === 1 ? ' listener' : ' listeners') + (after !== null ? ', ' + after + ' ms after it was published.' : '.');
+      step('The listener ran', true, words);
+      return done(words);
+    }
+    function nearest(events, topic) {
+      const t = topic.split('.');
+      let best = null, score = -1;
+      events._subs.forEach((s) => {
+        if (s.pattern[0] === '$') { return; }
+        const p = s.pattern.split('.');
+        let n = 0;
+        while (n < p.length && n < t.length && (p[n] === t[n] || p[n] === '*')) { n++; }
+        if (n > score) { score = n; best = s.pattern; }
+      });
+      return best ? ' The nearest is `' + best + '`.' : ' This page has no subscriptions.';
+    }
+    function downtime(r, since, now) {
+      const out = [];
+      let cur = null;
+      r.states.forEach((s) => {
+        if (s.state === 'open') { if (cur) { cur.to = s.at; if (cur.to >= since) { out.push(cur); } cur = null; } return; }
+        if (s.state === 'connecting' && !cur) { return; }
+        if (!cur) { cur = { state: s.state, from: s.at, to: null, reason: s.reason }; }
+      });
+      if (cur && now >= since) { out.push(cur); }
+      return out.filter((d) => d.state !== 'idle');
+    }
+    return { "Recorder": Recorder, "explainWhy": explainWhy };
+  })();
   /* ---- src/drishti_events-hub.js ---- */
   __m["src/drishti_events-hub.js"] = (function () {
     var pageBus = __lib("drishti-core").bus, EventBus = __lib("drishti-core").EventBus;
@@ -2102,6 +2316,8 @@
     var systemClock = __m["src/drishti_timing.js"].systemClock;
     var Subscription = __m["src/drishti_subscription.js"].Subscription;
     var TabsScope = __m["src/drishti_tabs.js"].TabsScope, broadcastChannelOf = __m["src/drishti_tabs.js"].broadcastChannelOf;
+    var Histogram = __m["src/drishti_metrics.js"].Histogram, Rate = __m["src/drishti_metrics.js"].Rate;
+    var Recorder = __m["src/drishti_trace.js"].Recorder, explainWhy = __m["src/drishti_trace.js"].explainWhy;
     const SCOPES = Object.freeze(['page', 'tabs', 'server']);
     const OWN_TOPICS = Object.freeze(['$events.state', '$events.error', '$events.gap', '$events.drop', '$events.subscription',
       '$events.auth', '$events.metrics']);
@@ -2128,11 +2344,18 @@
         /** @private */ this._pending = new Map();
         /** @private */ this._destroyed = false;
         this.counters = { published: 0, delivered: 0, requests: 0, answered: 0, timedOut: 0, drops: {} };
+        this.recorder = new Recorder(this.clock, this.o.recorder === false ? { max: 0 } : Object.assign({ max: this.limits.recorder }, this.o.recorder));
+        /** @private */ this._hist = { latency: new Histogram(), listener: new Histogram(), ack: new Histogram() };
+        /** @private */ this._rateIn = new Rate(this.clock);
+        /** @private */ this._byPattern = new Map();
+        /** @private */ this._slowest = { pattern: null, ms: 0 };
+        /** @private */ this._metricsTimer = null;
         this.page = new ScopedEvents(this, 'page');
         this.tabs = new ScopedEvents(this, 'tabs');
         this.server = new ScopedEvents(this, 'server');
         if (this.o.tabs !== false && broadcastChannelOf(this.o.env)) { this._attach('tabs', new TabsScope(this, { namespace: this.o.namespace, env: this.o.env })); }
         if (this.o.signal) { onAbort(this.o.signal, () => this.destroy()); }
+        if (this.o.onMetrics) { this._tickMetrics(); }
       }
       _candidates() {
         const own = (this._routes || []).concat(this._shared);
@@ -2180,6 +2403,8 @@
         if (this._destroyed) { return 0; }
         if (!isMessage(m)) { m = makeMessage(m); }
         if (m.receivedAt === undefined) { m.receivedAt = this.clock.now(); }
+        this._rateIn.add();
+        this.recorder.record(m, 'in');
         if (m.id && this._mine.has(m.id) && m.scope !== 'page') { this._drop('duplicate', m, null, 'this page published it to the page as well'); return 0; }
         const n = this._remote.emit(m.topic, m);
         if (!n) { this._drop('unrouted', m, null, 'no subscription matches ' + m.topic); }
@@ -2233,6 +2458,7 @@
           if (!to.length) { throw new EventError('scope.invalid', 'a publish needs a scope: page, tabs or server'); }
           if (o.signal && o.signal.aborted) { throw new AbortError('the publish to ' + topic + ' was given up before it was sent'); }
           this.counters.published++;
+          this.recorder.record(m, 'out', to.join('+'));
           if (to.length > 1) { this._remember(m.id); }
           const unrouted = [], waits = [];
           to.forEach((scope) => {
@@ -2246,6 +2472,7 @@
               (to.indexOf('server') >= 0 ? ' (connect(url) gives it a server)' : ''));
           }
           return Promise.all(waits).then((rs) => {
+            if (waits.length) { this._hist.ack.add(Math.max(0, this.clock.now() - m.time)); }
             const r = { id: m.id, topic: topic, time: m.time, to: to.filter((s) => unrouted.indexOf(s) < 0), acked: rs.every((x) => !x || x.acked !== false) };
             if (unrouted.length) { r.unrouted = unrouted; }
             return r;
@@ -2258,6 +2485,7 @@
       }
       _publishPage(m) {
         const copy = makeMessage(Object.assign({}, m, { scope: 'page', receivedAt: this.clock.now() }));
+        this.recorder.record(copy, 'in');
         this._bus.emit(m.topic, copy);
       }
       _remember(id) {
@@ -2335,10 +2563,14 @@
       define(kind, validate) { this.kinds.define(kind, validate); }
       _emitOwn(topic, data) {
         const now = this.clock.now();
+        if (topic === '$events.state') { this.recorder.state(data); }
+        else if (topic === '$events.gap') { this.recorder.note(Object.assign({ type: 'gap' }, data)); }
+        else if (topic === '$events.subscription') { this.recorder.note(Object.assign({ type: 'subscription' }, data)); }
         return this._own.emit(topic, makeMessage({ id: this.ids.next(), topic: topic, data: data, time: now, source: this.source, scope: 'page', receivedAt: now }));
       }
       _error(e, about) {
         const d = Object.assign({ error: e, code: (e && e.code) || 'error', detail: (e && (e.detail || e.message)) || String(e) }, about);
+        this.recorder.note({ type: 'error', topic: d.topic || null, where: d.where || null, detail: d.detail, pattern: d.pattern || null });
         if (this.o.onError) { try { this.o.onError(e, d); } catch (x) { /* the host's own */ } }
         if (!this._emitOwn('$events.error', d) && !this.o.onError && typeof console !== 'undefined') {
           console.error('drishti-events: ' + d.detail, e);
@@ -2347,6 +2579,7 @@
       _ownFailed(e, t) { if (typeof console !== 'undefined') { console.error('drishti-events: a listener of ' + t + ' failed', e); } }
       _drop(reason, m, sub, words) {
         this.counters.drops[reason] = (this.counters.drops[reason] || 0) + 1;
+        this.recorder.dropped(m, reason, words, sub && sub.pattern);
         if (sub) { sub.stats.dropped++; sub.stats.drops[reason] = (sub.stats.drops[reason] || 0) + 1; }
         if (reason !== 'conflated' && this._own.count('$events.drop') + this._own.count('$events.>') > 0) {
           this._emitOwn('$events.drop', { reason: reason, id: m && m.id, topic: m && m.topic, seq: m && m.seq, pattern: sub && sub.pattern, detail: words || reason });
@@ -2372,10 +2605,49 @@
         const out = { state: this.state, subscriptions: this._subs.size, pendingRequests: this._pending.size, counters: JSON.parse(JSON.stringify(this.counters)) };
         this._adapters.forEach((a, name) => { if (a.metrics) { out[name] = a.metrics(); } });
         if (out.server && out.server.outbox) { out.outbox = out.server.outbox; }
+        const srv = out.server || {}, o = srv.out || {};
+        let undelivered = 0;
+        this._subs.forEach((sub) => { undelivered += sub._flow && typeof sub._flow.size === 'number' ? sub._flow.size : 0; });
+        const byPattern = {};
+        this._byPattern.forEach((n, p) => { byPattern[p] = n; });
+        out.connection = { state: this.state, transport: srv.transport || null, shared: !!srv.shared, connects: srv.connects || 0, reconnects: srv.reconnects || 0,
+          connectedMs: srv.connectedMs || 0, rtt: srv.rtt || { last: null, p50: null, p99: null }, offset: srv.offset === undefined ? null : srv.offset };
+        out.in = Object.assign(this._rateIn.summary(), { bytes: srv.bytesIn || 0, byPattern: byPattern, latency: this._hist.latency.summary(),
+          latencyApproximate: srv.offset == null || this._hist.latency.n < 3,
+          listenerMs: Object.assign(this._hist.listener.summary(), { slowest: this._slowest.pattern }) });
+        out.out = { publishes: this.counters.published, acked: o.acked || 0, retried: o.retried || 0, failed: o.failed || 0, ackMs: this._hist.ack.summary(),
+          requests: { sent: this.counters.requests, answered: this.counters.answered, timedOut: this.counters.timedOut } };
+        out.drops = Object.assign({}, this.counters.drops);
+        out.stores = { undelivered: undelivered, heldForGaps: srv.held || 0, outbox: out.outbox || null, pendingRequests: this._pending.size, recorder: this.recorder.metrics() };
         return out;
+      }
+      explain(query) { return explainWhy(this, query || {}); }
+      _delivered(sub, item, listeners, ms) {
+        const now = this.clock.now(), list = Array.isArray(item) ? item : [item];
+        list.forEach((m) => {
+          this.recorder.delivered(m, sub.pattern, listeners);
+          if (typeof m.time === 'number' && m.scope !== 'page') { this._hist.latency.add(Math.max(0, now - m.time)); }
+        });
+        this._hist.listener.add(ms);
+        if (ms > this._slowest.ms) { this._slowest = { pattern: sub.pattern, ms: ms }; }
+        if (this._byPattern.size < 1000 || this._byPattern.has(sub.pattern)) { this._byPattern.set(sub.pattern, (this._byPattern.get(sub.pattern) || 0) + list.length); }
+      }
+      _tickMetrics() {
+        if (this._metricsTimer !== null || this._destroyed) { return; }
+        this._metricsTimer = this.clock.setTimeout(() => {
+          this._metricsTimer = null;
+          if (this._destroyed) { return; }
+          const heard = this._own.count('$events.metrics') + this._own.count('$events.>') > 0;
+          if (!heard && !this.o.onMetrics) { return; }
+          const m = this.metrics();
+          if (this.o.onMetrics) { try { this.o.onMetrics(m); } catch (e) { this._ownFailed(e, 'onMetrics'); } }
+          if (heard) { this._emitOwn('$events.metrics', m); }
+          this._tickMetrics();
+        }, 1000);
       }
       destroy() {
         if (this._destroyed) { return; }
+        if (this._metricsTimer !== null) { this.clock.clearTimeout(this._metricsTimer); this._metricsTimer = null; }
         Array.from(this._subs).forEach((s) => s.off());
         Array.from(this._pending.values()).forEach((f) => f());
         this._repliers.slice().forEach((r) => { const i = PAGE_REPLIERS.indexOf(r); if (i >= 0) { PAGE_REPLIERS.splice(i, 1); } });
@@ -2922,6 +3194,71 @@
     }
     return { "HUB_TIMING": HUB_TIMING, "HubHost": HubHost, "HubClient": HubClient, "workerAddress": workerAddress, "shareConnection": shareConnection, "serveSharedWorker": serveSharedWorker };
   })();
+  /* ---- src/drishti_status.js ---- */
+  __m["src/drishti_status.js"] = (function () {
+    var h = __lib("drishti-core").h, showState = __lib("drishti-core").showState;
+    const ANNOUNCE_EVERY_MS = 5000;
+    function badgeView(st, f) {
+      const s = (st && st.state) || 'idle';
+      const waiting = f.waiting ? ': ' + f.waiting + (f.waiting === 1 ? ' change waiting' : ' changes waiting') : '';
+      if (!f.server) { return { kind: 'empty', text: 'This page only', detail: null, fix: null, tone: 'muted' }; }
+      if (s === 'reconnecting') {
+        const left = st.waitMs == null ? null : Math.max(0, Math.ceil((st.at + st.waitMs - f.now) / 1000));
+        return { kind: 'stale', text: left ? 'Reconnecting in ' + left + ' s' : 'Reconnecting', detail: (st.reason || null), fix: 'reconnect', tone: 'warn' };
+      }
+      if (s === 'offline') { return { kind: 'stale', text: 'Offline' + waiting, detail: null, fix: null, tone: 'warn' }; }
+      if (s === 'refused') { return { kind: 'error', text: 'Refused', detail: st.reason || null, fix: 'reconnect', tone: 'bad' }; }
+      if (s === 'closed') { return { kind: 'stale', text: st.suspended ? 'Paused' + waiting : 'Closed' + waiting, detail: null, fix: 'reconnect', tone: 'muted' }; }
+      if (s === 'connecting' || s === 'idle') { return { kind: 'empty', text: 'Connecting' + waiting, detail: null, fix: null, tone: 'muted' }; }
+      if (f.missed) { return { kind: 'stale', text: 'Missed ' + f.missed.toLocaleString('en-US') + (f.missed === 1 ? ' update' : ' updates'), detail: null, fix: 'refresh', tone: 'warn' }; }
+      return { kind: 'empty', text: 'Live' + waiting, detail: null, fix: null, tone: 'good' };
+    }
+    function statusBadge(el, events, o) {
+      const opts = Object.assign({ tickMs: 1000 }, o);
+      const doc = el.ownerDocument, clock = events.clock;
+      let st = { state: events.state, at: clock.now(), waitMs: null, reason: null };
+      let missed = 0, spoken = '', lastSpoke = -Infinity, pending = null, timer = null, stopped = false;
+      el.classList.add('drishti-events-badge');
+      const box = h(doc, 'span', { cls: 'drishti-events-badge-state' });
+      const voice = h(doc, 'span', { cls: 'drishti-visually-hidden', attrs: { role: 'status', 'aria-live': 'polite' } });
+      el.appendChild(box);
+      el.appendChild(voice);
+      const say = (words) => {
+        if (words === spoken) { return; }
+        const now = clock.now();
+        if (now - lastSpoke >= ANNOUNCE_EVERY_MS) { voice.textContent = words; spoken = words; lastSpoke = now; pending = null; return; }
+        pending = words;
+      };
+      const waitingNow = () => { const m = events.metrics(); return (m.outbox && m.outbox.count) || 0; };
+      const draw = () => {
+        if (stopped) { return; }
+        const v = badgeView(st, { missed: missed, waiting: waitingNow(), now: clock.now(), server: !!events._adapter('server') });
+        const fix = v.fix === 'reconnect' ? { label: 'Reconnect now', run: () => events.reconnect() }
+          : v.fix === 'refresh' ? { label: 'Refresh', run: () => { missed = 0; if (opts.refresh) { opts.refresh(); } draw(); } } : undefined;
+        showState(box, v.kind, { text: v.text, detail: v.detail || undefined, fix: fix, compact: true, role: 'presentation' });
+        box.setAttribute('data-tone', v.tone);
+        el.setAttribute('data-state', st.state);
+        say(v.text.replace(/ in \d+ s$/, ''));
+        if (pending && clock.now() - lastSpoke >= ANNOUNCE_EVERY_MS) { say(pending); }
+      };
+      const offs = [
+        events.on('$events.state', (m) => { st = Object.assign({ at: clock.now() }, m.data); draw(); }),
+        events.on('$events.gap', (m) => { const g = m.data; if (!g.recoverable) { missed += Math.max(0, (g.to - g.from + 1) || 0); draw(); } })
+      ];
+      const tick = () => { timer = clock.setTimeout(() => { draw(); tick(); }, opts.tickMs); };
+      tick();
+      draw();
+      return () => {
+        stopped = true;
+        offs.forEach((f) => f());
+        if (timer !== null) { clock.clearTimeout(timer); }
+        if (box.parentNode === el) { el.removeChild(box); }
+        if (voice.parentNode === el) { el.removeChild(voice); }
+        el.classList.remove('drishti-events-badge');
+      };
+    }
+    return { "ANNOUNCE_EVERY_MS": ANNOUNCE_EVERY_MS, "badgeView": badgeView, "statusBadge": statusBadge };
+  })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
     var coreSegment = __lib("drishti-core").segment;
@@ -2953,7 +3290,7 @@
       }
       return events;
     }
-    return { "registerMock": registerMock, "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "SEQUENCE_LIMITS": __m["src/drishti_sequence.js"].SEQUENCE_LIMITS, "Sequencer": __m["src/drishti_sequence.js"].Sequencer, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink, "OUTBOX_DEFAULTS": __m["src/drishti_outbox.js"].OUTBOX_DEFAULTS, "Outbox": __m["src/drishti_outbox.js"].Outbox, "memoryStore": __m["src/drishti_outbox.js"].memoryStore, "indexedDbStore": __m["src/drishti_outbox.js"].indexedDbStore, "TABS_VERSION": __m["src/drishti_tabs.js"].TABS_VERSION, "TabsScope": __m["src/drishti_tabs.js"].TabsScope, "Leader": __m["src/drishti_tabs.js"].Leader, "HUB_TIMING": __m["src/drishti_shared-hub.js"].HUB_TIMING, "HubHost": __m["src/drishti_shared-hub.js"].HubHost, "HubClient": __m["src/drishti_shared-hub.js"].HubClient, "serveSharedWorker": __m["src/drishti_shared-hub.js"].serveSharedWorker, "workerAddress": __m["src/drishti_shared-hub.js"].workerAddress };
+    return { "registerMock": registerMock, "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "SEQUENCE_LIMITS": __m["src/drishti_sequence.js"].SEQUENCE_LIMITS, "Sequencer": __m["src/drishti_sequence.js"].Sequencer, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink, "OUTBOX_DEFAULTS": __m["src/drishti_outbox.js"].OUTBOX_DEFAULTS, "Outbox": __m["src/drishti_outbox.js"].Outbox, "memoryStore": __m["src/drishti_outbox.js"].memoryStore, "indexedDbStore": __m["src/drishti_outbox.js"].indexedDbStore, "TABS_VERSION": __m["src/drishti_tabs.js"].TABS_VERSION, "TabsScope": __m["src/drishti_tabs.js"].TabsScope, "Leader": __m["src/drishti_tabs.js"].Leader, "HUB_TIMING": __m["src/drishti_shared-hub.js"].HUB_TIMING, "HubHost": __m["src/drishti_shared-hub.js"].HubHost, "HubClient": __m["src/drishti_shared-hub.js"].HubClient, "serveSharedWorker": __m["src/drishti_shared-hub.js"].serveSharedWorker, "workerAddress": __m["src/drishti_shared-hub.js"].workerAddress, "BUCKETS": __m["src/drishti_metrics.js"].BUCKETS, "Histogram": __m["src/drishti_metrics.js"].Histogram, "Rate": __m["src/drishti_metrics.js"].Rate, "Recorder": __m["src/drishti_trace.js"].Recorder, "explainWhy": __m["src/drishti_trace.js"].explainWhy, "ANNOUNCE_EVERY_MS": __m["src/drishti_status.js"].ANNOUNCE_EVERY_MS, "badgeView": __m["src/drishti_status.js"].badgeView, "statusBadge": __m["src/drishti_status.js"].statusBadge };
   })();
   return Object.freeze(Object.assign({ library: "drishti-events", version: "3.0.0-rc.1" }, __m["src/drishti_index.js"]));
 });

@@ -17,7 +17,7 @@
    path: heard once (a message that two scopes bring is delivered once), the where filter, the kind's check, the latest value kept, the
    flow (conflation, the buffer, delivery now or per frame) and finally the listeners: the function given, feeds (subscribe(fn): the data,
    so a grid's connectLive and liveSource take a subscription as a feed), handlers by kind, and async iterators. */
-import { EventError, AbortError, makeMessage, isMessage, isOwnTopic } from './drishti_envelope.js';
+import { EventError, AbortError, makeMessage, isMessage, isOwnTopic, matches } from './drishti_envelope.js';
 import { createFlow, GridSink } from './drishti_flow.js';
 
 /** A subscription's states. */
@@ -81,6 +81,7 @@ export class Subscription {
     if (isOwnTopic(this.pattern)) {
       this._scopes = [];
       this._offs.push(ev._own.on(this.pattern, (m) => this._accept(m)));
+      if (matches(this.pattern, '$events.metrics') && ev._tickMetrics) { ev._tickMetrics(); }
       this._setState('active');
       return;
     }
@@ -181,10 +182,12 @@ export class Subscription {
     const ev = this.events, n = Array.isArray(item) ? item.length : 1;
     this.stats.delivered += n;
     ev.counters.delivered += n;
+    const t0 = now();
     this._fns.slice().forEach((f) => {
       try { f(item); } catch (e) { ev._error(e, { topic: Array.isArray(item) ? this.pattern : item.topic, where: 'listener', pattern: this.pattern }); }
     });
     if (this._iters.size) { (Array.isArray(item) ? item : [item]).forEach((m) => this._iters.forEach((it) => it.push(m))); }
+    if (ev._delivered) { ev._delivered(this, item, this._fns.length + this._iters.size, now() - t0); }
   }
 
   /**
@@ -291,3 +294,6 @@ export class Subscription {
     this.events._forget(this);
   }
 }
+
+/** @private a fine clock for the listeners' time (performance.now where there is one) */
+function now() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }

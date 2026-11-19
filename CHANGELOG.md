@@ -19,6 +19,13 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **drishti-events** (eventing step E9, observability): `metrics()` in groups (`connection`, `in` with rates over 1 s and 10 s, bytes,
+  counts by pattern, delivery latency and listener time; `out` with acknowledgement time and requests; `drops` by reason; `stores`),
+  fixed log-scale histograms (`Histogram`, `Rate`); `$events.metrics` once a second while someone listens, and `onMetrics`; the recorder
+  (the last 5,000 headers, `recorder: { max, payloads }`, `false` to turn it off); `events.explain({ topic, key, id, since })` answers
+  "why didn't I get it?" in steps, the first that failed marked (drawn with `renderExplain`); `statusBadge(el, events)` ("Live",
+  "Reconnecting in 4 s" with Reconnect now, "Offline: 3 changes waiting", "Missed 12 updates" with Refresh), announcing at most once in
+  five seconds; the library's sheet `drishti_events.css`.
 - **drishti-events** (eventing step E8, the mock server): `MockServer` speaks the protocol through an in-memory transport (`connect(server)`
   or `connect('mock:')`): numbered streams, retained values, a replay log, acknowledged and deduplicated publishes, `reply(pattern, fn)`,
   `every(ms, fn)`, and faults on purpose (`drop`, `partition(ms)`, `lose(n)`, `duplicate(n)`, `delay(ms)`, `reorder(n)`, `refuse(what)`,

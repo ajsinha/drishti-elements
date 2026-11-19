@@ -35,6 +35,9 @@ export { OVERFLOW_RULES, HIDDEN_DELIVERY_MS, Conflater, GridSink } from './drish
 export { OUTBOX_DEFAULTS, Outbox, memoryStore, indexedDbStore } from './drishti_outbox.js';
 export { TABS_VERSION, TabsScope, Leader } from './drishti_tabs.js';
 export { HUB_TIMING, HubHost, HubClient, serveSharedWorker, workerAddress } from './drishti_shared-hub.js';
+export { BUCKETS, Histogram, Rate } from './drishti_metrics.js';
+export { Recorder, explainWhy } from './drishti_trace.js';
+export { ANNOUNCE_EVERY_MS, badgeView, statusBadge } from './drishti_status.js';
 
 /** @private the mock servers of this page by address (connect('mock:') finds one) */
 const MOCKS = new Map();

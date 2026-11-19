@@ -26,6 +26,8 @@ import { EventError, TimeoutError, AbortError, makeMessage, isMessage, IdMaker, 
 import { systemClock } from './drishti_timing.js';
 import { Subscription } from './drishti_subscription.js';
 import { TabsScope, broadcastChannelOf } from './drishti_tabs.js';
+import { Histogram, Rate } from './drishti_metrics.js';
+import { Recorder, explainWhy } from './drishti_trace.js';
 
 /** The scopes a message travels in. */
 export const SCOPES = Object.freeze(['page', 'tabs', 'server']);
@@ -112,6 +114,8 @@ const PAGE_REPLIERS = [];
  * @property {boolean} [tabs=true] false: no 'tabs' scope (it is there wherever the browser has a BroadcastChannel)
  * @property {Object} [env] stand-ins for the browser's classes (BroadcastChannel, SharedWorker, locks, WebSocket, ...) in tests
  * @property {function(Error, Object): void} [onError] also told of every error published on $events.error
+ * @property {(import('./drishti_trace.js').RecorderOptions|boolean)} [recorder] the recorder behind explain and the inspector (false: off)
+ * @property {function(Object): void} [onMetrics] given events.metrics() once a second (a host's own telemetry)
  */
 
 /**
@@ -141,11 +145,19 @@ export class Events {
     /** @private */ this._destroyed = false;
     /** @type {Object} counters the metrics read */
     this.counters = { published: 0, delivered: 0, requests: 0, answered: 0, timedOut: 0, drops: {} };
+    /** @type {Recorder} the last messages' headers and what became of them (explain, the inspector) */
+    this.recorder = new Recorder(this.clock, this.o.recorder === false ? { max: 0 } : Object.assign({ max: this.limits.recorder }, this.o.recorder));
+    /** @private */ this._hist = { latency: new Histogram(), listener: new Histogram(), ack: new Histogram() };
+    /** @private */ this._rateIn = new Rate(this.clock);
+    /** @private */ this._byPattern = new Map();
+    /** @private */ this._slowest = { pattern: null, ms: 0 };
+    /** @private */ this._metricsTimer = null;
     this.page = new ScopedEvents(this, 'page');
     this.tabs = new ScopedEvents(this, 'tabs');
     this.server = new ScopedEvents(this, 'server');
     if (this.o.tabs !== false && broadcastChannelOf(this.o.env)) { this._attach('tabs', new TabsScope(this, { namespace: this.o.namespace, env: this.o.env })); }
     if (this.o.signal) { onAbort(this.o.signal, () => this.destroy()); }
+    if (this.o.onMetrics) { this._tickMetrics(); }
   }
 
   // ---- routes --------------------------------------------------------------------------------------------------------------------
@@ -247,6 +259,8 @@ export class Events {
     if (this._destroyed) { return 0; }
     if (!isMessage(m)) { m = makeMessage(m); }
     if (m.receivedAt === undefined) { m.receivedAt = this.clock.now(); }
+    this._rateIn.add();
+    this.recorder.record(m, 'in');
     if (m.id && this._mine.has(m.id) && m.scope !== 'page') { this._drop('duplicate', m, null, 'this page published it to the page as well'); return 0; }
     const n = this._remote.emit(m.topic, m);
     if (!n) { this._drop('unrouted', m, null, 'no subscription matches ' + m.topic); }
@@ -351,6 +365,7 @@ export class Events {
       if (!to.length) { throw new EventError('scope.invalid', 'a publish needs a scope: page, tabs or server'); }
       if (o.signal && o.signal.aborted) { throw new AbortError('the publish to ' + topic + ' was given up before it was sent'); }
       this.counters.published++;
+      this.recorder.record(m, 'out', to.join('+'));
       if (to.length > 1) { this._remember(m.id); }
       const unrouted = [], waits = [];
       to.forEach((scope) => {
@@ -364,6 +379,7 @@ export class Events {
           (to.indexOf('server') >= 0 ? ' (connect(url) gives it a server)' : ''));
       }
       return Promise.all(waits).then((rs) => {
+        if (waits.length) { this._hist.ack.add(Math.max(0, this.clock.now() - m.time)); }
         const r = { id: m.id, topic: topic, time: m.time, to: to.filter((s) => unrouted.indexOf(s) < 0), acked: rs.every((x) => !x || x.acked !== false) };
         if (unrouted.length) { r.unrouted = unrouted; }
         return r;
@@ -380,6 +396,7 @@ export class Events {
   /** @private the page's bus is the page scope */
   _publishPage(m) {
     const copy = makeMessage(Object.assign({}, m, { scope: 'page', receivedAt: this.clock.now() }));
+    this.recorder.record(copy, 'in');
     this._bus.emit(m.topic, copy);
   }
 
@@ -508,6 +525,9 @@ export class Events {
    */
   _emitOwn(topic, data) {
     const now = this.clock.now();
+    if (topic === '$events.state') { this.recorder.state(data); }
+    else if (topic === '$events.gap') { this.recorder.note(Object.assign({ type: 'gap' }, data)); }
+    else if (topic === '$events.subscription') { this.recorder.note(Object.assign({ type: 'subscription' }, data)); }
     return this._own.emit(topic, makeMessage({ id: this.ids.next(), topic: topic, data: data, time: now, source: this.source, scope: 'page', receivedAt: now }));
   }
 
@@ -520,6 +540,7 @@ export class Events {
    */
   _error(e, about) {
     const d = Object.assign({ error: e, code: (e && e.code) || 'error', detail: (e && (e.detail || e.message)) || String(e) }, about);
+    this.recorder.note({ type: 'error', topic: d.topic || null, where: d.where || null, detail: d.detail, pattern: d.pattern || null });
     if (this.o.onError) { try { this.o.onError(e, d); } catch (x) { /* the host's own */ } }
     if (!this._emitOwn('$events.error', d) && !this.o.onError && typeof console !== 'undefined') {
       console.error('drishti-events: ' + d.detail, e);
@@ -540,6 +561,7 @@ export class Events {
    */
   _drop(reason, m, sub, words) {
     this.counters.drops[reason] = (this.counters.drops[reason] || 0) + 1;
+    this.recorder.dropped(m, reason, words, sub && sub.pattern);
     if (sub) { sub.stats.dropped++; sub.stats.drops[reason] = (sub.stats.drops[reason] || 0) + 1; }
     if (reason !== 'conflated' && this._own.count('$events.drop') + this._own.count('$events.>') > 0) {
       this._emitOwn('$events.drop', { reason: reason, id: m && m.id, topic: m && m.topic, seq: m && m.seq, pattern: sub && sub.pattern, detail: words || reason });
@@ -609,15 +631,64 @@ export class Events {
     const out = { state: this.state, subscriptions: this._subs.size, pendingRequests: this._pending.size, counters: JSON.parse(JSON.stringify(this.counters)) };
     this._adapters.forEach((a, name) => { if (a.metrics) { out[name] = a.metrics(); } });
     if (out.server && out.server.outbox) { out.outbox = out.server.outbox; }
+    const srv = out.server || {}, o = srv.out || {};
+    let undelivered = 0;
+    this._subs.forEach((sub) => { undelivered += sub._flow && typeof sub._flow.size === 'number' ? sub._flow.size : 0; });
+    const byPattern = {};
+    this._byPattern.forEach((n, p) => { byPattern[p] = n; });
+    out.connection = { state: this.state, transport: srv.transport || null, shared: !!srv.shared, connects: srv.connects || 0, reconnects: srv.reconnects || 0,
+      connectedMs: srv.connectedMs || 0, rtt: srv.rtt || { last: null, p50: null, p99: null }, offset: srv.offset === undefined ? null : srv.offset };
+    out.in = Object.assign(this._rateIn.summary(), { bytes: srv.bytesIn || 0, byPattern: byPattern, latency: this._hist.latency.summary(),
+      latencyApproximate: srv.offset == null || this._hist.latency.n < 3,
+      listenerMs: Object.assign(this._hist.listener.summary(), { slowest: this._slowest.pattern }) });
+    out.out = { publishes: this.counters.published, acked: o.acked || 0, retried: o.retried || 0, failed: o.failed || 0, ackMs: this._hist.ack.summary(),
+      requests: { sent: this.counters.requests, answered: this.counters.answered, timedOut: this.counters.timedOut } };
+    out.drops = Object.assign({}, this.counters.drops);
+    out.stores = { undelivered: undelivered, heldForGaps: srv.held || 0, outbox: out.outbox || null, pendingRequests: this._pending.size, recorder: this.recorder.metrics() };
     return out;
   }
 
+  /**
+   * Why a message did or did not reach this page's listeners, in words: the steps (a listener matched, the route, the subscription,
+   * the connection, arrival, validity, kept, the listener ran), the first that failed marked. Draw it with drishti-core's renderExplain.
+   * @param {{topic: string, key: string, id: string, since: number}} query
+   * @returns {Object} an ExplainResult (title, value, steps with ok, failed)
+   */
+  explain(query) { return explainWhy(this, query || {}); }
+
+  /** @private a subscription delivered: the figures of the metrics and the recorder */
+  _delivered(sub, item, listeners, ms) {
+    const now = this.clock.now(), list = Array.isArray(item) ? item : [item];
+    list.forEach((m) => {
+      this.recorder.delivered(m, sub.pattern, listeners);
+      if (typeof m.time === 'number' && m.scope !== 'page') { this._hist.latency.add(Math.max(0, now - m.time)); }
+    });
+    this._hist.listener.add(ms);
+    if (ms > this._slowest.ms) { this._slowest = { pattern: sub.pattern, ms: ms }; }
+    if (this._byPattern.size < 1000 || this._byPattern.has(sub.pattern)) { this._byPattern.set(sub.pattern, (this._byPattern.get(sub.pattern) || 0) + list.length); }
+  }
+
+  /** @private once a second while someone listens to $events.metrics (or onMetrics is given) */
+  _tickMetrics() {
+    if (this._metricsTimer !== null || this._destroyed) { return; }
+    this._metricsTimer = this.clock.setTimeout(() => {
+      this._metricsTimer = null;
+      if (this._destroyed) { return; }
+      const heard = this._own.count('$events.metrics') + this._own.count('$events.>') > 0;
+      if (!heard && !this.o.onMetrics) { return; }
+      const m = this.metrics();
+      if (this.o.onMetrics) { try { this.o.onMetrics(m); } catch (e) { this._ownFailed(e, 'onMetrics'); } }
+      if (heard) { this._emitOwn('$events.metrics', m); }
+      this._tickMetrics();
+    }, 1000);
+  }
   /**
    * Closes the connection, ends every subscription and request, stops answering: the Events is done.
    * @returns {void}
    */
   destroy() {
     if (this._destroyed) { return; }
+    if (this._metricsTimer !== null) { this.clock.clearTimeout(this._metricsTimer); this._metricsTimer = null; }
     Array.from(this._subs).forEach((s) => s.off());
     Array.from(this._pending.values()).forEach((f) => f());
     this._repliers.slice().forEach((r) => { const i = PAGE_REPLIERS.indexOf(r); if (i >= 0) { PAGE_REPLIERS.splice(i, 1); } });
