@@ -19,6 +19,9 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **drishti-events** (step E4): the Sequencer is wired into the connection (order, repeats, gaps with a `replay` frame, `after` on a `sub`, resume,
+  `$events.gap`, a `resync` notice with the subscription `recovering`); `Sequencer` and `SEQUENCE_LIMITS` are exported.
+- **drishti-data**: `FeedMonitor` and `feedBadge` are removed (the sequencer's `stats` replace the monitor; the badge returns as `statusBadge` in step 9).
 - **drishti-core** (eventing step E1): `EventBus` listens to patterns over dotted topics (`*` one segment, a last `>` the rest; exact
   listeners are told first, then patterns, then a lone `*`); new topic helpers `isTopic`, `isPattern`, `topicMatches`, `segment`,
   `unsegment`, `selectionTopic`, `filterTopic`. Linked selection is the topic `ui.selection.<channel>` and the filter model the topic

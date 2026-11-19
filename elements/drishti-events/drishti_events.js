@@ -566,6 +566,158 @@
     }
     return { "OUTBOX_DEFAULTS": OUTBOX_DEFAULTS, "memoryStore": memoryStore, "indexedDbStore": indexedDbStore, "Outbox": Outbox };
   })();
+  /* ---- src/drishti_sequence.js ---- */
+  __m["src/drishti_sequence.js"] = (function () {
+    const SEQUENCE_LIMITS = Object.freeze({ streams: 5000, held: 5000, ids: 2048, gapWaitMs: 2000 });
+    class Sequencer {
+      constructor(o) {
+        if (!o || !o.clock) { throw new TypeError('Sequencer: give the clock'); }
+        const L = SEQUENCE_LIMITS;
+        this.o = Object.assign({ gapWaitMs: L.gapWaitMs, maxHeld: L.held, maxStreams: L.streams, idWindow: L.ids, canReplay: true }, o);
+        this.clock = o.clock;
+        this.streams = new Map();
+        /** @private */ this.ids = new Map();
+        /** @private */ this.watched = new Map();
+        this.stats = { received: 0, gaps: 0, missed: 0, repeats: 0, stale: 0 };
+        this.gaps = [];
+      }
+      state(stream) {
+        let s = this.streams.get(stream);
+        if (s) { this.streams.delete(stream); this.streams.set(stream, s); return s; }              // heard now: the most recent
+        s = { epoch: null, last: null, held: new Map(), timer: null, asked: null, at: 0 };
+        this.streams.set(stream, s);
+        while (this.streams.size > this.o.maxStreams) {
+          const oldest = this.streams.keys().next().value;
+          const gone = this.streams.get(oldest);
+          if (gone.timer != null) { this.clock.clearTimeout(gone.timer); }
+          this.streams.delete(oldest);
+        }
+        return s;
+      }
+      accept(m) {
+        this.stats.received++;
+        this.touch(m);
+        const stream = m.stream || m.topic;
+        if (typeof m.seq !== 'number') { return this.noSeq(m); }
+        const s = this.state(stream);
+        s.at = this.clock.now();
+        if (s.last === null) { s.last = m.seq; return [m]; }                                         // the first heard: where the stream begins for us
+        if (m.seq <= s.last) { this.stats.repeats++; return []; }
+        if (m.seq === s.last + 1) { s.last = m.seq; return [m].concat(this.drain(stream, s)); }
+        if (s.held.has(m.seq)) { this.stats.repeats++; return []; }
+        s.held.set(m.seq, m);                                                                         // a gap: hold it and ask
+        if (s.held.size > this.o.maxHeld) { return this.giveUp(stream, s, 'overflow'); }
+        if (!this.o.canReplay) { return this.giveUp(stream, s, 'no-replay'); }
+        this.ask(stream, s);
+        return [];
+      }
+      noSeq(m) {
+        if (m.id == null) { return [m]; }
+        if (this.ids.has(m.id)) { this.stats.repeats++; return []; }
+        this.ids.set(m.id, true);
+        while (this.ids.size > this.o.idWindow) { this.ids.delete(this.ids.keys().next().value); }
+        return [m];
+      }
+      drain(stream, s) {
+        const out = [];
+        while (s.held.has(s.last + 1)) { s.last++; out.push(s.held.get(s.last)); s.held.delete(s.last); }
+        if (!s.held.size) { this.stopTimer(s); s.asked = null; }
+        return out;
+      }
+      ask(stream, s) {
+        const first = Math.min(...s.held.keys());
+        if (s.asked === null || first < s.asked) {
+          s.asked = first;
+          if (this.o.onReplay) { this.o.onReplay({ stream: stream, epoch: s.epoch, from: s.last + 1, to: first - 1 }); }
+        }
+        if (s.timer == null) { s.timer = this.clock.setTimeout(() => { s.timer = null; this.release(this.giveUp(stream, s, 'timeout')); }, this.o.gapWaitMs); }
+      }
+      giveUp(stream, s, reason) {
+        this.stopTimer(s);
+        const out = [];
+        Array.from(s.held.keys()).sort((a, b) => a - b).forEach((seq) => {
+          if (seq > s.last + 1) { this.lose(stream, s.last + 1, seq - 1, false); }
+          s.last = seq;
+          out.push(s.held.get(seq));
+        });
+        s.held.clear();
+        s.asked = null;
+        if (this.o.onResync) { this.o.onResync({ stream: stream, reason: reason }); }
+        return out;
+      }
+      lose(stream, from, to, recoverable) {
+        const g = { stream: stream, from: from, to: to, recoverable: recoverable };
+        this.stats.gaps++;
+        this.stats.missed += to - from + 1;
+        this.gaps.push(g);
+        if (this.gaps.length > 100) { this.gaps.shift(); }
+        if (this.o.onGap) { this.o.onGap(g); }
+      }
+      release(list) { if (list.length && this.o.onRelease) { this.o.onRelease(list); } }
+      stopTimer(s) { if (s.timer != null) { this.clock.clearTimeout(s.timer); s.timer = null; } }
+      serverGap(g) {
+        const s = this.state(g.stream);
+        if (g.recoverable && this.o.canReplay) {
+          if (this.o.onReplay) { this.o.onReplay({ stream: g.stream, epoch: s.epoch, from: g.from, to: g.to }); }
+          if (s.timer == null && s.held.size) { s.timer = this.clock.setTimeout(() => { s.timer = null; this.release(this.giveUp(g.stream, s, 'timeout')); }, this.o.gapWaitMs); }
+          return [];
+        }
+        if (s.last !== null && g.to > s.last) {
+          this.lose(g.stream, Math.max(g.from, s.last + 1), g.to, false);
+          s.last = g.to;
+        }
+        if (this.o.onResync) { this.o.onResync({ stream: g.stream, reason: 'gap' }); }
+        return this.drain(g.stream, s);
+      }
+      positions() {
+        const out = {};
+        this.streams.forEach((s, k) => { if (s.last !== null) { out[k] = { epoch: s.epoch, seq: s.last }; } });
+        return out;
+      }
+      resumed(streams, recovered) {
+        const resync = [];
+        Object.keys(streams || {}).forEach((name) => {
+          const s = this.state(name), now = streams[name];
+          const fresh = s.last === null || (s.epoch != null && now.epoch !== s.epoch);
+          if (fresh || !recovered) {
+            s.held.clear(); this.stopTimer(s); s.asked = null;
+            s.last = now.seq;
+            if (s.epoch != null || !recovered) { resync.push(name); if (this.o.onResync) { this.o.onResync({ stream: name, reason: recovered ? 'epoch' : 'unrecovered' }); } }
+          }
+          s.epoch = now.epoch;
+        });
+        return resync;
+      }
+      reset() {
+        this.streams.forEach((s) => this.stopTimer(s));
+        this.streams.clear(); this.ids.clear();
+        this.stats = { received: 0, gaps: 0, missed: 0, repeats: 0, stale: 0 };
+        this.gaps = [];
+      }
+      touch(m) {
+        const key = m.stream || m.topic;
+        const w = this.watched.get(key);
+        if (w) { w.at = this.clock.now(); if (w.stale) { w.stale = false; if (this.o.onFresh) { this.o.onFresh(); } } this.arm(key, w); }
+      }
+      arm(key, w) {
+        if (w.timer != null) { this.clock.clearTimeout(w.timer); }
+        w.timer = this.clock.setTimeout(() => {
+          w.timer = null;
+          if (!w.stale) { w.stale = true; this.stats.stale++; if (this.o.onStale) { this.o.onStale({ stream: key, quietMs: this.clock.now() - w.at }); } }
+        }, w.staleMs);
+      }
+      watch(stream, staleMs) {
+        if (!(staleMs > 0)) { return () => {}; }
+        const w = { at: this.clock.now(), staleMs: staleMs, timer: null, stale: false };
+        this.watched.set(stream, w);
+        this.arm(stream, w);
+        return () => { if (w.timer != null) { this.clock.clearTimeout(w.timer); } this.watched.delete(stream); };
+      }
+      isStale(stream) { const w = this.watched.get(stream); return !!(w && w.stale); }
+      held() { let n = 0; this.streams.forEach((s) => { n += s.held.size; }); return n; }
+    }
+    return { "SEQUENCE_LIMITS": SEQUENCE_LIMITS, "Sequencer": Sequencer };
+  })();
   /* ---- src/drishti_transport-sse.js ---- */
   __m["src/drishti_transport-sse.js"] = (function () {
     var EventError = __m["src/drishti_envelope.js"].EventError;
@@ -704,6 +856,7 @@
     var PROTOCOL_VERSION = __m["src/drishti_protocol.js"].PROTOCOL_VERSION, SUBPROTOCOL = __m["src/drishti_protocol.js"].SUBPROTOCOL, CLOSE_CODES = __m["src/drishti_protocol.js"].CLOSE_CODES, decodeFrames = __m["src/drishti_protocol.js"].decodeFrames, checkFrame = __m["src/drishti_protocol.js"].checkFrame, messageOf = __m["src/drishti_protocol.js"].messageOf, rawMessage = __m["src/drishti_protocol.js"].rawMessage, encodeFrames = __m["src/drishti_protocol.js"].encodeFrames;
     var websocketTransport = __m["src/drishti_transport-ws.js"].websocketTransport;
     var Outbox = __m["src/drishti_outbox.js"].Outbox;
+    var Sequencer = __m["src/drishti_sequence.js"].Sequencer;
     var eventSourceTransport = __m["src/drishti_transport-sse.js"].eventSourceTransport, fetchTransport = __m["src/drishti_transport-sse.js"].fetchTransport;
     const CONNECTION_STATES = Object.freeze(['idle', 'connecting', 'open', 'reconnecting', 'offline', 'refused', 'closed']);
     const SECRET_PARAMS = Object.freeze(['token', 'access_token', 'jwt', 'key', 'apikey', 'secret', 'password', 'auth', 'signature']);
@@ -719,6 +872,47 @@
           'connect\'s auth option (a token) or headers instead');
       }
       return url;
+    }
+    class ConnectionSequencer {
+      constructor(conn) {
+        this.conn = conn;
+        this.deliver = null;
+        this.seq = new Sequencer({ clock: conn.clock, gapWaitMs: conn.o.gapWaitMs, maxHeld: conn.o.maxHeld,
+          onReplay: (r) => { conn._send([{ t: 'replay', stream: r.stream, epoch: r.epoch, from: r.from, to: r.to }]); },
+          onGap: (g) => { conn.events._emitOwn('$events.gap', { stream: g.stream, from: g.from, to: g.to, recoverable: g.recoverable }); },
+          onResync: (r) => { this._resync([r.stream], r.reason); },
+          onRelease: (list) => { list.forEach((m) => this._out(m)); } });
+      }
+      _out(m) { if (this.deliver) { this.deliver(m); } }
+      _can() { this.seq.o.canReplay = this.conn.can.indexOf('replay') >= 0; }
+      _resync(streams, reason) {
+        this.conn.subs.forEach((s) => {
+          if (!s.streams || !streams.some((x) => Object.prototype.hasOwnProperty.call(s.streams, x))) { return; }
+          s.sub._setState('recovering');
+          const now = this.conn.clock.now();
+          s.sub._accept(makeMessage({ id: this.conn.events.ids.next(), topic: streams[0], data: { streams: streams, reason: reason },
+            time: now, source: 'server', kind: 'resync', scope: 'server', receivedAt: now }));
+          s.sub._setState('active');
+        });
+      }
+      accept(m, deliver) { this.deliver = deliver; this._can(); this.seq.accept(m).forEach(deliver); }
+      after(sub, s) {
+        const all = this.seq.positions(), out = {};
+        Object.keys(s.streams || {}).forEach((k) => { if (all[k]) { out[k] = all[k]; } });
+        return out;
+      }
+      subscribed(sub, f) {
+        const s = this.conn.subs.get(Number(f.id)) || this.conn.subs.get(f.id);
+        if (s && !s.streams) { s.streams = f.streams || {}; }
+        this.seq.resumed(f.streams || {}, f.recovered !== false);
+      }
+      gap(f) {
+        this._can();
+        if (f.recoverable) { this.conn.events._emitOwn('$events.gap', { stream: f.stream, from: f.from, to: f.to, recoverable: true }); }
+        this.seq.serverGap(f).forEach((m) => this._out(m));
+      }
+      forget() { this.seq.reset(); }
+      unsubscribed() {}
     }
     class Connection {
       constructor(events, address, o) {
@@ -758,7 +952,7 @@
         this.transport = null;
         this.timers = { retry: null, ping: null, refresh: null, rescope: null, pump: null, idle: null };
         this.suspended = false;
-        /** @type {Object} */ this.sequencer = null;
+        /** @type {Object} */ this.sequencer = new ConnectionSequencer(this);
         this.stats = { connects: 0, reconnects: 0, openedAt: 0, connectedMs: 0, framesIn: 0, framesOut: 0, bytesIn: 0, unknown: 0, bad: 0,
           rtt: null, rtts: [], offset: null, published: 0, acked: 0, retried: 0, failed: 0 };
         this._onOnline = () => { if (this.state === 'offline' || this.state === 'reconnecting') { this._connectNow('connect'); } };
@@ -2056,7 +2250,7 @@
       }
       return events;
     }
-    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink, "OUTBOX_DEFAULTS": __m["src/drishti_outbox.js"].OUTBOX_DEFAULTS, "Outbox": __m["src/drishti_outbox.js"].Outbox, "memoryStore": __m["src/drishti_outbox.js"].memoryStore, "indexedDbStore": __m["src/drishti_outbox.js"].indexedDbStore };
+    return { "segment": segment, "connect": connect, "SCOPES": __m["src/drishti_events-hub.js"].SCOPES, "OWN_TOPICS": __m["src/drishti_events-hub.js"].OWN_TOPICS, "DEFAULT_LIMITS": __m["src/drishti_events-hub.js"].DEFAULT_LIMITS, "Events": __m["src/drishti_events-hub.js"].Events, "ScopedEvents": __m["src/drishti_events-hub.js"].ScopedEvents, "Topic": __m["src/drishti_events-hub.js"].Topic, "createEvents": __m["src/drishti_events-hub.js"].createEvents, "covers": __m["src/drishti_events-hub.js"].covers, "SUBSCRIPTION_STATES": __m["src/drishti_subscription.js"].SUBSCRIPTION_STATES, "Subscription": __m["src/drishti_subscription.js"].Subscription, "EventError": __m["src/drishti_envelope.js"].EventError, "TimeoutError": __m["src/drishti_envelope.js"].TimeoutError, "AbortError": __m["src/drishti_envelope.js"].AbortError, "MAX_ID_LENGTH": __m["src/drishti_envelope.js"].MAX_ID_LENGTH, "isMessage": __m["src/drishti_envelope.js"].isMessage, "checkTopic": __m["src/drishti_envelope.js"].checkTopic, "checkPattern": __m["src/drishti_envelope.js"].checkPattern, "matches": __m["src/drishti_envelope.js"].matches, "patternsOverlap": __m["src/drishti_envelope.js"].patternsOverlap, "shape": __m["src/drishti_envelope.js"].shape, "systemClock": __m["src/drishti_timing.js"].systemClock, "testClock": __m["src/drishti_timing.js"].testClock, "seededRandom": __m["src/drishti_timing.js"].seededRandom, "Backoff": __m["src/drishti_timing.js"].Backoff, "Heartbeat": __m["src/drishti_timing.js"].Heartbeat, "CONNECTION_STATES": __m["src/drishti_connection.js"].CONNECTION_STATES, "SECRET_PARAMS": __m["src/drishti_connection.js"].SECRET_PARAMS, "Connection": __m["src/drishti_connection.js"].Connection, "checkAddress": __m["src/drishti_connection.js"].checkAddress, "base64url": __m["src/drishti_connection.js"].base64url, "PROTOCOL_VERSION": __m["src/drishti_protocol.js"].PROTOCOL_VERSION, "SUBPROTOCOL": __m["src/drishti_protocol.js"].SUBPROTOCOL, "CLIENT_FRAMES": __m["src/drishti_protocol.js"].CLIENT_FRAMES, "SERVER_FRAMES": __m["src/drishti_protocol.js"].SERVER_FRAMES, "ERROR_CODES": __m["src/drishti_protocol.js"].ERROR_CODES, "CLOSE_CODES": __m["src/drishti_protocol.js"].CLOSE_CODES, "encodeFrames": __m["src/drishti_protocol.js"].encodeFrames, "decodeFrames": __m["src/drishti_protocol.js"].decodeFrames, "checkFrame": __m["src/drishti_protocol.js"].checkFrame, "SEQUENCE_LIMITS": __m["src/drishti_sequence.js"].SEQUENCE_LIMITS, "Sequencer": __m["src/drishti_sequence.js"].Sequencer, "parseSse": __m["src/drishti_transport-sse.js"].parseSse, "readSse": __m["src/drishti_transport-sse.js"].readSse, "OVERFLOW_RULES": __m["src/drishti_flow.js"].OVERFLOW_RULES, "HIDDEN_DELIVERY_MS": __m["src/drishti_flow.js"].HIDDEN_DELIVERY_MS, "Conflater": __m["src/drishti_flow.js"].Conflater, "GridSink": __m["src/drishti_flow.js"].GridSink, "OUTBOX_DEFAULTS": __m["src/drishti_outbox.js"].OUTBOX_DEFAULTS, "Outbox": __m["src/drishti_outbox.js"].Outbox, "memoryStore": __m["src/drishti_outbox.js"].memoryStore, "indexedDbStore": __m["src/drishti_outbox.js"].indexedDbStore };
   })();
   return Object.freeze(Object.assign({ library: "drishti-events", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

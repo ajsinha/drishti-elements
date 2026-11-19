@@ -37,6 +37,7 @@ import { Backoff, Heartbeat } from './drishti_timing.js';
 import { PROTOCOL_VERSION, SUBPROTOCOL, CLOSE_CODES, decodeFrames, checkFrame, messageOf, rawMessage, encodeFrames } from './drishti_protocol.js';
 import { websocketTransport } from './drishti_transport-ws.js';
 import { Outbox } from './drishti_outbox.js';
+import { Sequencer } from './drishti_sequence.js';
 import { eventSourceTransport, fetchTransport } from './drishti_transport-sse.js';
 
 /** The connection's states. */
@@ -98,6 +99,69 @@ export function checkAddress(url) {
 }
 
 /**
+ * The connection's sequencer seam (step 4) over a Sequencer: order, repeats, gaps and replay per stream, the `after` positions of a `sub`,
+ * resume (subd) with resync notices, and `$events.gap`. A message goes through accept(m, deliver); what the Sequencer holds is delivered
+ * when the range arrives or the wait ends.
+ * @private
+ */
+class ConnectionSequencer {
+  /**
+   * @param {Connection} conn
+   */
+  constructor(conn) {
+    this.conn = conn;
+    this.deliver = null;
+    this.seq = new Sequencer({ clock: conn.clock, gapWaitMs: conn.o.gapWaitMs, maxHeld: conn.o.maxHeld,
+      onReplay: (r) => { conn._send([{ t: 'replay', stream: r.stream, epoch: r.epoch, from: r.from, to: r.to }]); },
+      onGap: (g) => { conn.events._emitOwn('$events.gap', { stream: g.stream, from: g.from, to: g.to, recoverable: g.recoverable }); },
+      onResync: (r) => { this._resync([r.stream], r.reason); },
+      onRelease: (list) => { list.forEach((m) => this._out(m)); } });
+  }
+
+  /** @private */
+  _out(m) { if (this.deliver) { this.deliver(m); } }
+
+  /** @private whether the server offers replay (welcome.can) */
+  _can() { this.seq.o.canReplay = this.conn.can.indexOf('replay') >= 0; }
+
+  /** @private the subscriptions that hear a stream enter `recovering`, are told by a resync notice (to that subscription only), and are active again */
+  _resync(streams, reason) {
+    this.conn.subs.forEach((s) => {
+      if (!s.streams || !streams.some((x) => Object.prototype.hasOwnProperty.call(s.streams, x))) { return; }
+      s.sub._setState('recovering');
+      const now = this.conn.clock.now();
+      s.sub._accept(makeMessage({ id: this.conn.events.ids.next(), topic: streams[0], data: { streams: streams, reason: reason },
+        time: now, source: 'server', kind: 'resync', scope: 'server', receivedAt: now }));
+      s.sub._setState('active');
+    });
+  }
+
+  accept(m, deliver) { this.deliver = deliver; this._can(); this.seq.accept(m).forEach(deliver); }
+
+  after(sub, s) {
+    const all = this.seq.positions(), out = {};
+    Object.keys(s.streams || {}).forEach((k) => { if (all[k]) { out[k] = all[k]; } });
+    return out;
+  }
+
+  subscribed(sub, f) {
+    const s = this.conn.subs.get(Number(f.id)) || this.conn.subs.get(f.id);
+    if (s && !s.streams) { s.streams = f.streams || {}; }
+    this.seq.resumed(f.streams || {}, f.recovered !== false);
+  }
+
+  gap(f) {
+    this._can();
+    if (f.recoverable) { this.conn.events._emitOwn('$events.gap', { stream: f.stream, from: f.from, to: f.to, recoverable: true }); }
+    this.seq.serverGap(f).forEach((m) => this._out(m));
+  }
+
+  forget() { this.seq.reset(); }
+
+  unsubscribed() {}
+}
+
+/**
  * The connection to a server: the 'server' scope of an Events.
  */
 export class Connection {
@@ -146,7 +210,7 @@ export class Connection {
     this.timers = { retry: null, ping: null, refresh: null, rescope: null, pump: null, idle: null };
     /** @type {boolean} closed because the page was put away or hidden too long: opened again when it is shown */
     this.suspended = false;
-    /** @type {Object} */ this.sequencer = null;
+    /** @type {Object} */ this.sequencer = new ConnectionSequencer(this);
     /** @type {Object} the figures the metrics read */
     this.stats = { connects: 0, reconnects: 0, openedAt: 0, connectedMs: 0, framesIn: 0, framesOut: 0, bytesIn: 0, unknown: 0, bad: 0,
       rtt: null, rtts: [], offset: null, published: 0, acked: 0, retried: 0, failed: 0 };

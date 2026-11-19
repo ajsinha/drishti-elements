@@ -290,59 +290,6 @@
     }
     return { "DATA_WORKER": DATA_WORKER, "frameFromWorker": frameFromWorker, "DataWorker": DataWorker };
   })();
-  /* ---- src/drishti_feed-monitor.js ---- */
-  __m["src/drishti_feed-monitor.js"] = (function () {
-    var showState = __lib("drishti-core").showState;
-    class FeedMonitor {
-      constructor(o) {
-        this.o = Object.assign({ seqOf: (m) => (m && typeof m.seq === 'number' ? m.seq : null), staleMs: 15000, now: () => Date.now() }, o);
-        this.last = null;
-        this.stats = { received: 0, gaps: 0, missed: 0, outOfOrder: 0, repeats: 0 };
-        this.gaps = [];
-        this.at = null;
-        this.wasStale = false;
-        this.subs = [];
-      }
-      on(fn) { this.subs.push(fn); return () => { this.subs = this.subs.filter((f) => f !== fn); }; }
-      emit(name, d) { this.subs.forEach((f) => f(name, d || {})); }
-      receive(message) {
-        this.stats.received++;
-        this.at = this.o.now();
-        if (this.wasStale) { this.wasStale = false; this.emit('fresh'); }
-        const s = this.o.seqOf(message);
-        if (s === null) { return; }
-        if (this.last === null) { this.last = s; return; }
-        if (s === this.last + 1) { this.last = s; return; }
-        if (s === this.last) { this.stats.repeats++; this.emit('repeat', { seq: s }); return; }
-        if (s < this.last) { this.stats.outOfOrder++; this.emit('order', { seq: s, after: this.last }); return; }
-        const gap = { from: this.last + 1, to: s - 1, missed: s - this.last - 1 };
-        this.stats.gaps++; this.stats.missed += gap.missed; this.gaps.push(gap);
-        this.last = s;
-        this.emit('gap', gap);
-      }
-      check() {
-        const quiet = this.at === null ? 0 : this.o.now() - this.at, stale = !!this.o.staleMs && this.at !== null && quiet > this.o.staleMs;
-        if (stale && !this.wasStale) { this.wasStale = true; this.emit('stale', { since: this.at, quietMs: quiet }); }
-        return stale;
-      }
-      reset() { this.last = null; this.at = null; this.wasStale = false; this.gaps = []; this.stats = { received: 0, gaps: 0, missed: 0, outOfOrder: 0, repeats: 0 }; }
-      attach(client) { return client.subscribe((m) => this.receive(m)); }
-    }
-    function feedBadge(el, monitor, o) {
-      o = o || {};
-      const win = el.ownerDocument.defaultView;
-      const draw = () => {
-        const stale = monitor.check();
-        if (stale) { showState(el, 'stale', { text: 'No updates', compact: true, since: new Date(monitor.at).toISOString().slice(11, 19), fix: o.refresh ? { label: 'Refresh', run: () => { monitor.reset(); o.refresh(); } } : undefined }); }
-        else if (monitor.gaps.length) { showState(el, 'stale', { text: 'Missed ' + monitor.stats.missed + (monitor.stats.missed === 1 ? ' update' : ' updates'), compact: true, fix: { label: 'Got it', run: () => { monitor.gaps = []; draw(); } } }); }
-        else { showState(el, 'empty', { text: monitor.at === null ? 'Waiting for updates' : 'Live', compact: true }); }
-      };
-      const off = monitor.on(draw), t = win.setInterval(draw, o.tickMs || 2000);
-      draw();
-      return () => { off(); win.clearInterval(t); };
-    }
-    return { "FeedMonitor": FeedMonitor, "feedBadge": feedBadge };
-  })();
   /* ---- src/drishti_sources.js ---- */
   __m["src/drishti_sources.js"] = (function () {
     var compareRows = __lib("drishti-core").compareRows, rowFilter = __lib("drishti-core").rowFilter, isBlank = __lib("drishti-core").isBlank;
@@ -478,7 +425,7 @@
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
 
-    return { "ARROW_MEDIA": __m["src/drishti_arrow.js"].ARROW_MEDIA, "ARROW_VENDOR": __m["src/drishti_arrow.js"].ARROW_VENDOR, "arrowLib": __m["src/drishti_arrow.js"].arrowLib, "readColumn": __m["src/drishti_arrow.js"].readColumn, "DataFrame": __m["src/drishti_arrow.js"].DataFrame, "fromArrow": __m["src/drishti_arrow.js"].fromArrow, "fromArrowTable": __m["src/drishti_arrow.js"].fromArrowTable, "fromJson": __m["src/drishti_arrow.js"].fromJson, "readResponse": __m["src/drishti_arrow.js"].readResponse, "fetchFrame": __m["src/drishti_arrow.js"].fetchFrame, "ArrowClient": __m["src/drishti_arrow.js"].ArrowClient, "binCounts": __m["src/drishti_data-compute.js"].binCounts, "DATA_WORKER": __m["src/drishti_data-worker-client.js"].DATA_WORKER, "frameFromWorker": __m["src/drishti_data-worker-client.js"].frameFromWorker, "DataWorker": __m["src/drishti_data-worker-client.js"].DataWorker, "FeedMonitor": __m["src/drishti_feed-monitor.js"].FeedMonitor, "feedBadge": __m["src/drishti_feed-monitor.js"].feedBadge, "rowRequest": __m["src/drishti_sources.js"].rowRequest, "memorySource": __m["src/drishti_sources.js"].memorySource, "restSource": __m["src/drishti_sources.js"].restSource, "serverSideSource": __m["src/drishti_sources.js"].serverSideSource, "arrowSource": __m["src/drishti_sources.js"].arrowSource, "liveSource": __m["src/drishti_sources.js"].liveSource, "readAll": __m["src/drishti_sources.js"].readAll };
+    return { "ARROW_MEDIA": __m["src/drishti_arrow.js"].ARROW_MEDIA, "ARROW_VENDOR": __m["src/drishti_arrow.js"].ARROW_VENDOR, "arrowLib": __m["src/drishti_arrow.js"].arrowLib, "readColumn": __m["src/drishti_arrow.js"].readColumn, "DataFrame": __m["src/drishti_arrow.js"].DataFrame, "fromArrow": __m["src/drishti_arrow.js"].fromArrow, "fromArrowTable": __m["src/drishti_arrow.js"].fromArrowTable, "fromJson": __m["src/drishti_arrow.js"].fromJson, "readResponse": __m["src/drishti_arrow.js"].readResponse, "fetchFrame": __m["src/drishti_arrow.js"].fetchFrame, "ArrowClient": __m["src/drishti_arrow.js"].ArrowClient, "binCounts": __m["src/drishti_data-compute.js"].binCounts, "DATA_WORKER": __m["src/drishti_data-worker-client.js"].DATA_WORKER, "frameFromWorker": __m["src/drishti_data-worker-client.js"].frameFromWorker, "DataWorker": __m["src/drishti_data-worker-client.js"].DataWorker, "rowRequest": __m["src/drishti_sources.js"].rowRequest, "memorySource": __m["src/drishti_sources.js"].memorySource, "restSource": __m["src/drishti_sources.js"].restSource, "serverSideSource": __m["src/drishti_sources.js"].serverSideSource, "arrowSource": __m["src/drishti_sources.js"].arrowSource, "liveSource": __m["src/drishti_sources.js"].liveSource, "readAll": __m["src/drishti_sources.js"].readAll };
   })();
   return Object.freeze(Object.assign({ library: "drishti-data", version: "2.4.0" }, __m["src/drishti_index.js"]));
 });

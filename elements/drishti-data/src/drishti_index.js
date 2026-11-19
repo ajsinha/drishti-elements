@@ -20,6 +20,5 @@
 export { ARROW_MEDIA, ARROW_VENDOR, arrowLib, readColumn, DataFrame, fromArrow, fromArrowTable, fromJson, readResponse, fetchFrame, ArrowClient } from './drishti_arrow.js';
 export { binCounts } from './drishti_data-compute.js';
 export { DATA_WORKER, frameFromWorker, DataWorker } from './drishti_data-worker-client.js';
-export { FeedMonitor, feedBadge } from './drishti_feed-monitor.js';
 export { rowRequest, memorySource, restSource, serverSideSource, arrowSource, liveSource, readAll } from './drishti_sources.js';
 

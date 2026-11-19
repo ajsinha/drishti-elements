@@ -15021,72 +15021,6 @@ Ends the worker.
 
 Returns `void`.
 
-### drishti_feed-monitor.js
-
-#### class `FeedMonitor`
-
-Counts what a feed delivered and what it missed. Events through on(): gap {from, to, missed}, stale {since}, fresh, order, repeat.
-
-##### `new FeedMonitor(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `[o]` | `FeedMonitorOptions` |  |
-
-##### `FeedMonitor.on(fn)`
-
-Listens to the monitor's events.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `fn` | `function(string, Object): void` |  |
-
-Returns `function(): void`: stops listening.
-
-##### `FeedMonitor.receive(message)`
-
-Takes one message (call it for every message of the feed).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `message` | `Object` |  |
-
-Returns `void`.
-
-##### `FeedMonitor.check()`
-
-Checks the clock: call it on a timer (the badge does); says stale once when the quiet is too long.
-
-Returns `boolean`: whether the feed is stale now.
-
-##### `FeedMonitor.reset()`
-
-Starts again (a new connection with a new numbering).
-
-Returns `void`.
-
-##### `FeedMonitor.attach(client)`
-
-Feeds the monitor from a feed (any {subscribe}, a drishti-events subscription among them).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `client` | `{subscribe: function(function(Object): void): function(): void}` |  |
-
-Returns `function(): void`: stops.
-
-#### `feedBadge(el, monitor, o)`
-
-A small badge for a monitor: "Live", "Stale: nothing for 20 s" with a Refresh, or "Missed 3 updates" (until acknowledged). The badge is a live region.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `el` | `HTMLElement` |  |
-| `monitor` | `FeedMonitor` |  |
-| `[o]` | `{refresh: function(): void, tickMs: number}` | refresh: what Refresh does (resync); tickMs: how often the clock is checked (default 2000) |
-
-Returns `function(): void`: stops.
-
 ### drishti_sources.js
 
 #### `rowRequest(r)`
@@ -15167,14 +15101,6 @@ Every row a request matches, a page at a time up to a limit (what a chart reads 
 Returns `Promise&lt;{rows: Object[], rowCount: number, truncated: boolean}&gt;`.
 
 ### Types of drishti-data
-
-#### `FeedMonitorOptions` : `Object`
-
-| Name | Type | Meaning |
-|---|---|---|
-| `[seqOf]` | `function(Object): ?number` | the sequence number of a message (default: message.seq) |
-| `[staleMs=15000]` | `number` | quiet for this long is stale (0: never) |
-| `[now]` | `function(): number` | the clock (default Date.now) |
 
 #### `RowRequest` : `Object`
 
@@ -19353,6 +19279,92 @@ Checks a server's frame before use: true, or what is wrong in words.
 | `f` | `Object` |  |
 
 Returns `(true\|string)`.
+
+### drishti_sequence.js
+
+#### `SEQUENCE_LIMITS`
+
+The bounds of section 3.8.
+
+#### class `Sequencer`
+
+Orders, deduplicates and repairs the messages of numbered streams.
+
+##### `new Sequencer(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `SequencerOptions` |  |
+
+##### `Sequencer.accept(m)`
+
+Takes one message from the server and says what may be delivered now, in order. A message held for a gap is delivered later through onRelease. A message with no seq is delivered unless its id was seen lately.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` | the message (id, stream, seq ...) |
+
+Returns `Object[]`: the messages to deliver now (possibly none).
+
+##### `Sequencer.serverGap(g)`
+
+A `gap` frame of the server: it did not send this range (a slow client, a trimmed log). A recoverable one is asked for again; one that is not is declared lost, and what follows is delivered.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `g` | `{stream: string, from: number, to: number, recoverable: boolean}` |  |
+
+Returns `Object[]`: messages to deliver now.
+
+##### `Sequencer.positions()`
+
+Where each stream was: the `after` of a `sub` after a reconnect.
+
+Returns `Object&lt;string, {epoch: ?string, seq: number}&gt;`.
+
+##### `Sequencer.resumed(streams, recovered)`
+
+The server's answer to a `sub` (`subd`): the streams as they stand now, and whether everything after `after` will follow. A new epoch, or recovered false, starts the stream again from the server's position and asks for a resync.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `streams` | `Object&lt;string, {epoch: string, seq: number}&gt;` |  |
+| `recovered` | `boolean` |  |
+
+Returns `string[]`: the streams that must resync.
+
+##### `Sequencer.reset()`
+
+Forgets the numbering (a new session with no resume): positions are empty, held messages are dropped.
+
+Returns `void`.
+
+##### `Sequencer.watch(stream, staleMs)`
+
+Says (onStale, once) when a stream is quiet for longer than it should be, and (onFresh) when it speaks again.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `stream` | `string` |  |
+| `staleMs` | `number` | 0 or less: not watched |
+
+Returns `function(): void`: stops watching.
+
+##### `Sequencer.isStale(stream)`
+
+Whether a watched stream is stale now.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `stream` | `string` |  |
+
+Returns `boolean`.
+
+##### `Sequencer.held()`
+
+How many messages wait for a gap, over every stream.
+
+Returns `number`.
 
 ### drishti_transport-sse.js
 
