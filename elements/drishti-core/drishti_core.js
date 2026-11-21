@@ -2003,7 +2003,7 @@
           }
         },
         "drishti-views": {
-          "title": "Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states (error, denied, waiting, computing, stale, failed, empty), the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order), the frames of the live stream applied by identity in one animation frame, navigation in place; the registry of panel kinds",
+          "title": "Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states, the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order); every kind of contract 1 (words, tables, pivots, tabs, charts and maps, the chart engine loaded only when a view has a chart); the frames of the live stream applied by identity in one animation frame, conflated, and a live stream over drishti-events; the <elements-view> element; the fluent builders of views and frames; the registry of panel kinds",
           "bundle": "drishti-views/drishti_views.js",
           "entry": "drishti-views/src/drishti_index.js",
           "global": "views",

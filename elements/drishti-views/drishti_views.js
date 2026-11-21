@@ -769,6 +769,124 @@
     }
     return { "WIDTHS": WIDTHS, "arrange": arrange, "Layout": Layout };
   })();
+  /* ---- src/drishti_views-screen.js ---- */
+  __m["src/drishti_views-screen.js"] = (function () {
+    var h = __lib("drishti-core").h;
+    var drawCell = __m["src/drishti_views-cells.js"].drawCell, updateCell = __m["src/drishti_views-cells.js"].updateCell, say = __m["src/drishti_views-cells.js"].say;
+    function str(v) { return typeof v === 'string' && v ? v : null; }
+    class Screen {
+      constructor(ctx, vm, header) {
+        this.ctx = ctx;
+        this.cells = [];
+        const doc = ctx.doc;
+        this.element = h(doc, 'header', { cls: 'dv-head', attrs: { 'data-header': header } });
+        this.back = h(doc, 'button', { cls: 'dv-back', text: '‹ ' + say(ctx.messages, 'back'), attrs: { type: 'button', hidden: true }, on: { click: () => ctx.back() } });
+        this.title = this.titleLine(vm);
+        this.strip = h(doc, 'dl', { cls: 'dv-strip' });
+        this.status = h(doc, 'div', { cls: 'dv-status', attrs: { role: 'status' } });
+        this.banner = h(doc, 'div', { cls: 'dv-banners' });
+        (Array.isArray(vm.strip) ? vm.strip : []).forEach((c, i) => this.strip.appendChild(this.figure(c, i)));
+        this.setProvenance(vm.provenance);
+        if (header === 'full') {
+          this.element.append(h(doc, 'div', { cls: 'dv-titlebar' }, [this.back, this.title]), this.strip, this.status);
+          const keys = this.keys(vm.keys);
+          if (keys) { this.element.appendChild(keys); }
+        } else if (header === 'strip') {
+          this.element.append(this.strip, this.status);
+        }
+        this.element.appendChild(this.banner);
+        this.strip.hidden = !this.cells.length;
+      }
+      titleLine(vm) {
+        const doc = this.ctx.doc, t = vm.title && typeof vm.title === 'object' ? vm.title : {};
+        const parts = [];
+        if (str(t.pill)) { parts.push(h(doc, 'span', { cls: 'dv-pill', text: t.pill })); }
+        if (str(t.id)) { parts.push(h(doc, 'span', { cls: 'dv-id', text: t.id })); }
+        const out = h(doc, 'h2', { cls: 'dv-title', attrs: { id: this.ctx.uid('title') } }, parts);
+        if (t.with && typeof t.with === 'object') {
+          const w = drawCell(this.ctx, t.with);
+          w.classList.add('dv-with');
+          if (str(t.with.label)) { out.appendChild(h(doc, 'span', { cls: 'dv-with-label', text: t.with.label })); }
+          out.appendChild(w);
+        }
+        if (!parts.length) { out.appendChild(h(doc, 'span', { cls: 'dv-id', text: this.ctx.label })); }
+        return out;
+      }
+      figure(c, i) {
+        const doc = this.ctx.doc;
+        const dd = drawCell(this.ctx, c, 'dd');
+        const fig = h(doc, 'div', { cls: 'dv-fig' + (c && c.emphasis ? ' dv-fig-emph' : ''), attrs: { 'data-index': String(i) } },
+          [h(doc, 'dt', { text: (c && str(c.label)) || '' }), dd]);
+        this.cells[i] = { fig: fig, value: dd, label: fig.firstChild };
+        return fig;
+      }
+      setCell(index, cell) {
+        const at = this.cells[index];
+        if (!at) { return false; }
+        const before = at.value.textContent;
+        at.value = updateCell(this.ctx, at.value, cell);
+        at.label.textContent = (cell && str(cell.label)) || '';
+        at.fig.classList.toggle('dv-fig-emph', !!(cell && cell.emphasis));
+        if (at.value.textContent !== before) { this.ctx.flash(at.value); }
+        return true;
+      }
+      setProvenance(p) {
+        const doc = this.ctx.doc, m = this.ctx.messages, s = this.status;
+        while (s.firstChild) { s.removeChild(s.firstChild); }
+        while (this.banner.firstChild) { this.banner.removeChild(this.banner.firstChild); }
+        p = p && typeof p === 'object' ? p : {};
+        if (p.live === true) { s.appendChild(h(doc, 'span', { cls: 'dv-chip dv-t-ok dv-live', text: say(m, 'live') })); }
+        if (p.stale === true) { s.appendChild(h(doc, 'span', { cls: 'dv-chip dv-t-warn dv-stale-chip', text: say(m, 'stale') })); }
+        if (str(p.businessDate)) { s.appendChild(h(doc, 'span', { cls: 'dv-fact', text: say(m, 'businessDate', { date: p.businessDate }) })); }
+        if (str(p.updatedAt)) {
+          const at = h(doc, 'time', { cls: 'dv-fact', attrs: { datetime: p.updatedAt } });
+          at.textContent = say(m, 'updated', { at: this.ctx.time(p.updatedAt) });
+          s.appendChild(at);
+        }
+        if (str(p.source)) { s.appendChild(h(doc, 'span', { cls: 'dv-fact dv-source', text: p.source })); }
+        if (Number.isInteger(p.masked) && p.masked > 0) { s.appendChild(h(doc, 'span', { cls: 'dv-fact dv-masked', text: say(m, 'masked', { count: p.masked }) })); }
+        s.hidden = !s.firstChild;
+        if (p.partial === true) {
+          const list = Array.isArray(p.missing) ? p.missing.filter((x) => typeof x === 'string') : [];
+          this.banner.appendChild(h(doc, 'div', { cls: 'dv-banner dv-t-warn', attrs: { role: 'note' } },
+            [h(doc, 'strong', { text: say(m, 'partial') }), list.length ? h(doc, 'ul', null, list.map((x) => h(doc, 'li', { text: x }))) : null]));
+        }
+      }
+      setLink(down) {
+        if (!this.link) {
+          this.link = h(this.ctx.doc, 'span', { cls: 'dv-chip dv-t-warn dv-link-state', attrs: { role: 'status' } });
+          this.status.parentNode ? this.status.after(this.link) : this.element.appendChild(this.link);
+        }
+        this.link.hidden = !down;
+        this.link.textContent = down ? say(this.ctx.messages, down) : '';
+      }
+      setDeleted(at) {
+        const old = this.banner.querySelector('.dv-deleted');
+        if (old) { old.remove(); }
+        if (at === null) { return; }
+        const doc = this.ctx.doc;
+        const b = h(doc, 'div', { cls: 'dv-banner dv-deleted dv-t-bad', attrs: { role: 'alert' } }, [say(this.ctx.messages, 'deleted') + (str(at) ? ' · ' + this.ctx.time(at) : '')]);
+        this.banner.insertBefore(b, this.banner.firstChild);
+      }
+      keys(list) {
+        if (!Array.isArray(list) || !list.length) { return null; }
+        const doc = this.ctx.doc;
+        return h(doc, 'nav', { cls: 'dv-keys', attrs: { 'aria-label': say(this.ctx.messages, 'keys') } }, list.filter((k) => k && typeof k === 'object').map((k) => h(doc, 'button', {
+          cls: 'dv-keybtn', attrs: { type: 'button', 'data-key': str(k.key), 'data-action': str(k.action), disabled: k.action === 'denied' },
+          on: { click: () => this.ctx.key(k) } }, [h(doc, 'kbd', { text: str(k.key) || '' }), ' ' + (str(k.label) || '')])));
+      }
+    }
+    function problemCard(ctx, o) {
+      const doc = ctx.doc;
+      const items = (o.issues || []).slice(0, 10).map((x) => h(doc, 'li', { text: x }));
+      return h(doc, 'div', { cls: 'dv-problem', attrs: { role: 'alert' } }, [
+        h(doc, 'strong', { cls: 'dv-problem-title', text: o.title }),
+        o.detail ? h(doc, 'p', { cls: 'dv-problem-detail', text: o.detail }) : null,
+        items.length ? h(doc, 'ul', { cls: 'dv-problem-issues' }, items) : null,
+        o.retry ? h(doc, 'button', { cls: 'dv-retry', text: say(ctx.messages, 'retry'), attrs: { type: 'button' }, on: { click: o.retry } }) : null]);
+    }
+    return { "Screen": Screen, "problemCard": problemCard };
+  })();
   /* ---- src/drishti_views-patch.js ---- */
   __m["src/drishti_views-patch.js"] = (function () {
     const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored']);
@@ -903,124 +1021,6 @@
     }
     function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
     return { "OPS": OPS, "conflate": conflate, "Patcher": Patcher };
-  })();
-  /* ---- src/drishti_views-screen.js ---- */
-  __m["src/drishti_views-screen.js"] = (function () {
-    var h = __lib("drishti-core").h;
-    var drawCell = __m["src/drishti_views-cells.js"].drawCell, updateCell = __m["src/drishti_views-cells.js"].updateCell, say = __m["src/drishti_views-cells.js"].say;
-    function str(v) { return typeof v === 'string' && v ? v : null; }
-    class Screen {
-      constructor(ctx, vm, header) {
-        this.ctx = ctx;
-        this.cells = [];
-        const doc = ctx.doc;
-        this.element = h(doc, 'header', { cls: 'dv-head', attrs: { 'data-header': header } });
-        this.back = h(doc, 'button', { cls: 'dv-back', text: '‹ ' + say(ctx.messages, 'back'), attrs: { type: 'button', hidden: true }, on: { click: () => ctx.back() } });
-        this.title = this.titleLine(vm);
-        this.strip = h(doc, 'dl', { cls: 'dv-strip' });
-        this.status = h(doc, 'div', { cls: 'dv-status', attrs: { role: 'status' } });
-        this.banner = h(doc, 'div', { cls: 'dv-banners' });
-        (Array.isArray(vm.strip) ? vm.strip : []).forEach((c, i) => this.strip.appendChild(this.figure(c, i)));
-        this.setProvenance(vm.provenance);
-        if (header === 'full') {
-          this.element.append(h(doc, 'div', { cls: 'dv-titlebar' }, [this.back, this.title]), this.strip, this.status);
-          const keys = this.keys(vm.keys);
-          if (keys) { this.element.appendChild(keys); }
-        } else if (header === 'strip') {
-          this.element.append(this.strip, this.status);
-        }
-        this.element.appendChild(this.banner);
-        this.strip.hidden = !this.cells.length;
-      }
-      titleLine(vm) {
-        const doc = this.ctx.doc, t = vm.title && typeof vm.title === 'object' ? vm.title : {};
-        const parts = [];
-        if (str(t.pill)) { parts.push(h(doc, 'span', { cls: 'dv-pill', text: t.pill })); }
-        if (str(t.id)) { parts.push(h(doc, 'span', { cls: 'dv-id', text: t.id })); }
-        const out = h(doc, 'h2', { cls: 'dv-title', attrs: { id: this.ctx.uid('title') } }, parts);
-        if (t.with && typeof t.with === 'object') {
-          const w = drawCell(this.ctx, t.with);
-          w.classList.add('dv-with');
-          if (str(t.with.label)) { out.appendChild(h(doc, 'span', { cls: 'dv-with-label', text: t.with.label })); }
-          out.appendChild(w);
-        }
-        if (!parts.length) { out.appendChild(h(doc, 'span', { cls: 'dv-id', text: this.ctx.label })); }
-        return out;
-      }
-      figure(c, i) {
-        const doc = this.ctx.doc;
-        const dd = drawCell(this.ctx, c, 'dd');
-        const fig = h(doc, 'div', { cls: 'dv-fig' + (c && c.emphasis ? ' dv-fig-emph' : ''), attrs: { 'data-index': String(i) } },
-          [h(doc, 'dt', { text: (c && str(c.label)) || '' }), dd]);
-        this.cells[i] = { fig: fig, value: dd, label: fig.firstChild };
-        return fig;
-      }
-      setCell(index, cell) {
-        const at = this.cells[index];
-        if (!at) { return false; }
-        const before = at.value.textContent;
-        at.value = updateCell(this.ctx, at.value, cell);
-        at.label.textContent = (cell && str(cell.label)) || '';
-        at.fig.classList.toggle('dv-fig-emph', !!(cell && cell.emphasis));
-        if (at.value.textContent !== before) { this.ctx.flash(at.value); }
-        return true;
-      }
-      setProvenance(p) {
-        const doc = this.ctx.doc, m = this.ctx.messages, s = this.status;
-        while (s.firstChild) { s.removeChild(s.firstChild); }
-        while (this.banner.firstChild) { this.banner.removeChild(this.banner.firstChild); }
-        p = p && typeof p === 'object' ? p : {};
-        if (p.live === true) { s.appendChild(h(doc, 'span', { cls: 'dv-chip dv-t-ok dv-live', text: say(m, 'live') })); }
-        if (p.stale === true) { s.appendChild(h(doc, 'span', { cls: 'dv-chip dv-t-warn dv-stale-chip', text: say(m, 'stale') })); }
-        if (str(p.businessDate)) { s.appendChild(h(doc, 'span', { cls: 'dv-fact', text: say(m, 'businessDate', { date: p.businessDate }) })); }
-        if (str(p.updatedAt)) {
-          const at = h(doc, 'time', { cls: 'dv-fact', attrs: { datetime: p.updatedAt } });
-          at.textContent = say(m, 'updated', { at: this.ctx.time(p.updatedAt) });
-          s.appendChild(at);
-        }
-        if (str(p.source)) { s.appendChild(h(doc, 'span', { cls: 'dv-fact dv-source', text: p.source })); }
-        if (Number.isInteger(p.masked) && p.masked > 0) { s.appendChild(h(doc, 'span', { cls: 'dv-fact dv-masked', text: say(m, 'masked', { count: p.masked }) })); }
-        s.hidden = !s.firstChild;
-        if (p.partial === true) {
-          const list = Array.isArray(p.missing) ? p.missing.filter((x) => typeof x === 'string') : [];
-          this.banner.appendChild(h(doc, 'div', { cls: 'dv-banner dv-t-warn', attrs: { role: 'note' } },
-            [h(doc, 'strong', { text: say(m, 'partial') }), list.length ? h(doc, 'ul', null, list.map((x) => h(doc, 'li', { text: x }))) : null]));
-        }
-      }
-      setLink(down) {
-        if (!this.link) {
-          this.link = h(this.ctx.doc, 'span', { cls: 'dv-chip dv-t-warn dv-link-state', attrs: { role: 'status' } });
-          this.status.parentNode ? this.status.after(this.link) : this.element.appendChild(this.link);
-        }
-        this.link.hidden = !down;
-        this.link.textContent = down ? say(this.ctx.messages, down) : '';
-      }
-      setDeleted(at) {
-        const old = this.banner.querySelector('.dv-deleted');
-        if (old) { old.remove(); }
-        if (at === null) { return; }
-        const doc = this.ctx.doc;
-        const b = h(doc, 'div', { cls: 'dv-banner dv-deleted dv-t-bad', attrs: { role: 'alert' } }, [say(this.ctx.messages, 'deleted') + (str(at) ? ' · ' + this.ctx.time(at) : '')]);
-        this.banner.insertBefore(b, this.banner.firstChild);
-      }
-      keys(list) {
-        if (!Array.isArray(list) || !list.length) { return null; }
-        const doc = this.ctx.doc;
-        return h(doc, 'nav', { cls: 'dv-keys', attrs: { 'aria-label': say(this.ctx.messages, 'keys') } }, list.filter((k) => k && typeof k === 'object').map((k) => h(doc, 'button', {
-          cls: 'dv-keybtn', attrs: { type: 'button', 'data-key': str(k.key), 'data-action': str(k.action), disabled: k.action === 'denied' },
-          on: { click: () => this.ctx.key(k) } }, [h(doc, 'kbd', { text: str(k.key) || '' }), ' ' + (str(k.label) || '')])));
-      }
-    }
-    function problemCard(ctx, o) {
-      const doc = ctx.doc;
-      const items = (o.issues || []).slice(0, 10).map((x) => h(doc, 'li', { text: x }));
-      return h(doc, 'div', { cls: 'dv-problem', attrs: { role: 'alert' } }, [
-        h(doc, 'strong', { cls: 'dv-problem-title', text: o.title }),
-        o.detail ? h(doc, 'p', { cls: 'dv-problem-detail', text: o.detail }) : null,
-        items.length ? h(doc, 'ul', { cls: 'dv-problem-issues' }, items) : null,
-        o.retry ? h(doc, 'button', { cls: 'dv-retry', text: say(ctx.messages, 'retry'), attrs: { type: 'button' }, on: { click: o.retry } }) : null]);
-    }
-    return { "Screen": Screen, "problemCard": problemCard };
   })();
   /* ---- src/drishti_views-live.js ---- */
   __m["src/drishti_views-live.js"] = (function () {
@@ -1420,6 +1420,51 @@
       return handle.load(source);
     }
     return { "SPECS": SPECS, "ViewHandle": ViewHandle, "paint": paint };
+  })();
+  /* ---- src/drishti_views-element.js ---- */
+  __m["src/drishti_views-element.js"] = (function () {
+    var paint = __m["src/drishti_views-paint.js"].paint;
+    const VIEW_ELEMENT = 'elements-view';
+    const VIEW_ATTRIBUTES = Object.freeze(['src', 'density', 'header', 'panels', 'locale', 'validate', 'label', 'live']);
+    function define(o) {
+      o = o || {};
+      const w = o.window || (typeof window !== 'undefined' ? window : null), tag = o.tag || VIEW_ELEMENT;
+      if (!w || !w.customElements || !w.HTMLElement || w.customElements.get(tag)) { return false; }
+      class ElementsView extends w.HTMLElement {
+        static get observedAttributes() { return VIEW_ATTRIBUTES.slice(); }
+        constructor() { super(); this._vm = null; this._options = {}; this.handle = null; this._queued = false; }
+        connectedCallback() { this.repaint(); }
+        disconnectedCallback() { if (this.handle) { this.handle.dispose(); this.handle = null; } }
+        attributeChangedCallback(name, old, value) { if (old !== value && this.isConnected) { this.repaint(); } }
+        set viewModel(vm) { this._vm = vm || null; if (this.isConnected) { this.repaint(); } }
+        get viewModel() { return this.handle && this.handle.viewModel ? this.handle.viewModel : this._vm; }
+        set options(o) { this._options = o || {}; if (this.isConnected) { this.repaint(); } }
+        get options() { return this._options; }
+        repaint() {
+          if (this._queued) { return; }
+          this._queued = true;
+          Promise.resolve().then(() => { this._queued = false; if (this.isConnected) { this.draw(); } });
+        }
+        draw() {
+          const source = this._vm || this.getAttribute('src') || this.inline();
+          if (!source) { return; }
+          const o = Object.assign({}, this._options);
+          ['density', 'header', 'locale', 'validate', 'label'].forEach((a) => { if (this.hasAttribute(a)) { o[a] = this.getAttribute(a); } });
+          if (this.hasAttribute('panels')) { o.panels = this.getAttribute('panels').split(',').map((s) => s.trim()).filter(Boolean); }
+          if (this.getAttribute('live')) { o.live = Object.assign({}, o.live || {}, { url: this.getAttribute('live') }); }
+          this.handle = paint(this, source, o);
+          this.handle.ready.then(() => this.dispatchEvent(new w.CustomEvent('elements-view:painted', { detail: { handle: this.handle }, bubbles: true, composed: true })));
+        }
+        inline() {
+          const s = this.querySelector('script[type="application/json"]');
+          if (!s) { return null; }
+          try { return JSON.parse(s.textContent); } catch (e) { return null; }
+        }
+      }
+      w.customElements.define(tag, ElementsView);
+      return true;
+    }
+    return { "VIEW_ELEMENT": VIEW_ELEMENT, "VIEW_ATTRIBUTES": VIEW_ATTRIBUTES, "define": define };
   })();
   /* ---- src/drishti_views-words.js ---- */
   __m["src/drishti_views-words.js"] = (function () {
@@ -2008,8 +2053,10 @@
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
+    var defineElement = __m["src/drishti_views-element.js"].define;
     function registerKind(name, def) { defineKind(name, def); }
-    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink };
+    function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }
+    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.0.0" }, __m["src/drishti_index.js"]));
 });

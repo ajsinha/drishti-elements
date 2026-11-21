@@ -32,7 +32,7 @@ version above (not Drishti's own).
 | [drishti-chart](#drishti-chart) | The chart: one engine-neutral spec over the vendored ECharts (the general kinds, the maps from world to every country's first-level regions, the card and studio modes, the map's ranking and table modes), Explain on any mark, the data table, export, linked selection and live updates; Vega-Lite translated into the spec |
 | [drishti-graph](#drishti-graph) | The graph: networks cyclic or acyclic on a canvas for thousands of nodes; force (seeded), layered (DAG), radial, circular and grouped layouts; zoom, pan, minimap and fit; neighbours expanded on demand; the shortest path; groups collapsed by an attribute and filters by type; size and colour by a measure with a legend; pin, multi-select and lasso; a selection panel with Explain; linked selection; export (PNG, SVG, data); keyboard and an adjacency table; live updates; the lineage preset; the view's graph panel |
 | [drishti-events](#drishti-events) | Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests) |
-| [drishti-views](#drishti-views) | Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states (error, denied, waiting, computing, stale, failed, empty), the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order), the frames of the live stream applied by identity in one animation frame, navigation in place; the registry of panel kinds |
+| [drishti-views](#drishti-views) | Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states, the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order); every kind of contract 1 (words, tables, pivots, tabs, charts and maps, the chart engine loaded only when a view has a chart); the frames of the live stream applied by identity in one animation frame, conflated, and a live stream over drishti-events; the &lt;elements-view&gt; element; the fluent builders of views and frames; the registry of panel kinds |
 
 ## drishti-core
 
@@ -21467,6 +21467,26 @@ Stops the subscription (and the connection it made).
 
 Returns `void`.
 
+### drishti_views-element.js
+
+#### `VIEW_ELEMENT`
+
+The element's tag.
+
+#### `VIEW_ATTRIBUTES`
+
+The attributes the element reads (each as the option of the same name; live is the events address).
+
+#### `define(o)`
+
+Registers &lt;elements-view&gt; (or another tag) in a window's custom elements; nothing when the window has none or the tag is taken.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{tag: string, window: Object}` | tag: another name for a host's own; window: default the page's |
+
+Returns `boolean`: whether it was registered now.
+
 ### drishti_index.js
 
 #### `registerKind(name, def)`
@@ -21483,6 +21503,16 @@ Returns `void`.
 ```js
 registerKind('note', { paint(body, panel, ctx) { body.textContent = panel.data.text; } });
 ```
+
+#### `install(root)`
+
+Registers &lt;elements-view&gt; in a page (the bundle calls it when it loads); nothing under Node.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `root` | `Object` | the page's window |
+
+Returns `void`.
 
 ### Types of drishti-views
 

@@ -40,3 +40,12 @@ export { LIVE_KINDS, LiveLink } from './drishti_views-live.js';
  * @example registerKind('note', { paint(body, panel, ctx) { body.textContent = panel.data.text; } });
  */
 export function registerKind(name, def) { defineKind(name, def); }
+export { VIEW_ELEMENT, VIEW_ATTRIBUTES, define } from './drishti_views-element.js';
+import { define as defineElement } from './drishti_views-element.js';
+
+/**
+ * Registers <elements-view> in a page (the bundle calls it when it loads); nothing under Node.
+ * @param {Object} root the page's window
+ * @returns {void}
+ */
+export function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }

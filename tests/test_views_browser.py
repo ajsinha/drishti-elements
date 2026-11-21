@@ -526,3 +526,26 @@ def test_live_from_a_plain_stream_through_raw_mode(browsers):
         await pg.wait_for_function("() => " + ROOT + ".querySelector('[data-panel=facts] dd').textContent === 'Raw view'", timeout=10000)
         assert (await pg.evaluate("window.__harness.Fake.last.url")).startswith("https://example.org/views/A-7")
     run(browsers, body, "view=V002")
+
+
+def test_the_elements_view_element_inline_property_attributes_and_leaving_the_page(browsers):
+    async def body(pg):
+        assert await pg.evaluate("!!customElements.get('elements-view')")
+        await pg.evaluate("""(v) => new Promise((done) => {
+            const el = document.createElement('elements-view'), s = document.createElement('script');
+            s.type = 'application/json'; s.textContent = JSON.stringify(v); el.appendChild(s); el.id = 'ev1';
+            el.setAttribute('panels', 'facts,fig'); el.setAttribute('header', 'none');
+            el.addEventListener('elements-view:painted', () => done(), { once: true });
+            document.body.appendChild(el); })""", KINDS_VIEW)
+        got = await pg.evaluate("""() => { const R = document.getElementById('ev1').shadowRoot;
+            return [[...R.querySelectorAll('.dv-panel')].map((p) => p.dataset.panel), R.querySelector('.dv-head').dataset.header, !!document.getElementById('ev1').handle]; }""")
+        assert got == [["facts", "fig"], "none", True]
+        await pg.evaluate("""() => new Promise((done) => { const el = document.getElementById('ev1');
+            el.addEventListener('elements-view:painted', () => done(), { once: true }); el.setAttribute('panels', 'rows'); })""")
+        assert await pg.evaluate("[...document.getElementById('ev1').shadowRoot.querySelectorAll('.dv-panel')].map((p) => p.dataset.panel)") == ["rows"]
+        await pg.evaluate("""(v) => new Promise((done) => { const el = document.getElementById('ev1'), w = JSON.parse(JSON.stringify(v));
+            w.panels[0].data.fields[0].text = 'Prop'; el.removeAttribute('panels'); el.addEventListener('elements-view:painted', () => done(), { once: true }); el.viewModel = w; })""", KINDS_VIEW)
+        assert await pg.evaluate("document.getElementById('ev1').shadowRoot.querySelector('[data-panel=facts] dd').textContent") == "Prop"
+        await pg.evaluate("() => { window.__h = document.getElementById('ev1').handle; document.getElementById('ev1').remove(); }")
+        assert await pg.evaluate("window.__h.disposed") is True
+    run(browsers, body, "view=V002")
