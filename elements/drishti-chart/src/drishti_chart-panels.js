@@ -216,7 +216,7 @@ function donut(d, t) {
     tooltip: tip(t, { trigger: 'item', formatter: (p) => esc(p.name) + ': <b>' + esc(p.data.text) + '</b> (' + p.percent + '%)' }),
     title: { text: d.total || '', left: 'center', top: 'middle', textStyle: { color: t.ink, fontSize: 13, fontWeight: 600 } },
     series: [{ type: 'pie', radius: ['52%', '78%'], avoidLabelOverlap: true, label: { show: false }, itemStyle: { borderColor: t.surface, borderWidth: 1 },
-      data: bars.map((b, i) => ({ name: b.label, value: Math.abs(b.value), text: b.text, itemStyle: { color: colours[i % colours.length] } })) }] };
+      data: bars.map((b, i) => ({ name: b.label, value: Math.abs(b.value), text: b.text, bar: b, itemStyle: { color: colours[i % colours.length] } })) }] };
 }
 
 function surfaceOption(d, t, view) {
@@ -258,5 +258,51 @@ const BUILD = { line: (d, t) => line(d, t, 'line'), area: (d, t) => line(d, t, '
 export function panelOption(kind, data, tokens, size, view) {
   const b = BUILD[kind];
   if (!b) { throw new Error('no panel chart ' + kind + ' (' + Object.keys(BUILD).join(', ') + ')'); }
-  return b(data || {}, tokens, size || { width: 800, height: 360 }, view);
+  return elementTooltips(b(data || {}, tokens, size || { width: 800, height: 360 }, view));
+}
+
+/**
+ * Makes every tooltip of a chart option an element built with the DOM: the engine writes a markup string with style attributes, which a
+ * strict content security policy (no 'unsafe-inline' for styles) blocks. A formatter's markup string is parsed inertly with its style
+ * attributes dropped; with no formatter, a heading and one line per series with its swatch (set through the DOM's style object).
+ * @param {Object} option the engine's option (changed and returned)
+ * @returns {Object}
+ */
+export function elementTooltips(option) {
+  const fix = (tip) => {
+    if (!tip || typeof tip !== 'object' || tip.show === false) { return; }
+    const doc = globalThis.document;
+    if (!doc) { return; }
+    const f = tip.formatter;
+    tip.extraCssText = '';
+    tip.formatter = (p, ...rest) => {
+      const out = typeof f === 'function' ? f(p, ...rest) : null;
+      if (out && typeof out === 'object') { return out; }
+      const box = doc.createElement('div');
+      if (typeof out === 'string') {
+        const tpl = doc.createElement('template');
+        tpl.innerHTML = out;
+        tpl.content.querySelectorAll('[style]').forEach((n) => n.removeAttribute('style'));
+        box.appendChild(tpl.content);
+        return box;
+      }
+      const list = Array.isArray(p) ? p : [p];
+      const head = doc.createElement('div');
+      head.textContent = String((list[0] && (list[0].axisValueLabel !== undefined ? list[0].axisValueLabel : list[0].name)) || '');
+      box.appendChild(head);
+      list.forEach((q) => {
+        if (!q || (q.seriesName || '').startsWith('__')) { return; }
+        const row = doc.createElement('div'), sw = doc.createElement('i'), b = doc.createElement('b');
+        if (typeof q.color === 'string') { sw.style.setProperty('background', q.color); }
+        sw.style.setProperty('display', 'inline-block'); sw.style.setProperty('width', '8px'); sw.style.setProperty('height', '8px'); sw.style.setProperty('margin-right', '6px');
+        const v = Array.isArray(q.value) ? q.value[q.value.length - 1] : q.value;
+        b.textContent = ' ' + (num(v) ? panelCompact(v) : String(v == null ? '' : v));
+        row.appendChild(sw); row.appendChild(doc.createTextNode(q.seriesName || '')); row.appendChild(b);
+        box.appendChild(row);
+      });
+      return box;
+    };
+  };
+  if (option) { fix(option.tooltip); (Array.isArray(option.series) ? option.series : []).forEach((s) => fix(s && s.tooltip)); }
+  return option;
 }

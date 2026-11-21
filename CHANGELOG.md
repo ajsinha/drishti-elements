@@ -19,6 +19,11 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Donut clicks and tooltips under a strict CSP** (drishti-views, drishti-chart): the donut shape of an hbar fires `bar-click` on the slice's bar exactly as the
+  bar form does (`set` and `on` lists, contract 1.2; each slice carries its bar). The panel charts' tooltips are elements built with the DOM
+  (`elementTooltips`; no markup string, no style attribute), so no chart tooltip needs `'unsafe-inline'` for styles; the chart-click browser test
+  now asserts zero CSP violations instead of skipping the check.
+
 - **State and effects** (drishti-views, ViewModel contract 1.2, the pin moved to drishti-rachana `g2/integration` c89e068; the painter's side of
   Rachana's I1): the painter keeps `state[]`; a click on a table or tree row (depth first through `children`), an hbar bar, a timeline event, a
   figure (metric, gauge, kv, status) or a chart point (scatter, waterfall, candlestick, a line or area's x position) runs the mark's `set` or `on`

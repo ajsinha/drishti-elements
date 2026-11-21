@@ -89,3 +89,14 @@ for (const c of CASES) {
     });
   });
 }
+
+test('the donut shape of an hbar: a slice carries its bar, so a click names the bar by its own object', async () => {
+  const C = await import('../../elements/drishti-chart/src/drishti_index.js');
+  const bars = [{ label: 'A', value: 3, text: '3', set: { d: 'A' } }, { label: 'skipped', value: null }, { label: 'C', value: 1, text: '1', on: { 'bar-click': [{ do: 'notify', text: 'x' }] } }];
+  const opt = C.panelOption('donut', { bars }, { surface: '#fff', border: '#ccc', ink: '#000', muted: '#888', mono: 'monospace', palette: ['#1', '#2'] }, null);
+  const data = opt.series[0].data;
+  assert.equal(data.length, 2);                                       // a bar with no value draws no slice
+  assert.equal(data[1].bar, bars[2]);                                  // the slice is found again in the panel's bars (index 2, not 1)
+  assert.equal(V.marksOf({ kind: 'hbar', data: { shape: 'donut', bars } }).indexOf(data[1].bar), 2);
+  assert.equal(V.triggerFor('hbar'), 'bar-click');
+});

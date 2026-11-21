@@ -17413,6 +17413,16 @@ Returns `void`.
 
 The panel kinds drawn with the engine.
 
+#### `elementTooltips(option)`
+
+Makes every tooltip of a chart option an element built with the DOM: the engine writes a markup string with style attributes, which a strict content security policy (no 'unsafe-inline' for styles) blocks. A formatter's markup string is parsed inertly with its style attributes dropped; with no formatter, a heading and one line per series with its swatch (set through the DOM's style object).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `option` | `Object` | the engine's option (changed and returned) |
+
+Returns `Object`.
+
 #### `escapeTip(s)`
 
 Text made safe for a tooltip (the engine writes tooltips as markup).
@@ -21803,6 +21813,18 @@ Goes back to the view before the last one opened in place.
 
 Returns `boolean`: whether there was one.
 
+##### `ViewHandle.fire(panel, trigger, mark)`
+
+Fires a trigger on a mark of a panel as a click does (a row, a bar, a point, a step, an event, a candle, a figure): the mark's effect list runs in order (set, toggle, clear on the state; notify and host go to the host's hooks), the state goes back to the host's bind, and the panels the changed states' reads name are drawn again from the ViewModel it answers. Triggers run one after the other.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `string` | the panel's id |
+| `trigger` | `string` | row-click, bar-click or point-click |
+| `[mark=0]` | `number` | the mark's place, in the order the specification counts them |
+
+Returns `Promise&lt;{effects: Object[], problems: Object[], state: Object&lt;string, *&gt;}&gt;`: effects as run; problems: RCH-5001 for a panel, trigger or mark the screen does not have (nothing runs).
+
 ##### `ViewHandle.metrics()`
 
 Paint times and counts: firstPaintMs, readyMs, paints, patches applied, ignored and dropped, lastApplyMs.
@@ -21848,6 +21870,94 @@ const view = paint(document.getElementById('orders'), '/views/orders.json'); vie
 The kinds that have a painter, in the order they were registered.
 
 Returns `string[]`.
+
+### drishti_views-state.js
+
+#### class `StateStore`
+
+The screen's state values as the ViewModel's state[] gave them and as the effects changed them.
+
+##### `StateStore.load(states)`
+
+Takes the ViewModel's state[] (replacing every value: the host's bind is the truth).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `states` | `Object[]` |  |
+
+Returns `void`.
+
+##### `StateStore.get(id)`
+
+Returns `*`: a state's value (null when empty or unknown).
+
+##### `StateStore.values()`
+
+Returns `Object&lt;string, *&gt;`: id to value, the empty ones left out.
+
+##### `StateStore.request()`
+
+Returns `Object&lt;string, ?string&gt;`: the state.&lt;id&gt; parameters of the next bind, without the prefix (an empty value is not carried).
+
+##### `StateStore.readers(ids)`
+
+Returns `string[]`: the panels (and strip or title) that read any of the states, each once, or null when one of them does not say.
+
+##### `StateStore.run(effects)`
+
+Runs an effect list on the values, in order. set, toggle and clear change them (a state the ViewModel does not hold is made); notify and host change nothing and are handed back for the host. Answers the effects as run: {do, state, value} for the three, the effect itself for the two.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `effects` | `Object[]` |  |
+
+Returns `{ran: Object[], changed: string[]}`.
+
+#### `marksOf(panel)`
+
+The marks of a panel in the order the specification counts them: a table's rows (depth first through children), an hbar's bars, a chart's points, steps, events or candles, a line or area chart's x positions, the one mark of a metric, gauge or fields panel. Each mark is {set, on, ev} (the ViewModel's own objects, or the pieces beside x of a line or area chart).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `Object` |  |
+
+Returns `Object[]`.
+
+#### `effectsOf(mark, trigger)`
+
+The effect list a mark carries for a trigger: its `on` list when it has one, else its `set` map written as set effects.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `mark` | `Object` |  |
+| `trigger` | `string` |  |
+
+Returns `Object[]`.
+
+#### `hasEffects(mark)`
+
+Whether a mark carries any effect (set or on) at all, for the cursor and the keyboard.
+
+#### `triggerFor(kind)`
+
+The trigger a kind's marks fire, or null when it fires none.
+
+#### `requestText(v)`
+
+A value as a bind request carries it: text, a list's items joined by commas; null when there is none.
+
+#### `resolveFire(panel, id, trigger, mark)`
+
+Checks a trigger against the screen as the specification's fire cases do. Answers the marks and the effects, or the refusal (RCH-5001: a panel, trigger or mark the screen does not have; nothing runs).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `?Object` | the panel as drawn, or null when the screen has none of that id |
+| `id` | `string` | the panel's id as asked |
+| `trigger` | `string` |  |
+| `[mark=0]` | `number` |  |
+
+Returns `{problems: Object[], effects?: Object[]}`.
 
 ### drishti_views-words.js
 
@@ -22491,6 +22601,7 @@ Returns `void`.
 | `[geo]` | `(function(): Promise&lt;Object&gt;\|boolean)` | the map helper of map panels (world, region, find, option, codeOf): by default drishti-chart's geo part (loaded the first time a view has a map, with the vendored Natural Earth shapes); a host's own function overrides it; false: no maps (a map panel says so in words) |
 | `[mapsBase]` | `string` | the folder of the map shapes for the default helper (default: the static root's vendor/echarts/maps/) |
 | `[gl]` | `function(): Promise&lt;void&gt;` | loads the 3D engine for a surface's 3D view |
+| `[host]` | `{notify: ?function(Object, Object): void, run: ?function(Object, Object): void, bind: ?function(Object): *}` | the host's hooks for the screen's state and effects (contract 1.2). notify(effect, where) shows a notify effect {do, text, tone}; run(effect, where) runs a host effect {do, action, with} (Elements never runs one); bind({state, params}) is the next bind after a click wrote state: state is every value as text (null: cleared, its default stands), params the same as state.&lt;id&gt; request parameters; it answers the new ViewModel (or a promise of one), of which only the panels the changed states' reads name are drawn again. Without bind the values are kept and nothing is drawn again. where is {panel, trigger, mark}. |
 | `[live]` | `import('./drishti_views-live.js').LiveOptions` | the view's live stream over drishti-events (subscribed after the first paint) |
 
 #### `ViewIssue` : `Object`
