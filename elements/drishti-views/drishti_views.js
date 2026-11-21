@@ -374,7 +374,7 @@
       tooDeep: 'Panels nest at most four deep',
       dataTable: 'Data table',
       noCharts: 'Charts are not available on this page',
-      noMaps: 'Maps need the page\'s map helper (the option geo)',
+      noMaps: 'Maps are turned off on this page',
       linkConnecting: 'connecting',
       linkReconnecting: 'reconnecting',
       linkOffline: 'offline',
@@ -1088,7 +1088,7 @@
   })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
-    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded;
+    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart;
     var CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
     var validate = __m["src/drishti_views-validate.js"].validate, formatIssue = __m["src/drishti_views-validate.js"].formatIssue;
     var MESSAGES = __m["src/drishti_views-cells.js"].MESSAGES, say = __m["src/drishti_views-cells.js"].say, safeHref = __m["src/drishti_views-cells.js"].safeHref;
@@ -1144,7 +1144,7 @@
           flash: (node) => self.flash(node),
           library: (name) => self.library(name),
           charts: () => self.charts(),
-          can: (what) => (what === 'geo' ? typeof o.geo === 'function' : false),
+          can: (what) => (what === 'geo' ? o.geo !== false : false),
           time: (iso) => {
             const d = new Date(iso);
             if (isNaN(d.getTime())) { return String(iso); }
@@ -1380,11 +1380,16 @@
           this.chartsP = this.library('drishti-chart').then((C) => {
             if (this.disposed) { throw new Error('disposed'); }
             this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
-              tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: o.geo, gl: o.gl, graph: () => this.library('drishti-graph') });
+              tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
             return this.panelCharts;
           });
         }
         return this.chartsP;
+      }
+      geoHelper() {
+        const o = this.options, given = o.libraries && o.libraries['drishti-chart:geo'], win = this.el.ownerDocument.defaultView;
+        const part = given ? Promise.resolve(given) : (loaded('drishti-chart:geo') ? Promise.resolve(loaded('drishti-chart:geo')) : loadPart('drishti-chart', 'geo'));
+        return part.then((P) => P.geoHelper({ base: o.mapsBase || staticUrl('vendor/echarts/maps/'), engine: () => win.echarts }));
       }
       setLink(down) {
         this.linkState = down;

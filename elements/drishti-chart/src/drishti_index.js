@@ -39,7 +39,7 @@ export { buildLollipop, buildTrace3d, buildSegmented, buildMatrix, canDraw3d, en
 export { trackValues, trackColour, categoryCells, addTracks } from './drishti_chart-tracks.js';
 export { segmentOf, scatterOverlays } from './drishti_chart-overlays.js';
 export { frameValues, frameRows, reducedMotion, FrameBar } from './drishti_chart-frames.js';
-export { equalEarth, albers, plateCarree, projectGeometry, coreExtent, countryProjection, US_INSETS, prepareRegions, prepareWorld, findPlace,
+export { equalEarth, albers, plateCarree, projectGeometry, coreExtent, countryProjection, US_INSETS, prepareRegions, prepareWorld, findPlace, locate,
   createGeoLoader, holdAntimeridian, fitView } from './drishti_chart-geo.js';
 export { WORLD_REGIONS } from './drishti_world-regions.js';
 export { REGION_START_LEVELS, isRegionLevel, regionOf, regionName, prepareRegionLevel, bounds } from './drishti_chart-regions.js';

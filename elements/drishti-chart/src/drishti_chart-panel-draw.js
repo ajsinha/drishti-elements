@@ -16,7 +16,7 @@
 /* Draws a rendered view's panel charts (moved here from the client renderer's m/draw.js and m/charts.js drawMap): it finds the chart
    containers a host made (data-r-chart, the panel's kind and data on el.__drishti), draws each with the engine the host loads, keeps
    them sized and themed, hands a click on a point, a node or a place that names an entity to the host, switches a surface between its
-   heatmap and 3D, draws a map from the console's shapes (drishti_geomap.js, injected) and hands a graph panel to drishti-graph (loaded
+   heatmap and 3D, draws a map with a map helper (the option geo: drishti-chart's geo part, or a host's own) and hands a graph panel to drishti-graph (loaded
    by the host's graph hook: drishti-chart does not import it). One chart that cannot be drawn says so in words and leaves the others.
    Every engine call of a panel chart is in this module. */
 import { panelOption, panelTokens, panelCompact } from './drishti_chart-panels.js';
@@ -26,9 +26,9 @@ const upper = (v) => String(v == null ? '' : v).trim().toUpperCase();
 const panelOf = (el) => { const p = el.closest('.pnl'); return p ? p.getAttribute('data-panel') : null; };
 
 /**
- * Draws a map panel from the console's shapes; resolves with its clickable places and its note.
+ * Draws a map panel with a map helper; resolves with its clickable places and its note.
  * @param {Object} E the engine (echarts)
- * @param {Object} G the console's map helper (drishti_geomap.js: world, region, find, option, codeOf)
+ * @param {Object} G the map helper (world, region, find, option, codeOf): drishti-chart's geo part (createGeoHelper) or a host's own
  * @param {HTMLElement} el the chart's container
  * @param {Object} d the map panel's data (mode, region, highlight, shade, link, unit)
  * @param {Object<string, string>} t panelTokens of the view
@@ -64,7 +64,7 @@ export function drawMap(E, G, el, d, t, onLink, chartsOut) {
     }
     const chart = E.getInstanceByDom(el) || E.init(el, null, { renderer: 'svg' });
     chart.setOption(G.option({ level: isRegion ? 'region' : 'world', geo, t, items, highlight, clickable, linked: !!(link && !link.note),
-      legend: shade && shade.label, unit: d.unit || (shade && shade.unit) || '', numText: panelCompact }), true);
+      legend: shade && shade.label, unit: d.unit || (shade && shade.unit) || '', numText: panelCompact, width: el.clientWidth || 800, height: el.clientHeight || 400 }), true);
     if (!chartsOut.includes(chart)) { chartsOut.push(chart); }
     el.__places = { make, clickable };
     if (!el.__clicks) {
@@ -87,7 +87,8 @@ export function drawMap(E, G, el, d, t, onLink, chartsOut) {
  * @typedef {Object} PanelChartsOptions
  * @property {function(): Promise<Object>} engine loads the engine (ECharts) and resolves with it (the host's loader: its own policy for scripts)
  * @property {function(): Promise<void>} [gl] loads ECharts GL (the surface in 3D); without it a 3D surface is drawn as its heatmap
- * @property {function(): Promise<Object>} [geo] the console's map helper (drishti_geomap.js); without it a map says it did not load
+ * @property {function(): Promise<Object>} [geo] resolves with the map helper (loadPart('drishti-chart', 'geo').then((P) => P.geoHelper()), or a
+ *   host's own of the same shape); without it a map says it did not load
  * @property {function(): Promise<Object>} [graph] loads drishti-graph and resolves with its API (drawGraphPanel draws a graph panel); without
  *   it a graph panel says it did not load
  * @property {function(Object, HTMLElement): void} [onLink] a point, a node or a place that names an entity was clicked ({kind, id}, the container)

@@ -16,8 +16,8 @@
 /* The kinds of charts and maps. line, area, waterfall, histogram, scatter, candlestick, surface, graph, map and hbar's donut are
    drawn by drishti-chart's panel charts (and a graph by drishti-graph): one drawing of each, loaded the first time a view has such a
    panel (drishti-core's loader: a page that shows only words and tables never loads a chart engine). hbar's bars and gauge are drawn
-   as elements (a bar's width, a meter). Every chart carries a data table, its text alternative, closed until opened. A map needs the
-   host's map helper (options.geo); without it the panel says so in words. */
+   as elements (a bar's width, a meter). Every chart carries a data table, its text alternative, closed until opened. A map draws with
+   drishti-chart's geo part and the vendored shapes (or the host's map helper, options.geo); geo: false turns maps off, in words. */
 import { h } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';

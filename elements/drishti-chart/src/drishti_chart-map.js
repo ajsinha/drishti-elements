@@ -25,7 +25,7 @@
 import { registerKind } from './drishti_chart-spec.js';
 import { fieldOf, num, quantileBreaks, classOf } from './drishti_chart-data.js';
 import { rampColour, alpha, formatterFor, textStyle, blend } from './drishti_chart-theme.js';
-import { findPlace, fitView } from './drishti_chart-geo.js';
+import { findPlace, fitView, locate } from './drishti_chart-geo.js';
 import { bounds } from './drishti_chart-regions.js';
 import { rowId } from './drishti_chart-kinds.js';
 
@@ -146,7 +146,7 @@ export function buildMap(spec, rows, geo, env) {
   if (bub) {
     const bf = fieldOf(bub), bm = { field: bf }, bvals = placeValues(spec, rows, geo, bm).places.filter((p) => p.v !== null);
     const pts = [];
-    rows.forEach((r, i) => { if (bub.lon && bub.lat && num(r[bub.lon]) !== null && num(r[bub.lat]) !== null) { pts.push({ xy: geo.project(num(r[bub.lon]), num(r[bub.lat])), v: num(r[bf]), name: r[bub.label || fieldOf(spec.place) || 'code'], r: [i], ids: [rowId(spec, r, i)] }); } });
+    rows.forEach((r, i) => { if (bub.lon && bub.lat && num(r[bub.lon]) !== null && num(r[bub.lat]) !== null) { pts.push({ xy: locate(geo, num(r[bub.lon]), num(r[bub.lat])), v: num(r[bf]), name: r[bub.label || fieldOf(spec.place) || 'code'], r: [i], ids: [rowId(spec, r, i)] }); } });
     if (!bub.lon) {
       bvals.forEach((p) => { const s = shapeByCode.get(p.code), g = geo.points.find((x) => x.code === p.code); pts.push({ xy: s ? centreOf(s) : g ? g.xy : null, v: p.v, name: p.code, r: p.r, ids: p.ids }); });
     }

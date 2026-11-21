@@ -131,7 +131,13 @@ export const MANIFEST = Object.freeze({
       "scripts": [
         "vendor/echarts/echarts.min.js"
       ],
-      "module": "core"
+      "module": "core",
+      "parts": {
+        "geo": {
+          "file": "drishti-chart/drishti_chart-geohelper.js",
+          "css": []
+        }
+      }
     },
     "drishti-graph": {
       "title": "The graph: networks cyclic or acyclic on a canvas for thousands of nodes; force (seeded), layered (DAG), radial, circular and grouped layouts; zoom, pan, minimap and fit; neighbours expanded on demand; the shortest path; groups collapsed by an attribute and filters by type; size and colour by a measure with a legend; pin, multi-select and lasso; a selection panel with Explain; linked selection; export (PNG, SVG, data); keyboard and an adjacency table; live updates; the lineage preset; the view's graph panel",

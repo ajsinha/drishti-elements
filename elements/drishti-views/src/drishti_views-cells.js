@@ -61,7 +61,7 @@ export const MESSAGES = Object.freeze({
   tooDeep: 'Panels nest at most four deep',
   dataTable: 'Data table',
   noCharts: 'Charts are not available on this page',
-  noMaps: 'Maps need the page\'s map helper (the option geo)',
+  noMaps: 'Maps are turned off on this page',
   linkConnecting: 'connecting',
   linkReconnecting: 'reconnecting',
   linkOffline: 'offline',

@@ -136,10 +136,11 @@ export function countryProjection(iso3, features) {
   return { name: 'plate-carree', project: plateCarree((e.lat0 + e.lat1) / 2, e.lon0), extent: e };
 }
 
-/** The insets of the United States: Alaska and Hawaii, each in its own Albers, scaled and set under the lower 48's south-west. */
+/** The insets of the United States: Alaska and Hawaii, each in its own Albers, scaled and set under the lower 48's south-west; area is
+    the lon/lat box ([west, south, east, north]) whose points are drawn in the inset (a point given by its longitude and latitude). */
 export const US_INSETS = Object.freeze({
-  'US-AK': Object.freeze({ proj: Object.freeze({ p1: 55, p2: 65, p0: 50, l0: -154 }), width: 0.25, left: 0 }),
-  'US-HI': Object.freeze({ proj: Object.freeze({ p1: 8, p2: 18, p0: 3, l0: -157 }), width: 0.11, left: 0.27 })
+  'US-AK': Object.freeze({ proj: Object.freeze({ p1: 55, p2: 65, p0: 50, l0: -154 }), width: 0.25, left: 0, area: Object.freeze([-180, 50, -129, 72]) }),
+  'US-HI': Object.freeze({ proj: Object.freeze({ p1: 8, p2: 18, p0: 3, l0: -157 }), width: 0.11, left: 0.27, area: Object.freeze([-161, 18, -154, 23]) })
 });
 
 /** @private moves projected geometry by a scale and an offset */
@@ -182,7 +183,7 @@ export function prepareRegions(geo) {
       const g = affine(g0, k, x0 - b[0] * k, y1 - b[3] * k);
       shapes.push({ type: 'Feature', properties: { name: f.properties.code, fullName: f.properties.name }, geometry: g });
       const fb = bounds(allPoints(g)), pad = 0.01 * W;
-      frames.push({ code: f.properties.code, box: [fb[0] - pad, fb[1] - pad, fb[2] + pad, fb[3] + pad] });
+      frames.push({ code: f.properties.code, box: [fb[0] - pad, fb[1] - pad, fb[2] + pad, fb[3] + pad], k: k, dx: x0 - b[0] * k, dy: y1 - b[3] * k });
     });
     fit = bounds([[fit[0], fit[1]], [fit[2], fit[3]]].concat(frames.map((fr) => [fr.box[2], fr.box[3]])));
   }
@@ -217,7 +218,8 @@ export function fitView(geo, width, height) {
  * @property {Array<{code: string, name: string, point: boolean}>} list every place
  * @property {number[]} fit [minX, minY, maxX, maxY] the view fits
  * @property {number[]} all [minX, minY, maxX, maxY] of everything drawn
- * @property {Array<{code: string, box: number[]}>} frames inset frames (Alaska, Hawaii)
+ * @property {Array<{code: string, box: number[], k: number, dx: number, dy: number}>} frames inset frames (Alaska, Hawaii): the box drawn
+ *   and the scale and offset that place the inset's own projection in it
  */
 
 /**
@@ -243,6 +245,21 @@ export function prepareWorld(geo, pts) {
   });
   const fit = bounds([equalEarth(-180, 0), equalEarth(180, 0), equalEarth(0, 84), equalEarth(0, -58)]);
   return { level: 'world', iso3: null, projection: 'equal-earth', project: equalEarth, shapes: shapes, points: points, by: by, list: list, fit: fit, frames: [], all: drawnBounds(shapes, []) };
+}
+
+/**
+ * A longitude and latitude on a level's map ([x, y] projected): the level's projection, or for the United States a point in Alaska or
+ * Hawaii placed in its inset, as the state's shape is.
+ * @param {RegionGeo} geo
+ * @param {number} lon
+ * @param {number} lat
+ * @returns {number[]}
+ */
+export function locate(geo, lon, lat) {
+  const fr = (geo.frames || []).find((f) => { const a = US_INSETS[f.code] && US_INSETS[f.code].area; return a && f.k && lon >= a[0] && lon <= a[2] && lat >= a[1] && lat <= a[3]; });
+  if (!fr) { return geo.project(lon, lat); }
+  const p = albers(US_INSETS[fr.code].proj)(lon, lat);
+  return [p[0] * fr.k + fr.dx, p[1] * fr.k + fr.dy];
 }
 
 /**

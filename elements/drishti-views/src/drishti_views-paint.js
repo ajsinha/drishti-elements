@@ -19,7 +19,7 @@
    That first paint needs no engine. Then ready. A view is drawn inside a shadow root by default, so a ViewModel's names can neither
    collide with the page nor be styled by it; the theme's tokens still reach it (custom properties inherit).
    The painter computes nothing: every figure arrives as the producer's text. */
-import { h, manifest, staticUrl, loadStyle, load, loaded } from '../../drishti-core/src/drishti_index.js';
+import { h, manifest, staticUrl, loadStyle, load, loaded, loadPart } from '../../drishti-core/src/drishti_index.js';
 import { CONTRACT } from './drishti_views-schema.js';
 import { validate, formatIssue } from './drishti_views-validate.js';
 import { MESSAGES, say, safeHref } from './drishti_views-cells.js';
@@ -53,7 +53,10 @@ let counter = 0;
  * @property {string} [locale] how times are printed (default: the page's)
  * @property {Object<string, Object>} [libraries] the libraries a kind draws with, given by the host (drishti-chart, drishti-graph); else
  *   the ones on the page, else loaded by drishti-core's loader the first time a view has such a panel
- * @property {function(): Promise<Object>} [geo] the host's map helper for map panels (world, region, find, option, codeOf)
+ * @property {(function(): Promise<Object>|boolean)} [geo] the map helper of map panels (world, region, find, option, codeOf): by default
+ *   drishti-chart's geo part (loaded the first time a view has a map, with the vendored Natural Earth shapes); a host's own function
+ *   overrides it; false: no maps (a map panel says so in words)
+ * @property {string} [mapsBase] the folder of the map shapes for the default helper (default: the static root's vendor/echarts/maps/)
  * @property {function(): Promise<void>} [gl] loads the 3D engine for a surface's 3D view
  * @property {import('./drishti_views-live.js').LiveOptions} [live] the view's live stream over drishti-events (subscribed after the first paint)
  */
@@ -109,7 +112,7 @@ export class ViewHandle {
       flash: (node) => self.flash(node),
       library: (name) => self.library(name),
       charts: () => self.charts(),
-      can: (what) => (what === 'geo' ? typeof o.geo === 'function' : false),
+      can: (what) => (what === 'geo' ? o.geo !== false : false),
       time: (iso) => {
         const d = new Date(iso);
         if (isNaN(d.getTime())) { return String(iso); }
@@ -439,11 +442,22 @@ export class ViewHandle {
       this.chartsP = this.library('drishti-chart').then((C) => {
         if (this.disposed) { throw new Error('disposed'); }
         this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
-          tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: o.geo, gl: o.gl, graph: () => this.library('drishti-graph') });
+          tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
         return this.panelCharts;
       });
     }
     return this.chartsP;
+  }
+
+  /**
+   * The default map helper: drishti-chart's geo part (given by the host as libraries['drishti-chart:geo'], else loaded), over the maps folder.
+   * @private
+   * @returns {Promise<Object>}
+   */
+  geoHelper() {
+    const o = this.options, given = o.libraries && o.libraries['drishti-chart:geo'], win = this.el.ownerDocument.defaultView;
+    const part = given ? Promise.resolve(given) : (loaded('drishti-chart:geo') ? Promise.resolve(loaded('drishti-chart:geo')) : loadPart('drishti-chart', 'geo'));
+    return part.then((P) => P.geoHelper({ base: o.mapsBase || staticUrl('vendor/echarts/maps/'), engine: () => win.echarts }));
   }
 
   /**
