@@ -64,6 +64,7 @@ export const MESSAGES = Object.freeze({
   dataFailed: 'The rows could not be read',
   rowsLeft: '{count} more rows were not sent',
   liveRows: '{shown} of {total} rows, live',
+  legend: 'Legend',
   noTables: 'The page handed no live tables (options.tables) for "{name}"',
   noCharts: 'Charts are not available on this page',
   noMaps: 'Maps are turned off on this page',

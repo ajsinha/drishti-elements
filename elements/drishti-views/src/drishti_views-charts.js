@@ -80,6 +80,22 @@ function dataTable(ctx, kind, d) {
   return h(doc, 'details', { cls: 'dv-data' }, [h(doc, 'summary', { text: say(ctx.messages, 'dataTable') }), h(doc, 'div', { cls: 'dv-tbl-scroll' }, [table])]);
 }
 
+const SWATCHES = ['link', 'accent', 'ok', 'neg', 'warn', 'bad', 'muted', 'ink'];
+const TONES = new Set(SWATCHES.concat(['pos']));
+/**
+ * The legend of a line or an area of several series (contract 1.2 layers or by), as elements: each series' name and its colour (the
+ * series' tone, else the palette's place, as drishti-chart draws it); a bar, an area or a point says so in its swatch's shape.
+ */
+function legendOf(ctx, kind, d) {
+  const s = (kind === 'line' || kind === 'area') ? list(d && d.series) : [];
+  if (s.length < 2) { return null; }
+  return h(ctx.doc, 'ul', { cls: 'dv-legend', attrs: { 'aria-label': say(ctx.messages, 'legend') } }, s.map((x, i) => {
+    const tone = x && TONES.has(x.tone) ? x.tone : i > 0 ? SWATCHES[i % SWATCHES.length] : 'link';
+    return h(ctx.doc, 'li', {}, [h(ctx.doc, 'span', { cls: 'dv-sw dv-sw-' + ((x && x.mark) || 'line'), style: { '--dv-sw': 'var(--d-' + tone + ')' } }),
+      str(x && x.label) + (x && x.axis === 'right' ? ' (right)' : '')]);
+  }));
+}
+
 /** A chart drawn by drishti-chart's panel charts. */
 function engineKind(kind) {
   return {
@@ -90,7 +106,8 @@ function engineKind(kind) {
       const el = h(doc, 'div', { cls: 'dv-chart dv-chart-' + k, attrs: { 'data-r-chart': '', role: 'img', 'aria-label': panel.title || panel.id, 'data-view': panel.data.view || null } });
       el.__drishti = { kind: k, data: panel.data };
       let table = dataTable(ctx, kind, panel.data);
-      const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, table]);
+      const legend = legendOf(ctx, kind, panel.data);
+      const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, legend, table]);
       body.appendChild(box);
       let gone = false;
       const words = (w) => { el.removeAttribute('data-r-chart'); el.className = 'dv-chart-off'; el.textContent = w; };

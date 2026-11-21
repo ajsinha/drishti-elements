@@ -35,7 +35,7 @@ import { datasetsOf } from './drishti_views-data.js';
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose', 'point'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -486,7 +486,8 @@ export class ViewHandle {
       this.chartsP = this.library('drishti-chart').then((C) => {
         if (this.disposed) { throw new Error('disposed'); }
         this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
-          tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
+          tokensFrom: () => this.root, onLink: (l) => this.openLink(l),
+          onPoint: (m, el) => { const pn = el.closest('[data-panel]'); this.emit('point', Object.assign({ panel: pn ? pn.getAttribute('data-panel') : null }, m)); }, geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
         return this.panelCharts;
       });
     }

@@ -557,6 +557,7 @@
       dataFailed: 'The rows could not be read',
       rowsLeft: '{count} more rows were not sent',
       liveRows: '{shown} of {total} rows, live',
+      legend: 'Legend',
       noTables: 'The page handed no live tables (options.tables) for "{name}"',
       noCharts: 'Charts are not available on this page',
       noMaps: 'Maps are turned off on this page',
@@ -1493,7 +1494,7 @@
     var datasetsOf = __m["src/drishti_views-data.js"].datasetsOf;
     const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
     const HANDLES = new WeakMap();
-    const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose'];
+    const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose', 'point'];
     const CANCELABLE = { link: true, key: true };
     let counter = 0;
     function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
@@ -1799,7 +1800,8 @@
           this.chartsP = this.library('drishti-chart').then((C) => {
             if (this.disposed) { throw new Error('disposed'); }
             this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
-              tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
+              tokensFrom: () => this.root, onLink: (l) => this.openLink(l),
+              onPoint: (m, el) => { const pn = el.closest('[data-panel]'); this.emit('point', Object.assign({ panel: pn ? pn.getAttribute('data-panel') : null }, m)); }, geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
             return this.panelCharts;
           });
         }
@@ -2403,6 +2405,17 @@
         h(doc, 'tbody', {}, t.rows.map((r) => h(doc, 'tr', {}, r.map((c, i) => h(doc, i ? 'td' : 'th', { text: c, attrs: i ? null : { scope: 'row' } })))))]);
       return h(doc, 'details', { cls: 'dv-data' }, [h(doc, 'summary', { text: say(ctx.messages, 'dataTable') }), h(doc, 'div', { cls: 'dv-tbl-scroll' }, [table])]);
     }
+    const SWATCHES = ['link', 'accent', 'ok', 'neg', 'warn', 'bad', 'muted', 'ink'];
+    const TONES = new Set(SWATCHES.concat(['pos']));
+    function legendOf(ctx, kind, d) {
+      const s = (kind === 'line' || kind === 'area') ? list(d && d.series) : [];
+      if (s.length < 2) { return null; }
+      return h(ctx.doc, 'ul', { cls: 'dv-legend', attrs: { 'aria-label': say(ctx.messages, 'legend') } }, s.map((x, i) => {
+        const tone = x && TONES.has(x.tone) ? x.tone : i > 0 ? SWATCHES[i % SWATCHES.length] : 'link';
+        return h(ctx.doc, 'li', {}, [h(ctx.doc, 'span', { cls: 'dv-sw dv-sw-' + ((x && x.mark) || 'line'), style: { '--dv-sw': 'var(--d-' + tone + ')' } }),
+          str(x && x.label) + (x && x.axis === 'right' ? ' (right)' : '')]);
+      }));
+    }
     function engineKind(kind) {
       return {
         chart: true,
@@ -2412,7 +2425,8 @@
           const el = h(doc, 'div', { cls: 'dv-chart dv-chart-' + k, attrs: { 'data-r-chart': '', role: 'img', 'aria-label': panel.title || panel.id, 'data-view': panel.data.view || null } });
           el.__drishti = { kind: k, data: panel.data };
           let table = dataTable(ctx, kind, panel.data);
-          const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, table]);
+          const legend = legendOf(ctx, kind, panel.data);
+          const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, legend, table]);
           body.appendChild(box);
           let gone = false;
           const words = (w) => { el.removeAttribute('data-r-chart'); el.className = 'dv-chart-off'; el.textContent = w; };

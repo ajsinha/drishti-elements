@@ -337,3 +337,33 @@ def test_a_live_panel_without_live_tables_says_so(browsers):
         await pg.evaluate("(v) => window.__harness.paint(v)", vm)
         await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=blotter]'); return e && /options.tables/.test(e.textContent); }", timeout=30000)
     run_with(browsers, body)
+
+
+def test_a_line_of_several_series_draws_marks_on_two_axes_and_a_click_hands_back_the_row(browsers):
+    vm = view([{"id": "pv", "kind": "line", "title": "P&L against VaR", "span": 12, "height": 10,
+                "data": {"x": ["2026-01-12", "2026-01-13", "2026-01-14"], "ev": ["0", "1", "2"],
+                         "series": [{"label": "P&L", "values": [120000, -260000, 45000], "tone": "accent", "mark": "bar"},
+                                    {"label": "VaR", "values": [310000, 305000, 298000], "tone": "warn", "axis": "right"},
+                                    {"label": "Limit", "values": [400000, 400000, 400000], "tone": "bad", "mark": "point", "axis": "right"}]}},
+               {"id": "cc", "kind": "line", "span": 12, "height": 8,
+                "data": {"x": ["1Y", "5Y", "10Y"], "series": [{"label": "Today", "values": [0.0412, 0.0388, 0.0395], "tone": "link", "ev": ["0", "1", "2"]},
+                                                              {"label": "Yesterday", "values": [0.0409, None, 0.0401], "tone": None, "ev": ["3", None, "4"]}]}}], {})
+    vm["contract"] = "1.2"
+    del vm["datasets"]
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", vm)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=cc] .dv-chart'); return e && window.echarts && window.echarts.getInstanceByDom(e); }", timeout=30000)
+        await frame(pg)
+        got = await ev(pg, """(() => { const o = window.echarts.getInstanceByDom(R.querySelector('[data-panel=pv] .dv-chart')).getOption();
+            return { types: o.series.map((s) => s.type), axes: o.yAxis.length, legend: [...R.querySelectorAll('[data-panel=pv] .dv-legend li')].map((li) => li.textContent) }; })()""")
+        assert got == {"types": ["bar", "line", "scatter"], "axes": 2, "legend": ["P&L", "VaR (right)", "Limit (right)"]}
+        await shot(pg, "views-line-series.png")
+        xy = await ev(pg, """(() => { const el = R.querySelector('[data-panel=cc] .dv-chart'), c = window.echarts.getInstanceByDom(el);
+            c.setOption({ tooltip: { show: false } });   // the engine's tooltip writes inline styles (a known limit under the strict CSP)
+            const p = c.convertToPixel({ seriesIndex: 1 }, [0, 0.0409]), b = el.getBoundingClientRect(); return [b.left + p[0], b.top + p[1]]; })()""")
+        await pg.mouse.click(xy[0], xy[1])
+        await frame(pg)
+        pts = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
+        assert pts and pts[-1]["panel"] == "cc" and pts[-1]["ev"] == "3" and pts[-1]["series"] == "Yesterday", pts
+    run_with(browsers, body)

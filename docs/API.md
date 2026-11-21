@@ -17555,6 +17555,18 @@ Stops listening and disposes of every chart.
 
 Returns `void`.
 
+#### `pointOf(kind, d, p)`
+
+The mark a click on a panel chart chose, when it carries its row (contract 1.2 ev): a line's or an area's point (the series' ev beside x, else the chart's), a surface's cell (its ev), else the record the option item holds (a point, a step, a candle, an event).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` |  |
+| `d` | `Object` | the panel's data |
+| `p` | `Object` | the engine's click (seriesIndex, dataIndex, data) |
+
+Returns `?{ev: string, series: (string\|undefined), set: (Object\|undefined)}`.
+
 ### drishti_chart-element.js
 
 #### `CHART_ELEMENT`
@@ -17696,6 +17708,7 @@ A chart's frames.
 | `[geo]` | `function(): Promise&lt;Object&gt;` | resolves with the map helper (loadPart('drishti-chart', 'geo').then((P) =&gt; P.geoHelper()), or a host's own of the same shape); without it a map says it did not load |
 | `[graph]` | `function(): Promise&lt;Object&gt;` | loads drishti-graph and resolves with its API (drawGraphPanel draws a graph panel); without it a graph panel says it did not load |
 | `[onLink]` | `function(Object, HTMLElement): void` | a point, a node or a place that names an entity was clicked ({kind, id}, the container) |
+| `[onPoint]` | `function(Object, HTMLElement): void` | a mark that carries its row was clicked ({ev, series?, set?}, the container; contract 1.2) |
 | `[onPlaces]` | `function(HTMLElement, Array&lt;{name: string, link: Object, text: string}&gt;, string): void` | a map's clickable places and its note, for the host to list |
 | `[selector='[data-r-chart]` | `string` | '] the chart containers |
 | `[specOf]` | `function(HTMLElement): ?{kind: string, data: Object}` | a container's kind and data (default el.__drishti) |

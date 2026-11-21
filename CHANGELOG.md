@@ -19,6 +19,10 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Several series on a line panel** (drishti-chart's panel charts, drishti-views; contract 1.2 `Series.mark`, `axis`, `ev`): a series'
+  mark (bar, area, point; a line by default), a right-hand axis when a series asks for it, the palette's colours past the first, and a
+  legend drawn by drishti-views as elements (the engine's legend writes inline styles); a click on a mark that carries its row (a series'
+  `ev`, else the chart's) is the view's new event `point` (`{panel, ev, series?, set?}`; `PanelCharts` option `onPoint`, `pointOf`).
 - **The live kind** (drishti-views; ViewModel contract 1.2, the pin moved to drishti-rachana g3/kinds): a grid over a live table of the
   Data Protocol. The dataset's `live` reference (table, window, top, filter) is read through `options.tables(ref)`, the page's live tables
   (drishti-rachana's `liveTables` over its DataClient: `page(query)` and `follow(after, keys, top, onPatch, onGap)`): the first window in the
