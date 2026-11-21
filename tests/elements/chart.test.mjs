@@ -342,6 +342,10 @@ test('a line panel of several series (contract 1.2): bars, points and areas by m
   assert.deepEqual(C.pointOf('line', split, { seriesIndex: 1, dataIndex: 0 }), { ev: '2', series: 'Yesterday' });
   assert.equal(C.pointOf('line', split, { seriesIndex: 1, dataIndex: 1 }), null);
   assert.equal(C.pointOf('line', { x: ['a'], series: [{ values: [1] }] }, { seriesIndex: 0, dataIndex: 0 }), null);
+  const surf = { x: ['90', '110'], y: ['1M', '1Y'], z: [[1, 2], [null, 3]], ev: [['0', '1'], [null, '3']], set: [[null, null], [null, { at: 'x' }]] };
+  assert.deepEqual(C.pointOf('surface', surf, { data: [1, 1, 3] }), { ev: '3', set: { at: 'x' } });   // [column, row, value]
+  assert.deepEqual(C.pointOf('surface', surf, { data: [1, 0, 2] }), { ev: '1' });
+  assert.equal(C.pointOf('surface', { x: ['a'], z: [[1]] }, { data: [0, 0, 1] }), null);            // no ev: not a mark
   const one = C.panelOption('line', { x: ['a'], series: [{ label: 'x', values: [1], tone: 'link' }] }, T, {});
   assert.equal(one.legend, undefined);
   assert.equal(one.yAxis.type, 'value');

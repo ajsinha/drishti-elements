@@ -19,6 +19,10 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Pivot cells and surface points are marks** (drishti-views, drishti-chart; ViewModel contract 1.2: `Cell.ev`, `set`, `on`,
+  `Surface.ev`, `set`, `on`): a pivot cell with a figure is clickable (keyboard too), runs its effects as `point-click` and hands its
+  `ev` to the host as the `point` event; a surface point (heatmap and 3D) does the same through the chart. `marksOf` counts a pivot's
+  cells and a surface's points row by row; the schema copy synced with drishti-rachana 19b16da; fire fixture regenerated.
 - **Formats `pct4`, `bp1`, `df4`, `price4` bundled** (drishti-core, `data/formats.yaml`): Rachana's language level 1.2 promotes these four
   names from Drishti's packs into Core with Drishti's definitions, so the shared table carries them (`since: "1.2"`, kept in
   `SERVER_FORMATS`); a painter draws them from any view. **`pack --data`** puts `data/formats.yaml` and `data/world-regions.yaml` in the

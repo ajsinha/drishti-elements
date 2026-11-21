@@ -33,6 +33,15 @@ test('marks count depth first through children, bars, points, steps, x positions
   assert.deepEqual(V.effectsOf(line[1], 'point-click'), [{ do: 'notify', text: 'x' }]);
   assert.equal(V.marksOf({ kind: 'metric', data: { value: {} } }).length, 1);
   assert.equal(V.marksOf({ kind: 'pivot', data: {} }).length, 0);
+  const pv = V.marksOf({ kind: 'pivot', data: { rows: [{ cells: [{ ev: '0', set: { s: 'UP/FX' } }, { text: '' }] }, { cells: [{}, { ev: '3' }] }] } });
+  assert.deepEqual(pv.map((m) => m.ev || '-'), ['0', '-', '-', '3']);          // a pivot's cells row by row, an empty cell keeps its place
+  assert.deepEqual(V.effectsOf(pv[0], 'point-click'), [{ do: 'set', state: 's', value: 'UP/FX' }]);
+  const sf = V.marksOf({ kind: 'surface', data: { x: ['90', '110'], z: [[1, 2], [null, 3]], ev: [['0', '1'], [null, '3']], set: [[null, { a: 1 }], [null, null]] } });
+  assert.deepEqual(sf.map((m) => m.ev), ['0', '1', null, '3']);                 // a surface's points row by row
+  assert.equal(V.hasEffects(sf[1]), true);
+  assert.equal(V.hasEffects(sf[0]), false);
+  assert.equal(V.triggerFor('pivot'), 'point-click');
+  assert.equal(V.triggerFor('surface'), 'point-click');
   assert.equal(V.triggerFor('table'), 'row-click');
   assert.equal(V.triggerFor('hbar'), 'bar-click');
   assert.equal(V.triggerFor('scatter'), 'point-click');
