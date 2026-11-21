@@ -83,8 +83,7 @@ drishti-events or a plain stream), `<elements-view>`, and the builders of views 
 
 Ready, not yet tagged. drishti-events, the ninth library, complete (steps E1 to E12): events in the page, across tabs and with a server, one
 connection shared by every tab, an offline queue that survives a reload, the mock server and its faults, metrics, "why didn't I get it?",
-the status badge and the inspector. Its wire protocol is in docs/CONTRACTS.md. Breaking since 2.4.0: see drishti-core and drishti-data under
-3.0.0-rc.1.
+the status badge and the inspector. Its wire protocol is in docs/CONTRACTS.md. Breaking since 2.4.0: see docs/MIGRATING_TO_3.md (every removal with its replacement).
 
 - **drishti-events** (eventing step E12, documentation and guards): the wire protocol, version 1, is "The events contract" in
   docs/CONTRACTS.md (with `epoch: null` in `after` and `replay`, retained values outside the numbering, and raw mode's resume); how it keeps
