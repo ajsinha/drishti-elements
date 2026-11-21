@@ -19,6 +19,12 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Test pins and flake** (G2 gate F15, F18): `tests/support/fire_cases.json` carries the drishti-rachana commit and the hash of the `fire` case
+  files it was made from (`tools/views/fire_fixture.mjs` writes both); `tests/test_views_spec.py` reads Rachana's files by that commit, never by the
+  branch the sibling checkout has out, and fails when the cases at the fixture's `ref` changed since. The ViewModel schema pin is read the same way.
+  The Node timing budgets measure CPU time, and the 200 KB validation budget takes the least of its rounds, so a parallel run no longer fails them
+  (160 runs of the Node suite, eight at a time: no failure).
+
 - **Painter `requires` fails closed** (G2 gate F10, owner O8): an action button that names a permission is enabled only when `options.host.allowed(name)`
   answers exactly `true`; with no hook, any other answer, or a hook that throws, it is disabled. A page that wants every button passes
   `allowed: () => true`. Elements still runs no host action.
