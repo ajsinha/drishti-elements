@@ -238,6 +238,35 @@ def test_a_click_on_a_chart_point_fires_point_click_on_that_mark(browsers):
     with_page(browsers, body)
 
 
+
+def pivot_case():
+    """The surface case's screen with its panel a pivot whose cells are marks (contract 1.2): Core binds a pivot only with a host's engine,
+    so the ViewModel is written here; the bind that follows answers the same screen."""
+    c = json.loads(json.dumps(BY_ID["fire/surface-points/a-surface-point-writes-state"]))
+    cell = lambda text, ev, at: {"text": text, "ev": ev, "set": {"at": at}}
+    pv = {"id": "s", "kind": "pivot", "area": "main", "inferred": False, "empty": False,
+          "data": {"by": "scenario", "columns": ["FX", "RATES"], "agg": "sum",
+                   "rows": [{"label": "UP", "cells": [cell("10", "0", "UP FX"), cell("-4", "1", "UP RATES")], "values": [10, -4]},
+                            {"label": "DOWN", "cells": [cell("-7", "2", "DOWN FX"), {"text": ""}], "values": [-7, None]}]}}
+    for vm in [c["viewModel"]] + [st["viewModel"] for st in c["steps"]]:
+        vm["panels"][0] = json.loads(json.dumps(pv))
+    return c
+
+
+def test_a_click_on_a_pivot_cell_fires_point_click_and_hands_its_ev_to_the_host(browsers):
+    async def body(pg):
+        await pg.evaluate(PAINT, [pivot_case(), 0])
+        await frame(pg)
+        cells = pg.locator("[data-panel=s] td.dv-pick")
+        assert await cells.count() == 3                                          # the empty cell is no mark
+        await cells.nth(1).click()
+        await pg.wait_for_function(BOUND, timeout=10000)
+        assert await pg.evaluate("window.__w.states[0].mark") == 1
+        assert await pg.evaluate("window.__w.states[0].trigger") == "point-click"
+        points = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
+        assert points == [{"panel": "s", "ev": "1"}]                                # the host's event: the cell's place
+    with_page(browsers, body)
+
 UI = """async ([c, step]) => {
   const H = window.__harness, w = window.__w = { binds: [], calls: [], checks: [], bound: [], refused: [] };
   const host = { check: ({ values }) => { w.checks.push(values); return values.qty > 1000 ? [{ message: 'At most 1,000' }] : []; },    // the Rachana runtime's answer for this form's one rule
