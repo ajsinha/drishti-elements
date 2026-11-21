@@ -119,6 +119,15 @@ def test_the_pack_names_what_it_holds_and_carries_one_theme(tmp_path, capsys):
     assert rec["libraries"] == {n: TRAIN.version for n in ("drishti-core", "drishti-inputs", "drishti-chart", "drishti-grid")}
     assert rec["files"][pack.JS_NAME]["integrity"] == sri((tmp_path / pack.JS_NAME).read_bytes())
     assert sorted(p.name for p in (tmp_path / "vendor").iterdir()) == ["codemirror", "echarts-gl"]         # the assets: the code editor's engine, the 3D trace's
+    assert "drishti-chart:geo" not in js                                                                     # no maps, no map helper
+
+
+def test_a_pack_with_maps_carries_the_shapes_and_the_map_helper(tmp_path):
+    assert cli.main(["pack", "--libs", "chart", "--maps", "--out", str(tmp_path), "--no-engines"]) == 0
+    js = (tmp_path / pack.JS_NAME).read_text(encoding="utf-8")
+    assert js.index("/* ---- drishti-chart " + TRAIN.version) < js.index("/* ---- drishti-chart:geo " + TRAIN.version)   # after its library
+    assert "libs[\"drishti-chart:geo\"]" in js
+    assert (tmp_path / "vendor" / "echarts" / "maps" / "regions" / "USA.json").is_file() and (tmp_path / "vendor" / "echarts" / "maps" / "world-countries.json").is_file()
 
 
 def test_themes_aliases_and_a_theme_sheet_carries_every_token():

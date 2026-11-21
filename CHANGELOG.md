@@ -24,6 +24,16 @@ Ready, not yet tagged. drishti-views, the tenth library: whole screens from a Vi
 drishti-events or a plain stream), `<elements-view>`, and the builders of views and frames with `sse()`. Datasets and the `grid`, `tree` and
 `chart` kinds wait for the specification (contract 1 has none).
 
+- **Maps out of the box** (drishti-chart, drishti-views): drishti-chart's **geo part** (`drishti_chart-geohelper.js`,
+  `loadPart('drishti-chart', 'geo')`): the map helper of a view's map panels (`world`, `region`, `find`, `place`, `project`, `bounds`,
+  `option`, `codeOf`) over the vendored Natural Earth shapes (the world's countries, every country's first-level regions: the United
+  States' states with Alaska and Hawaii as insets, Canada's provinces and territories) and the Elements projections, with a layer of
+  bubbles at places or at a longitude and latitude. drishti-views uses it by default: a map panel draws with no host helper (a host's
+  `geo` still overrides it; `geo: false` turns maps off in words; `mapsBase` names another folder), loading the part and only the
+  shapes that map needs the first time a view has a map. `locate(geo, lon, lat)` places a point in the United States' insets (the
+  chart's map kind's bubbles use it too); maps keep their shape in any box (`preserveAspect: 'contain'`, also the map kind). `cli.py pack
+  --maps` packs the part with the shapes. Gallery pages *Maps in a view* and *The map helper: bubbles*; USING's Maps section; CONTRACTS'
+  map helper; Node and browser tests (a world choropleth, a US states map, a Canada map, a bubbles layer).
 - **drishti-views** (new, being built in the steps of `docs/VIEWS_DESIGN.md`; steps 1 to 3 here): the ViewModel specification as a
   pinned copy of drishti-rachana's `spec/1/viewmodel.schema.json` with its compact form (`tools/views/gen.py`, written by the build) and
   conformance vectors; `validate(view, { strict })` (normal mode ignores unknown fields and words as the specification asks a consumer to;

@@ -96,6 +96,23 @@ protocol sends Server-Sent Events named `view` (data: a ViewModel) and `frame` (
 painter reads them through raw mode (`live: { url, raw: true }`), and every reconnect of such a stream should begin with a `view`.
 `sse(write, { topic, raw })` (drishti-views' builders, Node or the browser) writes either form.
 
+## The map helper (drishti-views' `geo`, drishti-chart's geo part)
+
+A view's map panels draw with a **map helper**: drishti-chart's geo part by default (`loadPart('drishti-chart', 'geo')`, then
+`geoHelper({ base })`), or a host's own, given as `paint(el, view, { geo: () => Promise.resolve(helper) })`. A host's helper is an object
+with these members (the part's `GeoHelper`, in [API.md](API.md)):
+
+| Member | Answers |
+|---|---|
+| `world()` | a promise of the world: `by.iso3`, `by.iso2` (country records `{iso3, iso2, name}`), `list`, `points` |
+| `region(iso3)` | a promise of one country's regions: `iso3`, `by.code` (region records `{code, name}` by ISO 3166-2 code); rejects when it has none |
+| `find(world, code)` | the country an ISO alpha-3, alpha-2 or English name means (`{iso3, iso2, name}`), or null |
+| `option(cfg)` | the ECharts option of a map: `cfg` has `level` ('world' or 'region'), `geo`, `t` (the theme's colours), `items` (`{code, value, text}`), `highlight`, `clickable`, `linked`, `legend`, `unit`, `numText`, `width`, `height` |
+| `codeOf(params)` | the place code of an ECharts click on that map (a country's ISO alpha-3, a region's ISO 3166-2 code), or null |
+
+The shapes are files a server serves as they are (no API): `world-countries.json`, `world-points.json` and `regions/<ISO3>.json` under the
+maps folder (`vendor/echarts/maps/` in the release tree).
+
 ## The events contract (drishti-events, protocol version 1)
 
 A neutral, written contract any server in any language can implement; drishti-events is one client of it and names no particular server.

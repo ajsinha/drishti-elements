@@ -173,8 +173,8 @@ handle.on('pick', (e) => console.log(e.detail.pick));          // a table row wi
 ```
 
 The view draws inside a shadow root (`shadow: false` draws into the element). A chart, a graph or a map loads drishti-chart (and
-drishti-graph) the first time a view has one; a page of words and tables never loads a chart engine. A map needs the page's map helper
-(`geo`).
+drishti-graph) the first time a view has one; a page of words and tables never loads a chart engine. A map draws out of the box (see
+[Maps](#maps)).
 
 **2. The element**
 
@@ -209,6 +209,45 @@ stream.view(vm); stream.frame(frame(1).strip(0, { label: 'Booked', text: '18,432
 ```
 
 `validate(view, { strict })` checks any ViewModel; `registerKind(name, { paint })` adds a host's own kind.
+
+## Maps
+
+Maps come with Elements: the world's countries (Natural Earth 1:110m, the small ones as points) and every country's first-level regions
+(Natural Earth admin-1, simplified: the United States' states with Alaska and Hawaii as insets, Canada's provinces and territories, India's
+states, and so on), vendored under `vendor/echarts/maps/` (public domain, [VENDOR.md](../vendor/VENDOR.md)). Nothing comes from a tile
+server or a CDN; each file is read from your own server the first time a map needs it, and cached for the page.
+
+**A map panel in a view** draws with no setup: drishti-views loads drishti-chart's **geo part** (`drishti_chart-geohelper.js`, about 14 KB)
+and only the shapes that map needs, the first time a view has a map.
+
+```js
+paint(el, { contract: '1.0', ref: { kind: 'book', id: 'B-1' }, title: { id: 'B-1' }, panels: [
+  { id: 'world', kind: 'map', data: { mode: 'world', highlight: 'GB', shade: { label: 'Exposure', items: [{ code: 'USA', value: 420 }, { code: 'DEU', value: 130 }] },
+    link: { kind: 'country', template: 'country/{iso3}', codes: ['USA', 'DEU'] } } },          // a click raises the link event
+  { id: 'us', kind: 'map', data: { mode: 'region', region: 'USA', shade: { label: 'Orders', items: [{ code: 'US-CA', value: 90 }, { code: 'TX', value: 70 }] } } },
+  { id: 'ca', kind: 'map', data: { mode: 'region', region: 'Canada', shade: { label: 'Orders', items: [{ code: 'ON', value: 50 }] } } }] });
+```
+
+A country is named by its ISO alpha-3 or alpha-2 code or its English name; a region by its ISO 3166-2 code (`US-CA`), the code without its
+country (`CA` on the United States' map) or its name. The options: `mapsBase` (the shapes are elsewhere; default the static root's
+`vendor/echarts/maps/`), `geo` (a function that resolves with your own map helper of the same shape: it overrides the part) and
+`geo: false` (no maps: a map panel says so in words). A page that gives its libraries as modules (`libraries`) gives the part too, as
+`libraries['drishti-chart:geo']`.
+
+**The map helper itself**, for a page that draws its own maps (a choropleth and a layer of bubbles at places or at a longitude and
+latitude):
+
+```js
+const P = await Drishti.elements.core.loadPart('drishti-chart', 'geo');
+const G = P.geoHelper(), us = await G.region('USA');               // G.world(), G.region(iso3), G.find(world, 'DE'), G.place(us, 'CA')
+echarts.init(el, null, { renderer: 'svg' }).setOption(G.option({ level: 'region', geo: us,
+  items: [{ code: 'NY', value: 650 }], bubbles: [{ lon: -149.9, lat: 61.2, value: 40, name: 'Anchorage' }] }));   // Anchorage in the inset
+```
+
+`G.project(geo, lon, lat)` places a point on a level's map and `G.bounds(geo)` gives its boxes. The projections: Equal Earth for the world,
+Albers for the United States and for Canada, a conic fitted to any other country. The chart's own `map` kind (`new Chart(el, { kind:
+'map', ... })`, with its ranking, table and drill from the world to a country's regions) reads the same shapes. A packed page
+(`cli.py pack --maps`) carries the shapes and the geo part.
 
 ## Versions and integrity
 

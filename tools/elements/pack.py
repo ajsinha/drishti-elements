@@ -21,7 +21,8 @@ they require, for a page that wants two files and no loader (docs/USING.md, Pick
   library loads later (CodeMirror, the map shapes) is read from beside the file;
 * the style sheet: the design tokens (every theme, or with ``--theme`` one theme on :root) and each library's component sheet;
 * beside them, only when a packed library reads them at run time: ``vendor/codemirror/`` (drishti-inputs' code editor) and, with
-  ``--maps``, ``vendor/echarts/maps/`` (drishti-chart's maps); and ``drishti-elements-pack.json``: what is inside, with SRI hashes.
+  ``--maps``, ``vendor/echarts/maps/`` (drishti-chart's maps, whose geo part, the map helper of view map panels, is then packed after
+  the bundles); and ``drishti-elements-pack.json``: what is inside, with SRI hashes.
 """
 from __future__ import annotations
 
@@ -77,6 +78,10 @@ def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = T
     for n in names:
         js.append(f"/* ---- {n} {train.version} ---- */\n")
         js.append(body((dist.ELEMENTS / n / dist.bundle_name(n)).read_text(encoding="utf-8")))
+    if maps and "drishti-chart" in names:                               # the maps' helper (view map panels) rides with the shapes it reads
+        geo = train.libs["drishti-chart"]["parts"]["geo"]["file"]
+        js.append(f"/* ---- drishti-chart:geo {train.version} ---- */\n")
+        js.append(body((dist.ELEMENTS / "drishti-chart" / geo).read_text(encoding="utf-8")))
     tokens = dist.theme_css(chosen, table) if chosen else (dist.ROOT / dist.TOKENS).read_text(encoding="utf-8")
     css_parts.append(f"/* {words}\n   Theme: " + (f"{chosen} only, on :root" if chosen else "every theme (data-theme on <html>; the default without one)")
                      + ". Override a token after this sheet: :root { --d-accent: #0a6; } */\n")
