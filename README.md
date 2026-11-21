@@ -90,7 +90,7 @@ The current and previous major versions of Chrome, Edge, Firefox and Safari. No 
 
 ```bash
 python3 tools/elements/build.py --check && python3 tools/docs/elements_api.py --check && python3 tools/license_headers.py
-node --test tests/elements/*.test.mjs
+node tools/node_tests.mjs tests/elements        # node --test over every tests/elements/*.test.mjs, no shell glob
 python3 -m pytest -q tests -n 8          # needs: pip install -r tests/requirements.txt && playwright install chromium
 ```
 
@@ -102,12 +102,11 @@ No Java here: Python and Node only. The launchers are checked in and visible.
 
 | IDE | What runs what |
 |---|---|
-| **PyCharm** (open this folder) | `run-configs/`: the build and doc checks, the licence headers, `dist`, the static and browser pytest suites, the gallery server (Python configurations), and the Node tests (a Shell Script configuration) |
-| **IntelliJ IDEA Community** | no Python and no Node/JavaScript support: use the Shell Script configurations only (Node tests), or PyCharm or VS Code for the rest |
+| **PyCharm** (open this folder) | `run-configs/`: the build and doc checks, the licence headers, `dist`, the static and browser pytest suites, the other Python configurations, and the Maven launchers (`pom.xml`, exec-maven-plugin) for the Node tests and the gallery server |
+| **IntelliJ IDEA Community** | no Python and no Node/JavaScript support: the two Maven launchers (Node tests, gallery server; Node and Python on the PATH, no bash), PyCharm or VS Code for the rest |
 | **VS Code** | **File, Open Workspace from File**, `drishti-elements.code-workspace`: tasks (checks, build, dist, Node and pytest suites, gallery server) and Run and Debug configurations; recommended extensions: Python and Pylance, ESLint, YAML |
 
-Prepare once: `pip install -r tests/requirements.txt` and `playwright install chromium`. Windows: use `python` for `python3`; the Shell Script
-configurations need Git Bash (or run the same command in a terminal). The Rachana and Lake installation order, JDK 21 and the local Maven
+Prepare once: `pip install -r tests/requirements.txt` and `playwright install chromium`. Windows: use `python` for `python3`; the Maven launchers need no bash (name the programs with `-Dnode=` / `-Dpython=` when they are not on the PATH). The Rachana and Lake installation order, JDK 21 and the local Maven
 repository are described once, in [Drishti Rachana's java/README](https://github.com/ajsinha/drishti-rachana/blob/g2/integration/java/README.md#build-and-run-in-the-ide).
 
 ## Licence
