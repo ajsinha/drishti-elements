@@ -19,6 +19,8 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Charts, views**: a chart drawn before its box had a height (the engine at 0 px high) now follows its own box: each chart container is observed, not only the view, so the chart-point click is steady under parallel load (the browser test waits for the chart to be sized to its box); JSDoc for `drishti_views-state.js` complete, `docs/API.md` regenerated.
+
 - **Donut clicks and tooltips under a strict CSP** (drishti-views, drishti-chart): the donut shape of an hbar fires `bar-click` on the slice's bar exactly as the
   bar form does (`set` and `on` lists, contract 1.2; each slice carries its bar). The panel charts' tooltips are elements built with the DOM
   (`elementTooltips`; no markup string, no style attribute), so no chart tooltip needs `'unsafe-inline'` for styles; the chart-click browser test

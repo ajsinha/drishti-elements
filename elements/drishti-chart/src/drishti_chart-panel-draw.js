@@ -244,6 +244,16 @@ export class PanelCharts {
       });
       this.ro.observe(this.root.host || this.root.firstElementChild || win.document.body);
     }
+    if (win.ResizeObserver) {                             // a chart's own box can change while the view does not (it was drawn before its box had a height): each box is watched
+      if (!this.rb) {
+        this.rb = new win.ResizeObserver(() => {
+          win.requestAnimationFrame(() => {
+            this.live().forEach((c) => { const d = c.getDom(); if (d && d.clientWidth && d.clientHeight && (c.getWidth() !== d.clientWidth || c.getHeight() !== d.clientHeight)) { c.resize(); } });
+          });
+        });
+      }
+      els.forEach((el) => this.rb.observe(el));
+    }
   }
 
   /**
@@ -289,6 +299,7 @@ export class PanelCharts {
   dispose() {
     this.root.removeEventListener('click', this.onClick);
     if (this.ro) { this.ro.disconnect(); this.ro = null; }
+    if (this.rb) { this.rb.disconnect(); this.rb = null; }
     this.live().forEach((c) => c.dispose());
     this.all = [];
     this.root.querySelectorAll(this.o.selector).forEach((el) => { if (el.__drishtiGraph) { el.__drishtiGraph.destroy(); el.__drishtiGraph = null; } });

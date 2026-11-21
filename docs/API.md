@@ -21877,6 +21877,10 @@ Returns `string[]`.
 
 The screen's state values as the ViewModel's state[] gave them and as the effects changed them.
 
+##### `new StateStore()`
+
+Makes an empty store: no states until load.
+
 ##### `StateStore.load(states)`
 
 Takes the ViewModel's state[] (replacing every value: the host's bind is the truth).
@@ -21889,17 +21893,33 @@ Returns `void`.
 
 ##### `StateStore.get(id)`
 
-Returns `*`: a state's value (null when empty or unknown).
+A state's value.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` | the state's id |
+
+Returns `*`: the value (null when empty or unknown).
 
 ##### `StateStore.values()`
+
+The values held now.
 
 Returns `Object&lt;string, *&gt;`: id to value, the empty ones left out.
 
 ##### `StateStore.request()`
 
+The values as the next bind carries them.
+
 Returns `Object&lt;string, ?string&gt;`: the state.&lt;id&gt; parameters of the next bind, without the prefix (an empty value is not carried).
 
 ##### `StateStore.readers(ids)`
+
+The panels that read the given states.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ids` | `string[]` | the states' ids |
 
 Returns `string[]`: the panels (and strip or title) that read any of the states, each once, or null when one of them does not say.
 
@@ -21938,13 +21958,31 @@ Returns `Object[]`.
 
 Whether a mark carries any effect (set or on) at all, for the cursor and the keyboard.
 
+| Parameter | Type | Meaning |
+|---|---|---|
+| `mark` | `*` | the mark as the ViewModel gave it |
+
+Returns `boolean`.
+
 #### `triggerFor(kind)`
 
 The trigger a kind's marks fire, or null when it fires none.
 
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` | the panel's kind |
+
+Returns `?string`.
+
 #### `requestText(v)`
 
 A value as a bind request carries it: text, a list's items joined by commas; null when there is none.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` | the state's value |
+
+Returns `?string`.
 
 #### `resolveFire(panel, id, trigger, mark)`
 

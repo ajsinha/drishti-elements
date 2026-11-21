@@ -30,7 +30,11 @@ export function triggerOf(kind) {
 /** The kinds whose marks fire point-click (a chart's points, steps, events or candles, a line or area's x positions, a figure or record). */
 export const POINT_KINDS = Object.freeze(['line', 'area', 'scatter', 'waterfall', 'timeline', 'candlestick', 'metric', 'gauge', 'kv', 'status']);
 
-/** The trigger a kind's marks fire, or null when it fires none. */
+/**
+ * The trigger a kind's marks fire, or null when it fires none.
+ * @param {string} kind the panel's kind
+ * @returns {?string}
+ */
 export function triggerFor(kind) { return triggerOf(kind) || (POINT_KINDS.indexOf(kind) >= 0 ? 'point-click' : null); }
 
 function rowsDepthFirst(rows, out) {
@@ -73,10 +77,18 @@ export function effectsOf(mark, trigger) {
   return [];
 }
 
-/** Whether a mark carries any effect (set or on) at all, for the cursor and the keyboard. */
+/**
+ * Whether a mark carries any effect (set or on) at all, for the cursor and the keyboard.
+ * @param {*} mark the mark as the ViewModel gave it
+ * @returns {boolean}
+ */
 export function hasEffects(mark) { return isObj(mark) && (isObj(mark.set) || isObj(mark.on)); }
 
-/** A value as a bind request carries it: text, a list's items joined by commas; null when there is none. */
+/**
+ * A value as a bind request carries it: text, a list's items joined by commas; null when there is none.
+ * @param {*} v the state's value
+ * @returns {?string}
+ */
 export function requestText(v) {
   if (v === null || v === undefined) { return null; }
   return Array.isArray(v) ? v.map(String).join(',') : String(v);
@@ -84,6 +96,7 @@ export function requestText(v) {
 
 /** The screen's state values as the ViewModel's state[] gave them and as the effects changed them. */
 export class StateStore {
+  /** Makes an empty store: no states until load. */
   constructor() { this.entries = new Map(); }
 
   /**
@@ -96,24 +109,38 @@ export class StateStore {
     list(states).forEach((s) => { if (isObj(s) && typeof s.id === 'string') { this.entries.set(s.id, { value: s.value === undefined ? null : s.value, url: s.url === true, reads: Array.isArray(s.reads) ? s.reads.slice() : null }); } });
   }
 
-  /** @returns {*} a state's value (null when empty or unknown) */
+  /**
+   * A state's value.
+   * @param {string} id the state's id
+   * @returns {*} the value (null when empty or unknown)
+   */
   get(id) { const e = this.entries.get(id); return e ? e.value : null; }
 
-  /** @returns {Object<string, *>} id to value, the empty ones left out */
+  /**
+   * The values held now.
+   * @returns {Object<string, *>} id to value, the empty ones left out
+   */
   values() {
     const out = {};
     this.entries.forEach((e, id) => { if (e.value !== null) { out[id] = e.value; } });
     return out;
   }
 
-  /** @returns {Object<string, ?string>} the state.<id> parameters of the next bind, without the prefix (an empty value is not carried) */
+  /**
+   * The values as the next bind carries them.
+   * @returns {Object<string, ?string>} the state.<id> parameters of the next bind, without the prefix (an empty value is not carried)
+   */
   request() {
     const out = {};
     this.entries.forEach((e, id) => { const t = requestText(e.value); if (t !== null) { out[id] = t; } });
     return out;
   }
 
-  /** @returns {string[]} the panels (and strip or title) that read any of the states, each once, or null when one of them does not say */
+  /**
+   * The panels that read the given states.
+   * @param {string[]} ids the states' ids
+   * @returns {string[]} the panels (and strip or title) that read any of the states, each once, or null when one of them does not say
+   */
   readers(ids) {
     const out = [];
     for (const id of ids) {

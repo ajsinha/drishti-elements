@@ -194,7 +194,7 @@ def test_a_click_on_a_donut_slice_fires_bar_click_on_that_bar(browsers):
 POINT = """([id, kind, series, data]) => {
   const R = document.getElementById('hx-view').shadowRoot, el = R.querySelector('[data-panel=' + id + '] [data-r-chart]');
   const c = window.echarts.getInstanceByDom(el), r = el.getBoundingClientRect(), p = c.convertToPixel({ seriesIndex: series }, data);
-  return { x: r.left + p[0], y: r.top + p[1], pick: el.classList.contains('dv-pick'), done: c.getZr().animation.isFinished() };
+  return { x: r.left + p[0], y: r.top + p[1], pick: el.classList.contains('dv-pick'), done: c.getZr().animation.isFinished() && c.getWidth() === el.clientWidth && c.getHeight() === el.clientHeight };   // sized to its box
 }"""
 DRAWN = """(id) => { const R = document.getElementById('hx-view').shadowRoot, el = R && R.querySelector('[data-panel=' + id + '] [data-r-chart]'),
   c = el && window.echarts && window.echarts.getInstanceByDom(el); return !!c && c.getZr().animation.isFinished() && el.classList.contains('dv-pick'); }"""
