@@ -183,10 +183,10 @@
             if (cfg.linked) { line += '<br>' + esc(!ok || ok.has(code) ? (cfg.openText || 'click to open') : (cfg.closedText || 'no page for this ' + (isWorld ? 'country' : 'region'))); }
             return line;
           } },
-        geo: { map: geo.name, projection: { project: (p) => p, unproject: (p) => p }, roam: false, aspectScale: 1, left: 6, right: 6, top: 6, bottom: shaded ? 40 : 6,
+        geo: { map: geo.name, projection: { project: (p) => p, unproject: (p) => p }, roam: false, aspectScale: 1, preserveAspect: 'contain', left: 6, right: 6, top: 6, bottom: shaded ? 40 : 6,
           center: view.center, zoom: view.zoom,
           itemStyle: { areaColor: baseC, borderColor: t.border, borderWidth: 0.6 },
-          label: { show: labelled, color: t.ink, fontSize: 10, formatter: (p) => (String(p.name).indexOf('__') === 0 ? '' : nameOf(p.name)) },
+          label: { show: labelled, color: t.ink, fontSize: 10, formatter: (p) => (String(p.name).indexOf('__') === 0 ? '' : String(p.name).split('-').pop()) },
           emphasis: { label: { show: labelled, color: t.ink }, itemStyle: { areaColor: t.pos || t.link } }, select: { disabled: true }, regions: regions },
         series: series
       };

@@ -419,6 +419,7 @@ def test_the_kinds_of_charts_load_the_chart_library_only_then(browsers):
         await pg.evaluate("(v) => window.__harness.paint(v, { validate: 'off' })", CHARTS_VIEW)
         await pg.wait_for_function("() => window.__harness.handle.panelCharts && window.__harness.handle.panelCharts.instances().length >= 8", timeout=30000)
         await pg.wait_for_function("() => !!" + ROOT + ".querySelector('[data-panel=gr] .dv-chart').__drishtiGraph", timeout=30000)   # drishti-graph, loaded for it
+        await pg.wait_for_function("() => !!" + ROOT + ".querySelector('[data-panel=mp] svg path')", timeout=30000)                  # the map, with the geo part
         states = await ev(pg, "Object.fromEntries([...R.querySelectorAll('.dv-grid .dv-panel')].map((p) => [p.dataset.panel, p.dataset.state]))")
         assert states.pop("odd") == "unknown-kind" and set(states.values()) == {"ready"}, states
         got = await ev(pg, """{
@@ -426,12 +427,12 @@ def test_the_kinds_of_charts_load_the_chart_library_only_then(browsers):
           gauge: ['role', 'aria-valuenow', 'aria-valuemax', 'aria-valuetext', 'aria-label'].map((a) => R.querySelector('[data-panel=ga] .dv-gauge').getAttribute(a)),
           table: [...R.querySelectorAll('[data-panel=ln] .dv-data tr')].map((r) => r.textContent),
           graph: !!R.querySelector('[data-panel=gr] .dv-chart').__drishtiGraph,
-          map: R.querySelector('[data-panel=mp] .dv-chart-off').textContent,
+          map: !!R.querySelector('[data-panel=mp] svg path'),
           img: R.querySelector('[data-panel=sc] .dv-chart').getAttribute('role') }""")
         assert got["bars"] == [["DEU", "1", "dv-bar dv-t-accent"], ["FRA", "0.5", "dv-bar dv-t-warn"]]
         assert got["gauge"] == ["meter", "85", "100", "85%", "Capacity"]
         assert got["table"] == ["Orders", "Mon3", "Tue5", "Wed"]
-        assert got["graph"] and got["img"] == "img" and "map helper" in got["map"]
+        assert got["graph"] and got["img"] == "img" and got["map"]                 # a map draws out of the box (the geo part)
         await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels[0]));
             p.data.series[0].values = [3, 5, 8]; H.handle.patch({ seq: 1, patches: [{ op: 'panel', panel: p }] }); }""")
         await frame(pg)

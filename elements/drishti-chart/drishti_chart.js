@@ -2126,7 +2126,7 @@
       const option = {
         animation: false, textStyle: textStyle(th),
         tooltip: { trigger: 'item', confine: true },
-        geo: { map: env.mapName, projection: { project: (p) => p, unproject: (p) => p }, roam: true, scaleLimit: { min: 0.8, max: 24 },
+        geo: { map: env.mapName, projection: { project: (p) => p, unproject: (p) => p }, roam: true, scaleLimit: { min: 0.8, max: 24 }, preserveAspect: 'contain',
           aspectScale: 1, left: 8, right: 8, top: 8, bottom: 8, center: fitView(geo, env.width, env.height).center, zoom: fitView(geo, env.width, env.height).zoom,
           itemStyle: { areaColor: env.hatch || th.nodata, borderColor: blend(th.border, th.surface, 0.2), borderWidth: 0.5 },
           emphasis: { itemStyle: { areaColor: alpha(th.tokens.accent, 0.55) }, label: { show: false } }, select: { disabled: true }, label: { show: false }, regions: regions },

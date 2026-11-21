@@ -97,7 +97,7 @@ test('a US states map and a Canada map: labelled where few, inset frames, short 
   const c = G.option({ level: 'region', geo: ca, items: [{ code: 'ON', value: 9 }, { code: 'CA-BC', value: 2 }], highlight: ['QC'] });
   assert.equal(c.geo.map, 'drishti-geo-CAN');
   assert.equal(c.geo.label.show, true, 'thirteen provinces and territories are labelled');
-  assert.equal(c.geo.label.formatter({ name: 'CA-ON' }), 'Ontario');
+  assert.equal(c.geo.label.formatter({ name: 'CA-ON' }), 'ON', 'labelled by the short code (the name is in the tooltip)');
   assert.ok(c.geo.regions.find((r) => r.name === 'CA-QC').itemStyle.areaColor);
   assert.ok(Number.isFinite(c.geo.zoom) && c.geo.center.every(Number.isFinite));
 });
