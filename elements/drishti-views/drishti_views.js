@@ -2274,7 +2274,7 @@
   })();
   /* ---- src/drishti_views-words.js ---- */
   __m["src/drishti_views-words.js"] = (function () {
-    var h = __lib("drishti-core").h;
+    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var drawCell = __m["src/drishti_views-cells.js"].drawCell, updateCell = __m["src/drishti_views-cells.js"].updateCell, linkTo = __m["src/drishti_views-cells.js"].linkTo, safeHref = __m["src/drishti_views-cells.js"].safeHref, toneClass = __m["src/drishti_views-cells.js"].toneClass, say = __m["src/drishti_views-cells.js"].say;
     var marksOf = __m["src/drishti_views-state.js"].marksOf, clickable = __m["src/drishti_views-state.js"].clickable;
@@ -2423,7 +2423,7 @@
           ol.appendChild(li);
         });
         body.appendChild(ol);
-        if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: panel.data.more.toLocaleString('en-US') }) })); }
+        if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: formatCount(panel.data.more) }) })); }
         return { dispose() { while (body.firstChild) { body.removeChild(body.firstChild); } } };
       }
     };
@@ -2438,7 +2438,7 @@
   })();
   /* ---- src/drishti_views-tables.js ---- */
   __m["src/drishti_views-tables.js"] = (function () {
-    var h = __lib("drishti-core").h;
+    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var drawCell = __m["src/drishti_views-cells.js"].drawCell, say = __m["src/drishti_views-cells.js"].say;
     var marksOf = __m["src/drishti_views-state.js"].marksOf, hasEffects = __m["src/drishti_views-state.js"].hasEffects, clickable = __m["src/drishti_views-state.js"].clickable;
@@ -2557,8 +2557,8 @@
         if (!count) { this.tbody.appendChild(h(doc, 'tr', { cls: 'dv-empty-row' }, [h(doc, 'td', { text: this.d.emptyLabel || say(this.ctx.messages, 'noData'), attrs: { colspan: String(Math.max(1, this.columns.length)) } })])); }
         const left = all - Math.min(all, this.shown);
         this.more.hidden = left <= 0;
-        this.more.textContent = say(this.ctx.messages, 'showMore', { count: Math.min(left, PAGE_ROWS).toLocaleString('en-US') });
-        this.count.textContent = this.query ? say(this.ctx.messages, 'rowsMatch', { count: all.toLocaleString('en-US') }) : '';
+        this.more.textContent = say(this.ctx.messages, 'showMore', { count: formatCount(Math.min(left, PAGE_ROWS)) });
+        this.count.textContent = this.query ? say(this.ctx.messages, 'rowsMatch', { count: formatCount(all) }) : '';
       }
       subHead(level, depth) {
         const doc = this.ctx.doc;
@@ -2660,7 +2660,7 @@
         const table = h(doc, 'table', { cls: 'dv-tbl' }, [thead, tbody, tfoot]);
         while (this.box.firstChild) { this.box.removeChild(this.box.firstChild); }
         this.box.appendChild(h(doc, 'div', { cls: 'dv-tbl-scroll', attrs: { tabindex: '0', role: 'region', 'aria-label': this.panel.title || this.panel.id } }, [table]));
-        if (Number.isInteger(d.more) && d.more > 0) { this.box.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(m, 'moreRows', { count: d.more.toLocaleString('en-US') }) })); }
+        if (Number.isInteger(d.more) && d.more > 0) { this.box.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(m, 'moreRows', { count: formatCount(d.more) }) })); }
       }
       markCell(td, cell, ix) {
         const ev = cell && typeof cell.ev === 'string' ? cell.ev : null;
@@ -2940,7 +2940,7 @@
   })();
   /* ---- src/drishti_views-datakinds.js ---- */
   __m["src/drishti_views-datakinds.js"] = (function () {
-    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, isMasked = __lib("drishti-core").isMasked;
+    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, isMasked = __lib("drishti-core").isMasked, formatCount = __lib("drishti-core").formatCount;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var say = __m["src/drishti_views-cells.js"].say, toneClass = __m["src/drishti_views-cells.js"].toneClass;
     var valueText = __m["src/drishti_views-data.js"].valueText, rowKey = __m["src/drishti_views-data.js"].rowKey, derive = __m["src/drishti_views-data.js"].derive;
@@ -2997,7 +2997,7 @@
           const host = h(doc, 'div', { cls: 'dv-ds-host' });          // the library's own element (a grid makes its host .dg, height 100%)
           box.appendChild(host);
           body.appendChild(box);
-          const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: ds.more.toLocaleString() }) }) : null;
+          const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: formatCount(ds.more) }) }) : null;
           if (note) { body.appendChild(note); }
           let drawn = null, gone = false, off = null;
           Promise.all([ctx.library(lib), ctx.styles(lib)]).then(([L]) => {
@@ -3106,7 +3106,7 @@
       const mode = ref.edit === 'cells' || ref.edit === 'beside' ? ref.edit : null;
       const schemaOf = () => (typeof t.schema === 'function' ? Promise.resolve().then(() => t.schema()).then((s) => s || null, () => null) : Promise.resolve(null));
       let g = null, f = null, total = null, gone = false, edit = null, notices = null, timer = null;
-      const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: held.size.toLocaleString(), total: (total === null ? held.size : total).toLocaleString() }); };
+      const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: formatCount(held.size), total: formatCount(total === null ? held.size : total) }); };
       const labelOf = (name) => { const x = ds.field(name); return (x && x.label) || name; };
       const idsOf = (p) => list(p.remove).map((k) => (Array.isArray(k) ? k.map((x) => (x === null || x === undefined ? '' : String(x))).join(SEP) : String(k))).concat(list(p.update).concat(list(p.add)).map(idOf));
       const apply = (p) => {

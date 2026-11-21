@@ -17,7 +17,7 @@
    figure, its change, its unit and caption), markdown (text in a basic markup: headings, emphasis, code, lists, links; built as DOM
    nodes, never HTML), links (related things, each with its badge and status) and timeline (dated events, oldest first). Every figure is
    the producer's text; nothing is formatted or computed here. A kind whose cells keep their count updates them in place (the live path). */
-import { h } from '../../drishti-core/src/drishti_index.js';
+import { h, formatCount } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { drawCell, updateCell, linkTo, safeHref, toneClass, say } from './drishti_views-cells.js';
 import { marksOf, clickable } from './drishti_views-state.js';
@@ -196,7 +196,7 @@ const timeline = {
       ol.appendChild(li);
     });
     body.appendChild(ol);
-    if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: panel.data.more.toLocaleString('en-US') }) })); }
+    if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: formatCount(panel.data.more) }) })); }
     return { dispose() { while (body.firstChild) { body.removeChild(body.firstChild); } } };
   }
 };

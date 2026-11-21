@@ -22,7 +22,7 @@ import { GridKeys } from './drishti_keys.js';
 import { load } from './drishti_loader.js';
 import { installBase } from './drishti_base.js';
 
-export { MINUS, EMPTY, MASK, COMPACT_UNITS, plainDigits, roundHalfUp, group, formatNumber, formatPercent, formatBasisPoints, formatCurrency,
+export { MINUS, EMPTY, MASK, COMPACT_UNITS, plainDigits, roundHalfUp, group, formatNumber, formatCount, formatPercent, formatBasisPoints, formatCurrency,
   formatCompact, defineFormats, hasFormat, namedFormat, formatNames, formatSpec, formatNamed, formatter, formatPythonFloat, BYTE_UNITS,
   formatBytes, formatDuration, columnScale, formatScaled } from './drishti_format.js';
 export { parseDate, daysInMonth, isoDate, today, formatDate, formatDateRange, isBusinessDay, addBusinessDays, previousBusinessDay,

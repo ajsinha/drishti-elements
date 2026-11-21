@@ -18,7 +18,7 @@
    a derived read of the rows). Each loads its library (and adopts its sheets) the first time a view has such a panel, reads its dataset
    by name and follows the dataset's rows patches: a grid by transaction (only the rows in view are drawn again), a tree and a chart by
    drawing their rows again in the next animation frame. Values are raw: each column formats them with its field's fmt. */
-import { h, stateBlock, isMasked } from '../../drishti-core/src/drishti_index.js';
+import { h, stateBlock, isMasked, formatCount } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';
 import { valueText, rowKey, derive } from './drishti_views-data.js';
@@ -103,7 +103,7 @@ function datasetKind(lib, make) {
       const host = h(doc, 'div', { cls: 'dv-ds-host' });          // the library's own element (a grid makes its host .dg, height 100%)
       box.appendChild(host);
       body.appendChild(box);
-      const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: ds.more.toLocaleString() }) }) : null;
+      const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: formatCount(ds.more) }) }) : null;
       if (note) { body.appendChild(note); }
       let drawn = null, gone = false, off = null;
       Promise.all([ctx.library(lib), ctx.styles(lib)]).then(([L]) => {
@@ -236,7 +236,7 @@ const live = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => {
   const mode = ref.edit === 'cells' || ref.edit === 'beside' ? ref.edit : null;
   const schemaOf = () => (typeof t.schema === 'function' ? Promise.resolve().then(() => t.schema()).then((s) => s || null, () => null) : Promise.resolve(null));
   let g = null, f = null, total = null, gone = false, edit = null, notices = null, timer = null;
-  const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: held.size.toLocaleString(), total: (total === null ? held.size : total).toLocaleString() }); };
+  const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: formatCount(held.size), total: formatCount(total === null ? held.size : total) }); };
   const labelOf = (name) => { const x = ds.field(name); return (x && x.label) || name; };
   const idsOf = (p) => list(p.remove).map((k) => (Array.isArray(k) ? k.map((x) => (x === null || x === undefined ? '' : String(x))).join(SEP) : String(k))).concat(list(p.update).concat(list(p.add)).map(idOf));
   const apply = (p) => {

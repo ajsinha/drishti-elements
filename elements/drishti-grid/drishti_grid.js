@@ -2188,7 +2188,7 @@
   })();
   /* ---- src/drishti_pivot-answer.js ---- */
   __m["src/drishti_pivot-answer.js"] = (function () {
-    var passes = __lib("drishti-core").passes, columnScale = __lib("drishti-core").columnScale, formatScaled = __lib("drishti-core").formatScaled;
+    var passes = __lib("drishti-core").passes, columnScale = __lib("drishti-core").columnScale, formatScaled = __lib("drishti-core").formatScaled, formatCount = __lib("drishti-core").formatCount;
     var SEP = __m["src/drishti_pivot.js"].SEP, memberText = __m["src/drishti_pivot.js"].memberText;
     function pivotApplyUpdates(answer, updates) {
       const inc = answer && answer.incremental;
@@ -2296,7 +2296,7 @@
       if (showAs.indexOf('pct') === 0) { return (v * 100).toFixed(2) + '%'; }
       const whole = showAs === 'rank' || showAs.indexOf('ntile:') === 0
         || (m && (m.unit === 'count' || ((m.unit === null || m.unit === undefined) && /^count/.test(m.id || ''))));   // no unit: a count by its function
-      if (whole) { return Math.round(v).toLocaleString('en-US'); }
+      if (whole) { return formatCount(Math.round(v)); }
       if (m && m.scale) { return formatScaled(v, m.scale); }        // the column's one unit (answerScales): every figure of the measure in it
       const a = Math.abs(v);
       if (a >= 1e9) { return (v / 1e9).toFixed(2) + ' bn'; }
@@ -5513,7 +5513,7 @@
   })();
   /* ---- src/drishti_grid-shell.js ---- */
   __m["src/drishti_grid-shell.js"] = (function () {
-    var h = __lib("drishti-core").h;
+    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount;
     var formatValue = __m["src/drishti_columns.js"].formatValue;
     var rangeStats = __m["src/drishti_selection.js"].rangeStats;
     var renderExplain = __m["src/drishti_grid-explain.js"].renderExplain;
@@ -5635,7 +5635,7 @@
       const shown = m.shownColumns();
       if (piv) { item(m.answer ? 'Pivot · ' + (m.answer.computedBy === 'browser' ? 'computed in the browser' : 'by the server') : 'Pivot', 'dg-st-mode'); }
       else if (!v.o.quietStatus) { item(m.serverSide ? 'Server-side rows' : 'Rows in the page', 'dg-st-mode'); }
-      if (!v.o.quietStatus) { item(m.rowCount().toLocaleString('en-US') + ' rows × ' + v.displayColumns().all.length + ' columns', 'dg-st-count'); }
+      if (!v.o.quietStatus) { item(formatCount(m.rowCount()) + ' rows × ' + v.displayColumns().all.length + ' columns', 'dg-st-count'); }
       const pending = piv && m.answer && m.answer.pending ? m.answer.pending.length : 0;
       if (pending) { item('… ' + pending + ' figures asked of the server', 'dg-st-pending'); }
       (m.pivotExtra.valueFilters || []).forEach((f) => item('value filter: ' + conditionText(f, (x) => v.fmtMeasure(f.by, x)), 'dg-st-vf'));
@@ -7549,7 +7549,7 @@
   })();
   /* ---- src/drishti_live-set.js ---- */
   __m["src/drishti_live-set.js"] = (function () {
-    var h = __lib("drishti-core").h, announce = __lib("drishti-core").announce, drishtiUrl = __lib("drishti-core").url;
+    var h = __lib("drishti-core").h, announce = __lib("drishti-core").announce, drishtiUrl = __lib("drishti-core").url, formatCount = __lib("drishti-core").formatCount;
     var selectElement = __lib("drishti-inputs").selectElement;
     var Grid = __m["src/drishti_grid-view.js"].Grid;
     var ROW_KEY = __m["src/drishti_live-model.js"].ROW_KEY, ROW_VERSION = __m["src/drishti_live-model.js"].ROW_VERSION, LiveRows = __m["src/drishti_live-model.js"].LiveRows, gridColumns = __m["src/drishti_live-model.js"].gridColumns, windowIds = __m["src/drishti_live-model.js"].windowIds, pivotLayout = __m["src/drishti_live-model.js"].pivotLayout, pivotHref = __m["src/drishti_live-model.js"].pivotHref, staticSpec = __m["src/drishti_live-model.js"].staticSpec, staticApi = __m["src/drishti_live-model.js"].staticApi;
@@ -7613,7 +7613,7 @@
         this.state = s;
         this.status.setAttribute('data-state', s);
         const n = this.rows.size, total = this.rows.total;
-        const count = (this.paged ? n.toLocaleString('en-US') + ' of ' + total.toLocaleString('en-US') : total.toLocaleString('en-US')) + ' ' + (this.spec.noun || 'rows');
+        const count = (this.paged ? formatCount(n) + ' of ' + formatCount(total) : formatCount(total)) + ' ' + (this.spec.noun || 'rows');
         this.status.textContent = ({ connecting: 'CONNECTING', live: this.live ? 'LIVE' : 'STATIC', reconnecting: 'RECONNECTING', paused: 'PAUSED', ended: 'ENDED', failed: 'FAILED' })[s] + ' · ' + count
           + (note ? ' · ' + note : '');
         this.status.setAttribute('data-rows', total);
@@ -7724,7 +7724,7 @@
         this.newRows = n;
         if (!this.newBtn) { return; }
         this.newBtn.hidden = n <= 0;
-        this.newBtn.textContent = n.toLocaleString('en-US') + ' new';
+        this.newBtn.textContent = formatCount(n) + ' new';
       }
       toNew() {
         const s = this.spec.sort || {};

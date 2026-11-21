@@ -18,7 +18,7 @@
    pivot (a pivot the producer aggregated: nested rows by their path, the column and grand totals, heat over the values). Sorting reads
    a numeric column's text as a number; nothing is computed or formatted beyond that order. A row with a pick raises the handle's pick
    event (a click or Enter). A patch that replaces the panel keeps the sort, the filter and what was opened. */
-import { h } from '../../drishti-core/src/drishti_index.js';
+import { h, formatCount } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { drawCell, say } from './drishti_views-cells.js';
 import { marksOf, hasEffects, clickable } from './drishti_views-state.js';
@@ -154,8 +154,8 @@ class TableView {
     if (!count) { this.tbody.appendChild(h(doc, 'tr', { cls: 'dv-empty-row' }, [h(doc, 'td', { text: this.d.emptyLabel || say(this.ctx.messages, 'noData'), attrs: { colspan: String(Math.max(1, this.columns.length)) } })])); }
     const left = all - Math.min(all, this.shown);
     this.more.hidden = left <= 0;
-    this.more.textContent = say(this.ctx.messages, 'showMore', { count: Math.min(left, PAGE_ROWS).toLocaleString('en-US') });
-    this.count.textContent = this.query ? say(this.ctx.messages, 'rowsMatch', { count: all.toLocaleString('en-US') }) : '';
+    this.more.textContent = say(this.ctx.messages, 'showMore', { count: formatCount(Math.min(left, PAGE_ROWS)) });
+    this.count.textContent = this.query ? say(this.ctx.messages, 'rowsMatch', { count: formatCount(all) }) : '';
   }
 
   subHead(level, depth) {
@@ -266,7 +266,7 @@ class PivotView {
     const table = h(doc, 'table', { cls: 'dv-tbl' }, [thead, tbody, tfoot]);
     while (this.box.firstChild) { this.box.removeChild(this.box.firstChild); }
     this.box.appendChild(h(doc, 'div', { cls: 'dv-tbl-scroll', attrs: { tabindex: '0', role: 'region', 'aria-label': this.panel.title || this.panel.id } }, [table]));
-    if (Number.isInteger(d.more) && d.more > 0) { this.box.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(m, 'moreRows', { count: d.more.toLocaleString('en-US') }) })); }
+    if (Number.isInteger(d.more) && d.more > 0) { this.box.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(m, 'moreRows', { count: formatCount(d.more) }) })); }
   }
 
   /** @private a cell that is a mark (contract 1.2): its effects run on a click (state), its ev handed to the host (the panel's event) */
