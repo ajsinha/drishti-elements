@@ -17,7 +17,12 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
-## Unreleased
+## 3.1.0
+
+Ready, not yet tagged. drishti-views, the tenth library: whole screens from a ViewModel of contract 1 (drishti-rachana's
+`spec/1/viewmodel.schema.json`, pinned): the validator, the painter with every kind of contract 1, live frames (conflated; over
+drishti-events or a plain stream), `<elements-view>`, and the builders of views and frames with `sse()`. Datasets and the `grid`, `tree` and
+`chart` kinds wait for the specification (contract 1 has none).
 
 - **drishti-views** (new, being built in the steps of `docs/VIEWS_DESIGN.md`; steps 1 to 3 here): the ViewModel specification as a
   pinned copy of drishti-rachana's `spec/1/viewmodel.schema.json` with its compact form (`tools/views/gen.py`, written by the build) and
