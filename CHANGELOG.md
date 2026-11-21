@@ -19,7 +19,7 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## 3.1.0
 
-Ready, not yet tagged. drishti-views, the tenth library: whole screens from a ViewModel of contract 1 (drishti-rachana's
+Released 2026-11-21. drishti-views, the tenth library: whole screens from a ViewModel of contract 1 (drishti-rachana's
 `spec/1/viewmodel.schema.json`, pinned): the validator, the painter with every kind of contract 1, live frames (conflated; over
 drishti-events or a plain stream), `<elements-view>`, and the builders of views and frames with `sse()`; and contract 1.1's datasets with
 the `grid`, `tree` and `chart` kinds. Still 3.1.0: nothing was tagged since, and every addition is new API (the versioning rules make an
@@ -101,7 +101,7 @@ addition a minor, and 3.1.0 is that minor).
 
 ## 3.0.0
 
-Ready, not yet tagged. drishti-events, the ninth library, complete (steps E1 to E12): events in the page, across tabs and with a server, one
+Released 2026-11-21. drishti-events, the ninth library, complete (steps E1 to E12): events in the page, across tabs and with a server, one
 connection shared by every tab, an offline queue that survives a reload, the mock server and its faults, metrics, "why didn't I get it?",
 the status badge and the inspector. Its wire protocol is in docs/CONTRACTS.md. Breaking since 2.4.0: see docs/MIGRATING_TO_3.md (every removal with its replacement).
 
