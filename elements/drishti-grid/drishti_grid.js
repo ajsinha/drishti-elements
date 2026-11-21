@@ -2188,7 +2188,7 @@
   })();
   /* ---- src/drishti_pivot-answer.js ---- */
   __m["src/drishti_pivot-answer.js"] = (function () {
-    var passes = __lib("drishti-core").passes, columnScale = __lib("drishti-core").columnScale, formatScaled = __lib("drishti-core").formatScaled, formatCount = __lib("drishti-core").formatCount;
+    var passes = __lib("drishti-core").passes, columnScale = __lib("drishti-core").columnScale, formatScaled = __lib("drishti-core").formatScaled;
     var SEP = __m["src/drishti_pivot.js"].SEP, memberText = __m["src/drishti_pivot.js"].memberText;
     function pivotApplyUpdates(answer, updates) {
       const inc = answer && answer.incremental;
@@ -2296,7 +2296,7 @@
       if (showAs.indexOf('pct') === 0) { return (v * 100).toFixed(2) + '%'; }
       const whole = showAs === 'rank' || showAs.indexOf('ntile:') === 0
         || (m && (m.unit === 'count' || ((m.unit === null || m.unit === undefined) && /^count/.test(m.id || ''))));   // no unit: a count by its function
-      if (whole) { return formatCount(Math.round(v)); }
+      if (whole) { return Math.round(v).toLocaleString('en-US'); }
       if (m && m.scale) { return formatScaled(v, m.scale); }        // the column's one unit (answerScales): every figure of the measure in it
       const a = Math.abs(v);
       if (a >= 1e9) { return (v / 1e9).toFixed(2) + ' bn'; }

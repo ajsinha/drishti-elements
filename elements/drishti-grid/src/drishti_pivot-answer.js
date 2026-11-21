@@ -15,7 +15,7 @@
  */
 /* The pivot's answer after it is made (drishti_pivot.js makes it): figures changed by difference for rows that changed, the server's
    non-additive figures merged in by coordinates, value filters, the result columns, a cell's value and a measure's text. */
-import { passes, columnScale, formatScaled, formatCount } from '../../drishti-core/src/drishti_index.js';
+import { passes, columnScale, formatScaled } from '../../drishti-core/src/drishti_index.js';
 import { SEP, memberText } from './drishti_pivot.js';
 
 /**
@@ -175,7 +175,7 @@ export function measureText(v, m) {
   if (showAs.indexOf('pct') === 0) { return (v * 100).toFixed(2) + '%'; }
   const whole = showAs === 'rank' || showAs.indexOf('ntile:') === 0
     || (m && (m.unit === 'count' || ((m.unit === null || m.unit === undefined) && /^count/.test(m.id || ''))));   // no unit: a count by its function
-  if (whole) { return formatCount(Math.round(v)); }
+  if (whole) { return Math.round(v).toLocaleString('en-US'); }
   if (m && m.scale) { return formatScaled(v, m.scale); }        // the column's one unit (answerScales): every figure of the measure in it
   const a = Math.abs(v);
   if (a >= 1e9) { return (v / 1e9).toFixed(2) + ' bn'; }
