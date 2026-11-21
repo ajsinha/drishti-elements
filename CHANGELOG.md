@@ -19,6 +19,10 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Painter `requires` fails closed** (G2 gate F10, owner O8): an action button that names a permission is enabled only when `options.host.allowed(name)`
+  answers exactly `true`; with no hook, any other answer, or a hook that throws, it is disabled. A page that wants every button passes
+  `allowed: () => true`. Elements still runs no host action.
+
 - **Formats `pct4`, `bp1`, `df4`, `price4` bundled** (drishti-core, `data/formats.yaml`): Rachana's language level 1.2 promotes these four
   names from Drishti's packs into Core with Drishti's definitions, so the shared table carries them (`since: "1.2"`, kept in
   `SERVER_FORMATS`); a painter draws them from any view. **`pack --data`** puts `data/formats.yaml` and `data/world-regions.yaml` in the

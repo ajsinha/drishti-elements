@@ -132,7 +132,9 @@ export class ViewHandle {
       checkForm: (id, values) => self.checkForm(id, values),
       submitForm: (id, values) => self.fire(id, 'submit', 0, values, true),
       ask: (text) => (o.host && typeof o.host.confirm === 'function' ? Promise.resolve(o.host.confirm(text)).then((v) => v === true) : ask(self.ctx, text)),
-      allowed: (name) => !(o.host && typeof o.host.allowed === 'function') || o.host.allowed(name) !== false,
+      // fail closed (G2 gate F10, owner O8): an action that names a permission is enabled only when the host answers exactly true; no hook, no answer, or any
+      // other answer leaves it disabled (a page that wants every button passes allowed: () => true). The host still decides in run: Elements runs no host action.
+      allowed: (name) => { try { return !!(o.host && typeof o.host.allowed === 'function') && o.host.allowed(name) === true; } catch (e) { return false; } },
       dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
       tables: (ref) => (typeof o.tables === 'function' ? o.tables(ref) || null : null),
       density: o.density || null,

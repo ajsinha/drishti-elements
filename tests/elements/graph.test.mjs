@@ -23,6 +23,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import * as G from '../../elements/drishti-graph/src/drishti_index.js';
 import { visualTheme } from '../../elements/drishti-core/src/drishti_index.js';
+const cpuMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };   // CPU time, not wall time: a busy machine does not fail a budget
 
 const DATA = () => ({
   directed: true,
@@ -109,12 +110,12 @@ test('5,000 nodes and 20,000 edges: every layout in time', () => {
   for (let i = 0; i < E; i++) { const a = Math.floor(r() * N), b = Math.floor(Math.pow(r(), 2) * N); if (a !== b) { edges.push({ id: 'e' + i, source: 'n' + a, target: 'n' + b }); } }
   const times = {};
   for (const name of ['force', 'layered', 'radial', 'circular', 'grouped']) {
-    const t = Date.now(), o = G.layout(name, { nodes, edges }, { seed: 7 });
-    times[name] = Date.now() - t;
+    const t = cpuMs(), o = G.layout(name, { nodes, edges }, { seed: 7 });
+    times[name] = cpuMs() - t;
     assert.equal(o.positions.size, N);
   }
-  const m = new G.GraphModel({ nodes, edges }), t0 = Date.now(), vis = G.visibleGraph(m, { groupBy: 'group' }, {});
-  times.group = Date.now() - t0;
+  const m = new G.GraphModel({ nodes, edges }), t0 = cpuMs(), vis = G.visibleGraph(m, { groupBy: 'group' }, {});
+  times.group = cpuMs() - t0;
   assert.equal(vis.nodes.length, 12);
   assert.ok(times.force < 15000, JSON.stringify(times));
   console.log('# 5,000 nodes / 20,000 edges, ms: ' + JSON.stringify(times));

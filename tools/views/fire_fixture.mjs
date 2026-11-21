@@ -22,6 +22,8 @@
 
    Needs the runtime bundle built there (python3 tools/js/build_js.py): js/packages/rachana/dist/rachana.tools.js. */
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -32,7 +34,14 @@ const require = createRequire(import.meta.url);
 const yaml = require(join(root, 'js/vendor/js-yaml/4.1.0/js-yaml.min.js'));
 const rt = await import(pathToFileURL(join(root, 'js/packages/rachana/dist/rachana.tools.js')).href);
 rt.init('core', JSON.stringify([readFileSync(join(root, 'spec/1/formats.yaml'), 'utf8')]));
-const dir = join(root, 'conformance/1/fire'), out = { source: 'drishti-rachana conformance/1/fire', cases: [] };
+const dir = join(root, 'conformance/1/fire');
+// The pin (G2 gate F15): the Rachana commit the cases are from and the hash of the case files (each file's name, a NUL, its bytes, in name order). tests/test_views_spec.py
+// reads the same files at this commit, and at `ref` (where Rachana's fire cases live now), and fails when they differ: regenerate with this script. The files must be committed.
+const git = (...a) => execFileSync('git', ['-C', root, ...a], { encoding: 'utf8' }).trim();
+if (git('status', '--porcelain', '--', 'conformance/1/fire')) { throw new Error('conformance/1/fire has uncommitted changes in ' + root + ': commit them first, the pin names a commit'); }
+const hash = createHash('sha256');
+for (const f of readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) { hash.update(f + '\0'); hash.update(readFileSync(join(dir, f))); }
+const out = { source: 'drishti-rachana conformance/1/fire', commit: git('rev-parse', 'HEAD'), ref: process.env.DRISHTI_RACHANA_REF || 'origin/g2/integration', sha256: hash.digest('hex'), cases: [] };
 for (const f of readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) {
   const doc = yaml.load(readFileSync(join(dir, f), 'utf8'));
   for (const c of doc.cases) {

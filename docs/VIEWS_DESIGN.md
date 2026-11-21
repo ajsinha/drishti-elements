@@ -768,8 +768,8 @@ after the other. A `form` panel is drishti-inputs' Form drawn from its fields (s
 Cancel; a submit hands its values to `options.host.check({panel, form, values})`, which answers the problems the Rachana runtime found (the rules are
 never evaluated in the browser): any problem refuses the submit, shown at its field, and nothing runs; otherwise the `submit` effects run with
 `event` the values (`set` takes `event.<field>`, a `host` effect's `withEvent` arguments are filled from them). `cancel` runs without checks. A panel's
-`actions` are buttons in its header (`confirm` asks in a dialog first, or `options.host.confirm(text)`; a `requires` that `options.host.allowed(name)`
-answers no leaves the button disabled). A control's `on.change` runs through `handle.change(control, value)`.
+`actions` are buttons in its header (`confirm` asks in a dialog first, or `options.host.confirm(text)`; a `requires` is enabled only when `options.host.allowed(name)`
+answers `true`: with no hook, or any other answer, the button is disabled; a page that wants every button passes `allowed: () => true`). A control's `on.change` runs through `handle.change(control, value)`.
 
 ### 8.3 `<elements-view>`
 

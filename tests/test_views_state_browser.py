@@ -242,6 +242,7 @@ UI = """async ([c, step]) => {
   const H = window.__harness, w = window.__w = { binds: [], calls: [], checks: [], bound: [], refused: [] };
   const host = { check: ({ values }) => { w.checks.push(values); return values.qty > 1000 ? [{ message: 'At most 1,000' }] : []; },    // the Rachana runtime's answer for this form's one rule
     bind: (req) => { w.binds.push(req); return JSON.parse(JSON.stringify(c.steps[step].viewModel)); },
+    allowed: (name) => name === 'order.cancel',
     run: (e, x) => w.calls.push(['host', e, x]), notify: (e, x) => w.calls.push(['notify', e, x]) };
   await H.paint(JSON.parse(JSON.stringify(c.viewModel)), { host: host });
   H.handle.on('bound', (e) => w.bound.push(e.detail));
@@ -292,4 +293,27 @@ def test_action_buttons_fire_their_effects_ask_first_with_confirm_and_a_control_
         await pg.locator(".dv-ask [data-ask=yes]").click()
         await pg.wait_for_function("() => window.__w.calls.length === 2", timeout=10000)
         assert await pg.evaluate("window.__w.calls.map((c) => c[1].do + ':' + (c[1].action || c[1].text))") == ["host:order.cancel", "notify:Cancelled A"]
+    with_page(browsers, body)
+
+
+ALLOWED = """async ([c, mode]) => {
+  const H = window.__harness, host = { bind: () => null, run: () => null, notify: () => null };
+  if (mode === 'true') host.allowed = () => true;
+  if (mode === 'false') host.allowed = () => false;
+  if (mode === 'yes') host.allowed = () => 'yes';
+  if (mode === 'undefined') host.allowed = () => undefined;
+  if (mode === 'throws') host.allowed = () => { throw new Error('no'); };
+  await H.paint(JSON.parse(JSON.stringify(c.viewModel)), { host: host });
+  const R = document.getElementById('hx-view'), root = R.shadowRoot || R;
+  return [...root.querySelectorAll('[data-panel=orders] .dv-panel-acts button')].map((b) => [b.textContent, b.disabled]);
+}"""
+
+
+def test_an_action_that_requires_a_permission_is_disabled_unless_the_host_answers_true(browsers):
+    """G2 gate F10 / O8: the painter fails closed. Cancel A names order.cancel; Wide and Reset name nothing and stay enabled."""
+    async def body(pg):
+        case = BY_ID["fire/actions/buttons-run-their-effects"]
+        for mode, cancel_disabled in (("none", True), ("false", True), ("undefined", True), ("yes", True), ("throws", True), ("true", False)):
+            got = await pg.evaluate(ALLOWED, [case, mode])
+            assert got == [["Cancel A", cancel_disabled], ["Wide", False], ["Reset", False]], (mode, got)
     with_page(browsers, body)

@@ -25,6 +25,7 @@ import * as C from '../../elements/drishti-core/src/drishti_index.js';
 
 const require = createRequire(import.meta.url);
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 0));
+const cpuMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };   // CPU time of this process: a busy machine (a parallel test run) does not slow it, so a budget is not a wall-clock race
 
 test('holiday calendars: the rules of a year (weekend rolls, nth weekdays, Easter), unions, a site\'s own dates', () => {
   const us = I.calendar('US');
@@ -240,9 +241,9 @@ test('code: the Rachana and YAML modes, completion from a catalogue, the text pu
   assert.equal(side[side.length - 1].left, null);
   assert.equal(I.lineDiff('same', 'same').every((o) => o.op === 'equal'), true);
   const big = Array.from({ length: 3000 }, (_, i) => 'line ' + i).join('\n'), big2 = big.replace('line 1500', 'line 1500 changed');
-  const t0 = Date.now(), d = I.lineDiff(big, big2);
+  const t0 = cpuMs(), d = I.lineDiff(big, big2);
   assert.equal(I.diffStats(d).added, 1);
-  assert.ok(Date.now() - t0 < 500);
+  assert.ok(cpuMs() - t0 < 500);
 });
 
 test('the bundle: drishti-inputs is a CommonJS module under Node, registered beside drishti-core, with every name', () => {

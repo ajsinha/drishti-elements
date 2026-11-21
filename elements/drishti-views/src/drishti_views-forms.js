@@ -17,7 +17,7 @@
    fields (types, labels, options, required, min and max, the starting values the ViewModel computed from initial:), with its own Submit and
    Cancel. Submit hands the values to the painter's fire (a refused submit shows the messages the host's check hook answered, each at its
    field; nothing is evaluated here: the rules are the Rachana runtime's), Cancel runs the cancel effects without checks. An action button
-   fires its place in the panel's list; confirm asks first; a requires the host's allowed hook answers no leaves the button disabled. */
+   fires its place in the panel's list; confirm asks first; a requires is enabled only when the host's allowed hook answers true (no hook, or any other answer: disabled). */
 import { h, openDialog, closeDialog } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { say } from './drishti_views-cells.js';

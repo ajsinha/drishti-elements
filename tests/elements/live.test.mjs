@@ -23,6 +23,7 @@ import * as EV from '../../elements/drishti-events/src/drishti_index.js';
 import { EventBus } from '../../elements/drishti-core/src/drishti_index.js';
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+const cpuMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };   // CPU time of this process: a busy machine (a parallel test run) does not slow it, so a budget is not a wall-clock race
 function trades(n) {
   const out = [];
   for (let i = 0; i < n; i++) { out.push({ id: 'T' + i, DESK: ['RATES', 'FX', 'EQUITY'][i % 3], CCY: ['USD', 'EUR'][i % 2], PX: 100 + i, QTY: i % 7, VAR: 5 + i }); }
@@ -106,7 +107,7 @@ test('batching: many transactions within the wait are one refresh, a row\'s last
   assert.equal(res[0].updated, 500);
   assert.equal(g.rowModel.getRowById('T0').PX, 1e6 + 1500);
   assert.equal(g.rowAt(0).id, 'T499');
-  const t0 = Date.now();
+  const t0 = cpuMs();
   let n = 0;
   for (let b = 0; b < 20; b++) {
     const upd = [];
@@ -115,7 +116,7 @@ test('batching: many transactions within the wait are one refresh, a row\'s last
     g.flushTransactions();
     n += upd.length;
   }
-  const perSecond = n / Math.max(1, Date.now() - t0) * 1000;
+  const perSecond = n / Math.max(1, cpuMs() - t0) * 1000;
   assert.ok(perSecond > 2000, 'updates a second: ' + Math.round(perSecond));
   for (let i = 1; i < g.rowCount(); i++) { assert.ok(g.rowAt(i - 1).row.PX >= g.rowAt(i).row.PX); }
 });
