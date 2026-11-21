@@ -20,6 +20,8 @@ Each release lists what changed, by library. One version for every library: the 
 ## Unreleased
 
 - **Charts, views**: a chart drawn before its box had a height (the engine at 0 px high) now follows its own box: each chart container is observed, not only the view, so the chart-point click is steady under parallel load (the browser test waits for the chart to be sized to its box).
+- **IDE launchers**: `run-configs/` (PyCharm and Shell Script configurations for the checks, the pytest and Node suites, the gallery server) and `drishti-elements.code-workspace` for VS Code; README, Build and run in the IDE.
+
 - **Treemap and bullet panels** (contract 1.2): `treemap` drawn by drishti-chart's panel charts (cells nested by group, toned by sign,
   the groups' labels on top, no zoom; a cell that carries its row is a `point` event) with its data table; `bullet` drawn by drishti-views
   as elements (the zones, the bounds, the figure's mark toned by its zone, the bounds' words, a meter for assistive technology).
