@@ -1091,9 +1091,8 @@
   })();
   /* ---- src/drishti_graph-export.js ---- */
   __m["src/drishti_graph-export.js"] = (function () {
-    var toCsv = __lib("drishti-core").toCsv;
-    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-    const esc = (s) => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, (c) => ESC[c]);
+    var toCsv = __lib("drishti-core").toCsv, escapeHtml = __lib("drishti-core").escapeHtml;
+    const esc = escapeHtml;
     const n2 = (v) => Math.round(v * 100) / 100;
     function svgShape(shape, x, y, r) {
       switch (shape) {

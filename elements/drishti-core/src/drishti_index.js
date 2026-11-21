@@ -48,7 +48,7 @@ export { openDialog, closeDialog, openDrawer, ToastTray, toast } from './drishti
 export { configure, endpoint, register, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, loadPart, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
 export { isBlank, compareValues, compareRows, cycleSort, passes, rowFilter, filterWords, filterRows, textSortKey,
   compareTextKeys } from './drishti_filters.js';
-export { h, placeAt, placeUnder, attrAllowed, safeUrl } from './drishti_dom.js';
+export { h, escapeHtml, placeAt, placeUnder, attrAllowed, safeUrl } from './drishti_dom.js';
 export { parseNumberText, numberEditText } from './drishti_parse.js';
 export { toCsv, download } from './drishti_files.js';
 export { sparkline, renderExplain } from './drishti_explain.js';

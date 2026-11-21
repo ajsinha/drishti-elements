@@ -17,6 +17,15 @@
    draws every component), placements that keep a floating element (a menu, a popover, a calendar) inside the window, and the rules for
    drawing untrusted data (attrAllowed, safeUrl: the client renderer draws a ViewModel through them). */
 
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+/**
+ * The one HTML escape of Drishti Elements: text made safe for an element's text and for a quoted attribute value (double or single
+ * quotes), and for XML text too (SVG, SpreadsheetML). Escapes & < > " ' ; null and undefined are the empty string.
+ * @param {*} s
+ * @returns {string}
+ */
+export function escapeHtml(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, (c) => ESCAPES[c]); }
+
 /** Attribute names a drawing of untrusted data may set (with data-* and aria-*): never an event handler, a style or a script address. */
 const SAFE_ATTRS = new Set(('class id role title href target rel type name value placeholder for colspan rowspan scope tabindex hidden disabled '
   + 'open datetime lang dir aria-label aria-hidden maxlength autocomplete').split(' '));

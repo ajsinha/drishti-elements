@@ -1599,7 +1599,7 @@
   })();
   /* ---- src/drishti_export.js ---- */
   __m["src/drishti_export.js"] = (function () {
-    var namedFormat = __lib("drishti-core").namedFormat, isoDate = __lib("drishti-core").isoDate;
+    var namedFormat = __lib("drishti-core").namedFormat, isoDate = __lib("drishti-core").isoDate, escapeHtml = __lib("drishti-core").escapeHtml;
     const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) { c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; } t[n] = c >>> 0; } return t; })();
     function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) { c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); } return (c ^ 0xFFFFFFFF) >>> 0; }
     const utf8 = (s) => new TextEncoder().encode(s);
@@ -1631,7 +1631,7 @@
       all.forEach((p) => { out.set(p, at); at += p.length; });
       return out;
     }
-    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    const esc = (s) => escapeHtml(s)
       .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
     function excelFormat(c) {
       if (c.type === 'date') { return 'yyyy-mm-dd'; }
@@ -7824,6 +7824,7 @@
   })();
   /* ---- src/drishti_plain-render.js ---- */
   __m["src/drishti_plain-render.js"] = (function () {
+    var escapeHtml = __lib("drishti-core").escapeHtml;
     function renderWindow(grid) {
       const vp = grid.viewport, rows = vp.rows(), shown = grid.shownColumns();
       const pinned = shown.filter((c) => c.pinned), center = shown.filter((c) => !c.pinned);
@@ -7843,7 +7844,7 @@
     }
     function renderHtml(grid) {
       const w = renderWindow(grid);
-      const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const esc = escapeHtml;
       return '<table role="grid" aria-rowcount="' + (grid.rowCount() + 1) + '"><thead><tr>' + w.columns.map((c) => '<th role="columnheader">' + esc(c.header) + '</th>').join('') +
         '</tr></thead><tbody>' + w.cells.map((r, i) => '<tr aria-rowindex="' + (w.first + i + 2) + '">' + r.map((t) => '<td role="gridcell">' + esc(t) + '</td>').join('') + '</tr>').join('') +
         '</tbody></table>';

@@ -13,6 +13,7 @@
  *
  * See the LICENSE file in the root of this repository.
  */
+import { escapeHtml } from '../../drishti-core/src/drishti_index.js';
 /* A plain renderer of the grid model: the rows and columns the viewport draws, as text lines or as plain table markup. For tests and for
    measuring the engine without a page; the layouts (wells, panel, terminal) draw the real grid. */
 
@@ -52,7 +53,7 @@ export function renderText(grid) {
  */
 export function renderHtml(grid) {
   const w = renderWindow(grid);
-  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const esc = escapeHtml;
   return '<table role="grid" aria-rowcount="' + (grid.rowCount() + 1) + '"><thead><tr>' + w.columns.map((c) => '<th role="columnheader">' + esc(c.header) + '</th>').join('') +
     '</tr></thead><tbody>' + w.cells.map((r, i) => '<tr aria-rowindex="' + (w.first + i + 2) + '">' + r.map((t) => '<td role="gridcell">' + esc(t) + '</td>').join('') + '</tr>').join('') +
     '</tbody></table>';

@@ -19,18 +19,17 @@
    console's, point for point, so the renderer and the console's pages draw the same chart (the parity suite compares them); axis
    ticks are drishti-core's formatCompact. Tooltips are markup written by the engine: every formatter escapes what it prints. The
    drawing (the engine, sizes, clicks, the map) is drishti_chart-panel-draw.js. */
-import { formatCompact } from '../../drishti-core/src/drishti_index.js';
+import { formatCompact, escapeHtml } from '../../drishti-core/src/drishti_index.js';
 
 /** The panel kinds drawn with the engine. */
 export const PANEL_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'graph', 'donut', 'surface', 'map', 'treemap']);
 
-const ENT = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 /**
  * Text made safe for a tooltip (the engine writes tooltips as markup).
  * @param {*} s
  * @returns {string}
  */
-export function escapeTip(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ENT[c]); }
+export function escapeTip(s) { return escapeHtml(s); }
 const esc = escapeTip;
 const num = (v) => typeof v === 'number' && isFinite(v);
 

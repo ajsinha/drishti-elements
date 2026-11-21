@@ -1934,6 +1934,16 @@ Makes an element: classes, text, attributes, data, CSSOM styles (never a style a
 
 Returns `HTMLElement`.
 
+#### `escapeHtml(s)`
+
+The one HTML escape of Drishti Elements: text made safe for an element's text and for a quoted attribute value (double or single quotes), and for XML text too (SVG, SpreadsheetML). Escapes & &lt; &gt; " ' ; null and undefined are the empty string.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `s` | `*` |  |
+
+Returns `string`.
+
 #### `placeAt(el, x, y)`
 
 Keeps a floating element inside the window: at (x, y), moved left or up when it would leave it.

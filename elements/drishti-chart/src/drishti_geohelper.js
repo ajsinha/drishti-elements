@@ -28,10 +28,11 @@
      G.project(geo, lon, lat)  a longitude and latitude on the level's map; G.bounds(geo) its boxes
      G.option(cfg)             the ECharts option of a world or region map (a choropleth, highlights, clickable places, bubbles)
      G.codeOf(params)          the place code of a click or hover on that map */
+import { escapeHtml } from '../../drishti-core/src/drishti_index.js';
 import { createGeoLoader, findPlace, fitView, locate, blend, alpha, panelCompact } from './drishti_index.js';
 
 const helpers = new Map();
-const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const esc = escapeHtml;
 const finite = (v) => typeof v === 'number' && isFinite(v);
 const DEFAULT_T = { ink: '#1b2430', muted: '#6b7785', border: '#c9d1da', surface: '#ffffff', link: '#1f5fbf', accent: '#d9822b', pos: '#2e8b57', mono: 'monospace' };
 

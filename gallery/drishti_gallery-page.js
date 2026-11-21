@@ -109,7 +109,7 @@
     }
     /* served: the files inlined (the sandbox's policy allows no network); from the file system a page cannot read files (fetch is
        refused), so the sandbox names them and reads them itself, as a file:// page may */
-    const esc = (u) => u.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const esc = NS.elements.core.escapeHtml;
     let head, libsCode;
     if (location.protocol === 'file:') {
       head = css.map((u) => '<link rel="stylesheet" href="' + esc(u) + '">').join('');

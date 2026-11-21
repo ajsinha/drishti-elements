@@ -3367,10 +3367,9 @@
   })();
   /* ---- src/drishti_chart-panels.js ---- */
   __m["src/drishti_chart-panels.js"] = (function () {
-    var formatCompact = __lib("drishti-core").formatCompact;
+    var formatCompact = __lib("drishti-core").formatCompact, escapeHtml = __lib("drishti-core").escapeHtml;
     const PANEL_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'graph', 'donut', 'surface', 'map', 'treemap']);
-    const ENT = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
-    function escapeTip(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ENT[c]); }
+    function escapeTip(s) { return escapeHtml(s); }
     const esc = escapeTip;
     const num = (v) => typeof v === 'number' && isFinite(v);
     const UNITS = [['bn', 1e9], ['m', 1e6], ['k', 1e3, 1e4]];

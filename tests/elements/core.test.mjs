@@ -298,3 +298,17 @@ test('a tour: one step\'s parts shown at a time, Back and Next clamped, the step
   t.destroy();
   assert.ok(!say1.hidden && !say2.hidden && !card.hidden && !next.listeners.click);
 });
+
+test('escapeHtml: the one escape makes text and quoted attribute values safe, with hostile strings', () => {
+  assert.equal(C.escapeHtml('a & b < c > d " e \' f'), 'a &amp; b &lt; c &gt; d &quot; e &#39; f');
+  assert.equal(C.escapeHtml(null), '');
+  assert.equal(C.escapeHtml(undefined), '');
+  assert.equal(C.escapeHtml(0), '0');
+  assert.equal(C.escapeHtml('&amp;'), '&amp;amp;');                      // never double-decoded, always escaped once more
+  for (const hostile of ['"><script>alert(1)</script>', "' onmouseover='alert(1)", '" autofocus onfocus="x', '<img src=x onerror=alert(1)>', '</title><svg/onload=x>']) {
+    const out = C.escapeHtml(hostile);
+    assert.ok(!/[<>"']/.test(out), out);                                // no markup, no quote survives
+    assert.equal(out.replace(/&(amp|lt|gt|quot|#39);/g, (m) => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" })[m]), hostile);
+  }
+  assert.equal(require('../../elements/drishti-core/drishti_core.js').escapeHtml('"'), '&quot;');   // the bundle too
+});

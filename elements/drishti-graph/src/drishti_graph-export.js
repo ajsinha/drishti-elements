@@ -16,10 +16,9 @@
 /* What leaves the graph: an SVG of what is drawn (vector, every node and edge, the labels, the theme's colours), the nodes and the
    edges as tables (drishti-core's CSV writer, or the grid's rows), the data as JSON, and the adjacency table, the graph's text
    alternative (each node with what it points to and what points to it, as the chart's ▦ gives its data). Pure: no page. */
-import { toCsv } from '../../drishti-core/src/drishti_index.js';
+import { toCsv, escapeHtml } from '../../drishti-core/src/drishti_index.js';
 
-const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const esc = (s) => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, (c) => ESC[c]);
+const esc = escapeHtml;
 const n2 = (v) => Math.round(v * 100) / 100;
 
 /** An SVG shape for a node. */

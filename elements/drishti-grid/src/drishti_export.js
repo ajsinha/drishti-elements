@@ -18,7 +18,7 @@
    #,##0, pct2 is 0.00%), dates are dates, the heading row is bold and frozen, and group rows keep Excel's outline levels (+ and -).
    The console's server-side workbooks (the VaR, SIMM and FRTB exports, made in Java) stay where they are: this is for a grid's own rows,
    with or without a Drishti server. The CSV writer is drishti-core's (the chart's data exports the same way). */
-import { namedFormat, isoDate } from '../../drishti-core/src/drishti_index.js';
+import { namedFormat, isoDate, escapeHtml } from '../../drishti-core/src/drishti_index.js';
 
 /** @typedef {import('../../drishti-core/src/drishti_files.js').ExportTable} ExportTable */
 
@@ -70,7 +70,7 @@ export function zipStore(files) {
 }
 
 // ---- the workbook --------------------------------------------------------------------------------------------------------------------
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const esc = (s) => escapeHtml(s)
   .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 
 /**

@@ -33,9 +33,10 @@
   var __m = {};
   /* ---- src/drishti_geohelper.js ---- */
   __m["src/drishti_geohelper.js"] = (function () {
+    var escapeHtml = __lib("drishti-core").escapeHtml;
     var createGeoLoader = __lib("drishti-chart").createGeoLoader, findPlace = __lib("drishti-chart").findPlace, fitView = __lib("drishti-chart").fitView, locate = __lib("drishti-chart").locate, blend = __lib("drishti-chart").blend, alpha = __lib("drishti-chart").alpha, panelCompact = __lib("drishti-chart").panelCompact;
     const helpers = new Map();
-    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const esc = escapeHtml;
     const finite = (v) => typeof v === 'number' && isFinite(v);
     const DEFAULT_T = { ink: '#1b2430', muted: '#6b7785', border: '#c9d1da', surface: '#ffffff', link: '#1f5fbf', accent: '#d9822b', pos: '#2e8b57', mono: 'monospace' };
     function geoHelper(o) {

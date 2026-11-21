@@ -156,3 +156,18 @@ def test_the_host_words_check_finds_them():
     for s in ("Drishti.elements.events", "drishti_events.js", "drishti-events", "prices.fx.USDCAD", "wss://example.org/events"):
         assert not HOST_WORDS.search(s), s
     assert all(p.is_file() for p in _events_files())
+
+
+# ---- one HTML escape, in drishti-core ------------------------------------------------------------------------------------------------
+# escapeHtml (drishti-core, & < > " ') is the only way to escape markup: a second helper is how one of them once left out the double quote
+# (an attribute-context hole). A hand-written escape is a chain of replaces to an entity, or a table of entities.
+ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#39|#x27);")
+
+
+def test_no_hand_written_html_escape_outside_drishti_core():
+    bad = []
+    files = [p for p in (ROOT / "elements").glob("*/src/*.js") if p.parent.parent.name != "drishti-core"] + list((ROOT / "gallery").glob("*.js"))
+    for p in sorted(files):
+        code = COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), p.read_text(encoding="utf-8"))
+        bad += [f"{p.relative_to(ROOT)}: {line.strip()[:120]}" for line in code.splitlines() if ENTITY.search(line)]
+    assert not bad, "write no escape of your own, use escapeHtml of drishti-core:\n" + "\n".join(bad)
