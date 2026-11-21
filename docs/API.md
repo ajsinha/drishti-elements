@@ -8200,6 +8200,30 @@ The editing of a grid model: what may change, transactions, undo and redo, paste
 | `grid` | `Object` | the GridModel |
 | `[o]` | `{writeBack: function(EditTransaction): Promise&lt;{status: string, proposalId: string, message: string}&gt;, fourEyes: boolean, locale: string, undoLimit: number}` | writeBack: the server hears each transaction (applied, refused, or proposed); fourEyes: every transaction is a proposal until resolveProposal; undoLimit default 100 |
 
+##### `GridEditing.setMark(rowId, colId, mark, note)`
+
+A cell's mark and its words (a live edit's states); a cell with a pending mark is not edited again until it is cleared.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rowId` | `string` |  |
+| `colId` | `string` |  |
+| `mark` | `?string` | sending, queued, held, applied, staged, invalid (null clears) |
+| `[note]` | `string` |  |
+
+Returns `void`.
+
+##### `GridEditing.noteOf(rowId, colId)`
+
+A cell's words for its mark, or null.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rowId` | `string` |  |
+| `colId` | `string` |  |
+
+Returns `?string`.
+
 ##### `GridEditing.canEdit(r, c)`
 
 Whether a shown cell may be edited.
@@ -8350,6 +8374,18 @@ Saves the editor's value (validated; a problem keeps the editor open) and moves 
 | `[leaving]` | `boolean` | the focus left: a value that is not valid is given up, not kept open |
 
 Returns `Promise&lt;boolean&gt;`: whether it was saved.
+
+##### `CellEditor.nextEditable(r, c, dc)`
+
+The next cell after (r, c) that may be edited, going right (dc 1) or left (dc -1) and on to the next or the previous row; null when none.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `r` | `number` |  |
+| `c` | `number` |  |
+| `dc` | `number` |  |
+
+Returns `?{r: number, c: number}`.
 
 ##### `CellEditor.cancel()`
 
@@ -8776,6 +8812,337 @@ Returns `void`.
 ##### `LiveSetGrid.destroy()`
 
 Stops following and takes the grid and the panel away.
+
+Returns `void`.
+
+### drishti_live-edit-model.js
+
+#### `ulid(now, rnd)`
+
+A ULID: 26 characters, a time (48 bits) then randomness (80 bits), sortable by creation.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[now]` | `number` | milliseconds (default: now) |
+| `[rnd]` | `function(): number` | a random number in [0, 1) (default: crypto, else Math.random) |
+
+Returns `string`.
+
+#### `isMaskedValue(v)`
+
+Whether a cell value is masked for the reader.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+
+Returns `boolean`.
+
+#### `writeSpec(schema)`
+
+What the reader may change, from the table's schema: null when the schema has no `write` (a read-only table: no edit control at all).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `schema` | `?Object` | the table's schema document |
+
+Returns `?WriteSpec`.
+
+#### `editorFor(rule)`
+
+The editor a column's rule asks for: number, select, date, checkbox, else text.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rule` | `{type: string, options: ?Array}` |  |
+
+Returns `string`.
+
+#### `checkRule(name, rule, v)`
+
+One value against one column's rules, in the host's words: null when fine.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` | the column |
+| `rule` | `{type: string, required: boolean, min: ?number, max: ?number, pattern: ?string, options: ?Array}` |  |
+| `v` | `*` |  |
+
+Returns `?string`.
+
+#### `reasonMode(spec, set)`
+
+The reason a change needs: required by the table, or for a rejection in the tray (a decision to reject always says why).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `WriteSpec` |  |
+| `set` | `Object` |  |
+
+Returns `('none'\|'optional'\|'required')`.
+
+#### `checkChange(spec, set, reason)`
+
+Every problem of a change before it is sent, by column: the rules of the columns set, and the reason. Nothing is sent when any.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `WriteSpec` |  |
+| `set` | `Object` | the columns and their new values |
+| `reason` | `?string` |  |
+
+Returns `Object&lt;string, string&gt;`: column to message ('reason' for the reason).
+
+#### `buildChange(spec, row, set, reason, id)`
+
+The change to send for one row: an update by key, on the version the row shows (the tray: "held").
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `WriteSpec` |  |
+| `row` | `Object` |  |
+| `set` | `Object` |  |
+| `reason` | `?string` |  |
+| `id` | `string` | the change's ULID (the same for a retry) |
+
+Returns `{id: string, op: string, key: Array, basedOn: *, set: Object, reason?: string}`.
+
+#### `mayEdit(spec, row, column, lockedWhy)`
+
+Which columns of a row the reader may edit now: the write columns, none when the row is read only, never a masked cell.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `WriteSpec` |  |
+| `row` | `Object` |  |
+| `column` | `string` |  |
+| `lockedWhy` | `?string` | the row's lock (403, 405), or null |
+
+Returns `boolean`.
+
+#### `outcome(answer, error)`
+
+What a host's answer or refusal means for the screen.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `answer` | `*` | the write's answer ({change, state, message, version?}) or null |
+| `error` | `*` | the DataError (status, error {code, message, fields, current}) or any error |
+
+Returns `{kind: string, message: string, fields: Array&lt;{column: ?string, message: string}&gt;, current: ?{version: *, by: *, at: *}, retry: boolean}`: kind: queued, held, applied (the answer's states), refused, conflict (409), invalid (422), forbidden (403), unsupported (405), gone (404), failed; retry: the same change id may be sent again (the network failed, no answer was seen).
+
+#### `changedWords(current)`
+
+Who changed a row and when, in a sentence: the words of a 409.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `current` | `?{version: *, by: *, at: *}` |  |
+
+Returns `string`.
+
+#### class `PendingChanges`
+
+The state of the changes a reader sent that wait for the table's patch: by row, until a patch names the row (or the row goes).
+
+##### `new PendingChanges()`
+
+Starts with nothing pending.
+
+##### `PendingChanges.idFor(key, basedOn, set, reason)`
+
+The id to send a change with: the one a failed try used when the same change is sent again, else a new one.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `key` | `Array` |  |
+| `basedOn` | `*` |  |
+| `set` | `Object` |  |
+| `reason` | `?string` |  |
+
+Returns `string`.
+
+##### `PendingChanges.settled(key, basedOn, set, reason)`
+
+A definitive answer was seen (not a network failure): the signature's id is not reused.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `key` | `Array` |  |
+| `basedOn` | `*` |  |
+| `set` | `Object` |  |
+| `reason` | `?string` |  |
+
+Returns `void`.
+
+##### `PendingChanges.mark(rowId, p)`
+
+Marks a row pending.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rowId` | `string` |  |
+| `p` | `{id: string, state: string, message: string, columns: string[]}` |  |
+
+Returns `void`.
+
+##### `PendingChanges.get(rowId)`
+
+The row's pending change, if any.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rowId` | `string` |  |
+
+Returns `?{id: string, state: string, message: string, columns: string[]}`.
+
+##### `PendingChanges.arrived(rowId)`
+
+The row's patch arrived (or the row left): the mark goes.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rowId` | `string` |  |
+
+Returns `boolean`: whether there was a mark.
+
+### drishti_live-edit.js
+
+#### class `LiveEdit`
+
+The live edit of one grid.
+
+##### `new LiveEdit(host, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` | where the status, the reason and the record panel go |
+| `o` | `Object` |  |
+| `o.spec` | `Object` | the WriteSpec (writeSpec(schema)): required |
+| `o.mode` | `('cells'\|'beside')` |  |
+| `o.table` | `{write: function(Object): Promise&lt;Object&gt;}` | the live table (write answers {change, state, message}; a refusal rejects with status and error) |
+| `o.idOf` | `function(Object): string` | the grid's row id of a row |
+| `o.rowOf` | `function(string): ?Object` | the row held for an id |
+| `o.drop` | `function(string): void` | takes a row away (it is gone: 404) |
+| `[o.label]` | `function(string): string` | a column's label |
+| `[o.grid]` | `function(): Object` | the grid (the cells mode's editors; the record panel's selection) |
+
+##### `LiveEdit.column(col)`
+
+Makes a column editable by its write rule (cells mode); other columns are returned as they are.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `col` | `Object` | a grid column ({field, header, type, ...}) |
+
+Returns `Object`.
+
+##### `LiveEdit.gridOptions()`
+
+The grid options of the edit: the propose hook and Tab to the next editable cell.
+
+Returns `Object`.
+
+##### `LiveEdit.may(row, column)`
+
+Whether a cell of a row may be edited now: a write column, not masked, the row not read only and no change of its own waiting.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `row` | `Object` |  |
+| `column` | `string` |  |
+
+Returns `boolean`.
+
+##### `LiveEdit.propose(tx)`
+
+The editing model's hook: a transaction's cells as one change per row, checked, then sent (or staged until the reason is given).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `tx` | `{edits: Array&lt;{rowId: string, colId: string, field: string, value: *}&gt;}` |  |
+
+Returns `Promise&lt;void&gt;`: rejects when a value breaks a rule.
+
+##### `LiveEdit.send(j, reason)`
+
+Sends one row's change and shows the answer.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `j` | `{rowId: string, set: Object, cols: Object}` |  |
+| `reason` | `string` |  |
+
+Returns `Promise&lt;Object&gt;`: the outcome (see outcome()).
+
+##### `LiveEdit.patched(rowIds)`
+
+A patch named rows (changed or gone): their pending marks go, and the panel notices a newer version.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rowIds` | `string[]` |  |
+
+Returns `void`.
+
+##### `LiveEdit.reset()`
+
+The rows were read again (a gap, a resync): nothing waits for a patch any more.
+
+Returns `void`.
+
+##### `LiveEdit.select(ids)`
+
+The grid's selection changed: beside mode opens the record of the one row selected.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ids` | `string[]` |  |
+
+Returns `void`.
+
+##### `LiveEdit.destroy()`
+
+Takes the edit down.
+
+Returns `void`.
+
+#### class `LiveNotices`
+
+The live panel's notices: the paused and stale banners from the table's schema, and "N new" when rows arrive while the page is scrolled down.
+
+##### `new LiveNotices(host, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `o` | `Object` |  |
+| `o.scroller` | `function(): ?Object` | the element the rows scroll in |
+
+##### `LiveNotices.state(schema)`
+
+Shows the table's state: paused (with the reason) or stale; nothing when it is up.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `schema` | `?Object` | the table's schema document |
+
+Returns `void`.
+
+##### `LiveNotices.arrived(n, scrolled)`
+
+Rows arrived above the page: counted while the page is scrolled down.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+| `[scrolled]` | `number` | how far the page was scrolled before the rows arrived (default: now) |
+
+Returns `void`.
+
+##### `LiveNotices.destroy()`
+
+Takes the notices away.
 
 Returns `void`.
 
@@ -10012,6 +10379,17 @@ Connects a live feed (drishti_live.js).
 | `feed` | `{subscribe: function(function(Object): void): function(): void}` |  |
 
 Returns `function(): void`: disconnects.
+
+##### `Grid.cellEl(r, c)`
+
+A cell's element by its place (the grid may sit in a shadow root, where the document does not look).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `r` | `number` |  |
+| `c` | `number` |  |
+
+Returns `?HTMLElement`.
 
 ##### `Grid.focusCell(r, c)`
 
@@ -11319,6 +11697,16 @@ Everything GridModel takes (columns, rows or datasource, serverPivot, explain, c
 | `focus` | `?{row: number, col: number}` | the new focus (null: unchanged) |
 | `action` | `?string` | what the layout does: select-row, toggle-row, select-all, extend-range, copy, edit, open, expand, collapse, expand-all, collapse-all, explain, clear, null |
 | `handled` | `boolean` | whether the key was the grid's (the layout then prevents the browser's default) |
+
+#### `WriteSpec` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `columns` | `Object&lt;string, {type: string, required: boolean, min: ?number, max: ?number, pattern: ?string, options: ?Array&lt;{value: *, label: string}&gt;}&gt;` |  |
+| `reason` | `('none'\|'optional'\|'required')` |  |
+| `key` | `string[]` | the key columns |
+| `version` | `?string` | the row version column (null: the held changes' tray, `basedOn` is "held") |
+| `decides` | `boolean` | the tray: the column `state` takes released or rejected |
 
 #### `LiveSetOptions` : `Object`
 

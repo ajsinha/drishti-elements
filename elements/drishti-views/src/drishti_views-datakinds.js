@@ -230,17 +230,26 @@ const live = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => {
   const keysOf = () => Array.from(held.values()).map((r) => key.map((k) => r[k]));
   const note = h(ctx.doc, 'p', { cls: 'dv-more dv-live-count', attrs: { 'aria-live': 'polite' } });
   box.parentNode.insertBefore(note, box.nextSibling);
-  let g = null, f = null, total = null, gone = false;
+  const lane = h(ctx.doc, 'div', { cls: 'dv-live-lane' }), editLane = h(ctx.doc, 'div', { cls: 'dv-live-edit' });   // the notices (paused, "N new") and the edit (status, reason, record)
+  note.parentNode.insertBefore(lane, note.nextSibling);
+  lane.parentNode.insertBefore(editLane, lane.nextSibling);
+  const mode = ref.edit === 'cells' || ref.edit === 'beside' ? ref.edit : null;
+  const schemaOf = () => (typeof t.schema === 'function' ? Promise.resolve().then(() => t.schema()).then((s) => s || null, () => null) : Promise.resolve(null));
+  let g = null, f = null, total = null, gone = false, edit = null, notices = null, timer = null;
   const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: held.size.toLocaleString(), total: (total === null ? held.size : total).toLocaleString() }); };
+  const labelOf = (name) => { const x = ds.field(name); return (x && x.label) || name; };
+  const idsOf = (p) => list(p.remove).map((k) => (Array.isArray(k) ? k.map((x) => (x === null || x === undefined ? '' : String(x))).join(SEP) : String(k))).concat(list(p.update).concat(list(p.add)).map(idOf));
   const apply = (p) => {
     if (!p || gone) { return; }
     let moved = false;
+    const scrolled = g && g.body && g.body.scroller ? g.body.scroller.scrollTop : 0;       // how far the page is scrolled down, before the rows arrive
     if (Array.isArray(p.reset)) { held.clear(); p.reset.forEach((r) => held.set(idOf(r), Object.assign({}, r))); moved = true; }
     list(p.remove).forEach((k) => { if (held.delete(Array.isArray(k) ? k.map((x) => (x === null || x === undefined ? '' : String(x))).join(SEP) : String(k))) { moved = true; } });
     const update = [], top = new Set(list(p.top).map((k) => (Array.isArray(k) ? k.map(String).join(SEP) : String(k)))), first = [];
+    let fresh = 0;
     list(p.update).concat(list(p.add)).forEach((r) => {
       const id = idOf(r), was = held.get(id);
-      if (was) { const n = Object.assign({}, was, r); held.set(id, n); update.push(n); if (top.has(id)) { first.push(id); } } else { held.set(id, Object.assign({}, r)); if (top.has(id)) { first.push(id); } moved = true; }
+      if (was) { const n = Object.assign({}, was, r); held.set(id, n); update.push(n); if (top.has(id)) { first.push(id); } } else { held.set(id, Object.assign({}, r)); if (top.has(id)) { first.push(id); fresh++; } moved = true; }
     });
     if (first.length) {                                             // a newest-first order: listed rows go on top, in the patch's order
       const rest = Array.from(held.entries()).filter((e) => first.indexOf(e[0]) < 0);
@@ -249,35 +258,55 @@ const live = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => {
       order.forEach((e) => held.set(e[0], e[1]));
       moved = true;
     }
+    if (edit) { if (Array.isArray(p.reset)) { edit.reset(); } else { edit.patched(idsOf(p)); } }     // the table's patch: what was pending is settled
     if (typeof p.total === 'number') { total = p.total; }
     while (held.size > size) { held.delete(Array.from(held.keys())[held.size - 1]); }   // past the window: the bottom rows leave
     if (moved) { g.setRows(Array.from(held.values())); } else if (update.length) { g.applyTransaction({ update: update }); }   // ticks flash
     if (moved && f) { f.window(keysOf(), !!ref.top); }
+    if (notices && fresh) { notices.arrived(fresh, scrolled); }
     count();
   };
-  const read = () => t.page(query).then((page) => {
+  const drop = (id) => { if (held.delete(id) && g) { g.setRows(Array.from(held.values())); if (f) { f.window(keysOf(), !!ref.top); } count(); } };
+  const showSchema = (schema) => {
+    if (!notices) { notices = new G.LiveNotices(lane, { scroller: () => (g && g.body ? g.body.scroller : null) }); }
+    notices.state(schema);
+    const spec = G.writeSpec(schema);
+    if (mode && spec && !edit && G.LiveEdit) {
+      edit = new G.LiveEdit(editLane, { spec: spec, mode: mode, table: t, idOf: idOf, rowOf: (id) => held.get(id) || null, drop: drop, label: labelOf, grid: () => g });
+    } else if (edit && !spec) { edit.lockAll = 'You may no longer edit this table'; }
+  };
+  const read = () => Promise.all([schemaOf(), t.page(query)]).then((both) => {
+    const schema = both[0], page = both[1];
     if (gone) { return; }
+    showSchema(schema);
+    if (edit) { edit.reset(); }
     held.clear();
     list(page.rows).slice(0, size).forEach((r) => held.set(idOf(r), Object.assign({}, r)));
     total = typeof page.total === 'number' ? page.total : null;
     if (g) { g.setRows(Array.from(held.values())); } else {
-      g = new G.Grid(box, { columns: withBars(G, gridColumns(d, ds), d, () => Array.from(held.values())), layout: 'wells', density: ctx.density || 'compact',
-        rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()) });
+      const cols = withBars(G, gridColumns(d, ds), d, () => Array.from(held.values()));
+      g = new G.Grid(box, Object.assign({ columns: edit ? cols.map((c) => edit.column(c)) : cols, layout: 'wells', density: ctx.density || 'compact',
+        rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()) }, edit ? edit.gridOptions() : {}));
       if (list(d.group).length) { g.model.setRowGroups(list(d.group)); }   // the rows keep the host's order (the query's sort)
       g.refresh();
       g.on('selectionChanged', () => {
         const ids = g.model.selection && g.model.selection.selectedIds ? g.model.selection.selectedIds() : [];
+        if (edit) { edit.select(ids); }
         ctx.emit('select', { panel: panel.id, dataset: ds.name, keys: ids });
       });
     }
     count();
     if (f) { f.stop(); }
     f = page.version ? t.follow(page.version, keysOf(), !!ref.top, apply, () => { f = null; if (!gone) { read(); } }) : null;
+    if (!timer && typeof t.schema === 'function') {                 // the paused and stale banners follow the table's schema
+      const every = () => { timer = ctx.doc.defaultView.setTimeout(() => { schemaOf().then((s) => { if (!gone && s) { showSchema(s); } }).then(() => { if (!gone) { every(); } }); }, ctx.schemaEvery); };
+      every();
+    }
   });
   return read().then(() => ({
     get component() { return g; },
     change() { /* a live dataset is changed by its table's patches, never by the view's rows op */ },
-    destroy() { gone = true; if (f) { f.stop(); } if (g) { g.destroy(); } note.remove(); }
+    destroy() { gone = true; if (timer) { ctx.doc.defaultView.clearTimeout(timer); } if (f) { f.stop(); } if (edit) { edit.destroy(); } if (notices) { notices.destroy(); } if (g) { g.destroy(); } note.remove(); lane.remove(); editLane.remove(); }
   }));
 });
 

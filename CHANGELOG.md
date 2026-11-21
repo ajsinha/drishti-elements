@@ -19,6 +19,16 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **The grid's live-mode edit UI** (drishti-grid, drishti-views): for a live table whose declaration says `edit: cells` or `beside`, the grid reads the
+  schema's `write` (only those columns, their rules, the reason mode; no `write`, no edit control) and edits it: cells mode an editor by each rule
+  (number, text, pick list, date), beside mode a record panel (a drishti-inputs form) with Save and Cancel; a masked cell is never editable. The
+  page checks the rules first, then `write({id: ulid, op: update, key, basedOn: the row's version, set, reason})`, the same id on a retry; the row is
+  never changed locally: the cell is marked sending, queued or held (with the host's message) until the table's patch arrives. 409 says who changed
+  the row and when, the value now, and offers Edit again; 422 puts each message on its column; 403 and 405 make the row read only; 404 drops it.
+  The held-changes tray decides in cells (`state`: released or rejected, a rejection asks its reason, `basedOn` held). Enter or F2 edits, Escape
+  cancels, Tab goes to the next editable cell; every editor has a name. The paused and stale banners come from the schema, "N new" counts rows that
+  arrive above a scrolled page. The page's `options.tables(ref)` answers `schema()` as well as `page`, `follow` and `write`. Fix found by it: the
+  grid in a shadow root looked its cells up in the document (an editor opened hidden).
 - **G2 golden: budgets alone, browsers required, the pack's own version** (tests, tools): the performance-budget tests (pytest marker `budget`,
   Node tests named `budget: ...`) run serially after the parallel run, in the standard command `python3 tools/run_tests.py`, so load cannot fail
   them; Playwright is pinned (1.64.0) and a missing Playwright or Chromium fails the run with the install command (no silent skips); the run

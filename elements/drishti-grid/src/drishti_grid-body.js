@@ -276,7 +276,7 @@ export class GridBody extends GridPointer {
     s.setAttribute('aria-rowcount', String(m.rowCount() + sp.levels));
     s.setAttribute('aria-colcount', String(m.shownColumns().length));
     const fid = focus ? this.uid + '-r' + focus.row + '-c' + focus.col : null;
-    if (fid && doc.getElementById(fid)) { s.setAttribute('aria-activedescendant', fid); } else { s.removeAttribute('aria-activedescendant'); }
+    if (fid && this.view.cellEl(focus.row, focus.col)) { s.setAttribute('aria-activedescendant', fid); } else { s.removeAttribute('aria-activedescendant'); }
     const why = v.emptyText();
     this.empty.hidden = !why;
     if (why) { showState(this.empty, 'empty', { text: why, overlay: true }); }
@@ -425,7 +425,7 @@ export class GridBody extends GridPointer {
     if (x.kind === 'leaf' && col.editable) {
       const mark = m.editing.markOf(x.id, col.id);
       if (m.editing.canEdit(r, c)) { cls += ' dg-editable'; }
-      if (mark) { cls += ' dg-' + mark; note = mark === 'proposed' ? 'Waiting for a second person to approve' : 'Changed here'; }
+      if (mark) { cls += ' dg-' + mark; note = m.editing.noteOf(x.id, col.id) || (mark === 'proposed' ? 'Waiting for a second person to approve' : 'Changed here'); }
     }
     let deco = null;
     if (x.kind === 'pivot' && !col.rowHeader && m.answer) {

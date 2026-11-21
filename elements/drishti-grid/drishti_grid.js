@@ -2863,6 +2863,7 @@
       if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
       return rows;
     }
+    const HOLDS = ['proposed', 'sending', 'queued', 'held', 'applied', 'staged'];
     function plain(row) { return row && typeof row.toObject === 'function' ? row.toObject() : Object.assign({}, row); }
     class GridEditing {
       constructor(grid, o) {
@@ -2872,12 +2873,19 @@
         this.redoStack = [];
         this.seq = 0;
         this.marks = new Map();
+        this.notes = new Map();
         this.proposals = new Map();
       }
+      setMark(rowId, colId, mark, note) {
+        const k = rowId + '\u001f' + colId;
+        if (mark) { this.marks.set(k, mark); if (note) { this.notes.set(k, note); } else { this.notes.delete(k); } } else { this.marks.delete(k); this.notes.delete(k); }
+        this.grid.events.emit('changed', { what: 'edit' });
+      }
+      noteOf(rowId, colId) { return this.notes.get(rowId + '\u001f' + colId) || null; }
       canEdit(r, c) {
         const g = this.grid, x = g.rowAt(r), col = g.shownColumns()[c];
         if (!x || x.kind !== 'leaf' || !col || g.pivotMode || g.serverSide || col.valueGetter || col.rowHeader) { return false; }
-        if (this.marks.get(x.id + '\u001f' + col.id) === 'proposed') { return false; }
+        if (HOLDS.indexOf(this.marks.get(x.id + '\u001f' + col.id)) >= 0) { return false; }
         return typeof col.editable === 'function' ? !!col.editable(x.row) : !!col.editable;
       }
       markOf(rowId, colId) { return this.marks.get(rowId + '\u001f' + colId) || null; }
@@ -2906,6 +2914,9 @@
         const g = this.grid;
         if (!edits.length) { return Promise.resolve({ id: 0, source: source, edits: [], status: 'applied', proposalId: null }); }
         const tx = { id: ++this.seq, source: source, edits: edits, status: 'pending', proposalId: null };
+        if (this.o.propose && source !== 'undo' && source !== 'redo') {            // a live table: the hook sends it, the row stays as it is
+          return Promise.resolve().then(() => this.o.propose(this.describe(tx))).then(() => tx);
+        }
         this.write(edits, 'value');
         edits.forEach((e) => this.marks.set(e.rowId + '\u001f' + e.colId, this.o.fourEyes ? 'proposed' : 'edited'));
         if (source !== 'undo' && source !== 'redo') { this.undoStack.push(tx); if (this.undoStack.length > this.o.undoLimit) { this.undoStack.shift(); } this.redoStack = []; }
@@ -3025,7 +3036,7 @@
         e.preventDefault();
         const f = m.navigator.focus;
         if (!f) { return; }
-        const cell = v.doc.getElementById(v.uid + '-r' + f.row + '-c' + f.col), r = cell ? cell.getBoundingClientRect() : { left: 40, bottom: 40 };
+        const cell = v.cellEl(f.row, f.col), r = cell ? cell.getBoundingClientRect() : { left: 40, bottom: 40 };
         v.openCellMenu(f.row, f.col, { x: r.left + 8, y: r.bottom });
         return;
       }
@@ -4253,7 +4264,7 @@
         s.setAttribute('aria-rowcount', String(m.rowCount() + sp.levels));
         s.setAttribute('aria-colcount', String(m.shownColumns().length));
         const fid = focus ? this.uid + '-r' + focus.row + '-c' + focus.col : null;
-        if (fid && doc.getElementById(fid)) { s.setAttribute('aria-activedescendant', fid); } else { s.removeAttribute('aria-activedescendant'); }
+        if (fid && this.view.cellEl(focus.row, focus.col)) { s.setAttribute('aria-activedescendant', fid); } else { s.removeAttribute('aria-activedescendant'); }
         const why = v.emptyText();
         this.empty.hidden = !why;
         if (why) { showState(this.empty, 'empty', { text: why, overlay: true }); }
@@ -4391,7 +4402,7 @@
         if (x.kind === 'leaf' && col.editable) {
           const mark = m.editing.markOf(x.id, col.id);
           if (m.editing.canEdit(r, c)) { cls += ' dg-editable'; }
-          if (mark) { cls += ' dg-' + mark; note = mark === 'proposed' ? 'Waiting for a second person to approve' : 'Changed here'; }
+          if (mark) { cls += ' dg-' + mark; note = m.editing.noteOf(x.id, col.id) || (mark === 'proposed' ? 'Waiting for a second person to approve' : 'Changed here'); }
         }
         let deco = null;
         if (x.kind === 'pivot' && !col.rowHeader && m.answer) {
@@ -5700,7 +5711,7 @@
       if (!v.exOpen) { return; }
       renderExplain(place, v.ex, L === 'panel' ? 'card' : 'drawer', { onClose: close, explainable: !!v.o.explain });
       if (L === 'panel' && v.ex) {
-        const cell = v.doc.getElementById(v.uid + '-r' + v.ex.row + '-c' + v.ex.col);
+        const cell = v.cellEl(v.ex.row, v.ex.col);
         const box = R.main.getBoundingClientRect();
         if (cell) {
           const r = cell.getBoundingClientRect(), w = place.offsetWidth || 330;
@@ -5733,7 +5744,7 @@
         const col = m.shownColumns()[c], ed = editorOf(col), cur = m.cellValue(r, c);
         if (ed === 'checkbox') { this.save(r, c, !cur, null); return true; }
         v.focusCell(r, c);
-        if (!this.doc.getElementById(v.uid + '-r' + r + '-c' + c)) { v.body.render(); }
+        if (!v.cellEl(r, c)) { v.body.render(); }
         this.at = { r: r, c: c, ed: ed, col: col, old: cur };
         const box = this.el = h(this.doc, 'div', { cls: 'dg-editor dg-editor-' + ed, attrs: { role: 'presentation' } });
         const msg = this.msg = h(this.doc, 'div', { cls: 'dg-editor-msg', attrs: { role: 'alert', id: v.uid + '-edit-msg', hidden: true } });
@@ -5792,7 +5803,7 @@
       }
       place() {
         if (!this.at || !this.el) { return; }
-        const v = this.view, cell = this.doc.getElementById(v.uid + '-r' + this.at.r + '-c' + this.at.c);
+        const v = this.view, cell = v.cellEl(this.at.r, this.at.c);
         if (!cell) { this.el.style.visibility = 'hidden'; return; }
         const a = v.body.area.getBoundingClientRect(), r = cell.getBoundingClientRect();
         const shown = this.el.style.visibility === 'hidden';               // a cell scrolled into view after editing started (out of view at first)
@@ -5848,13 +5859,20 @@
         if (plan.problems.length) { return Promise.resolve(this.problem(plan.problems[0].message, leaving)); }
         const p = m.editing.apply(plan.edits, 'edit');
         this.close(true);
+        if (move && move.dr === 0 && m.editing.o.tabEditable) { const n = this.nextEditable(r, c, move.dc); if (n) { move = { dr: n.r - r, dc: n.c - c }; } }   // Tab: the next cell that can be edited
         if (move) { m.navigator.setFocus(r + move.dr, c + move.dc); m.selection.startRange(m.navigator.focus.row, m.navigator.focus.col, {}); v.afterFocus(true); }
         v.body.scroller.focus({ preventScroll: true });
         return p.then((tx) => {
           if (tx.status === 'proposed') { v.say('Sent for approval (' + tx.proposalId + '): the cell is marked until a second person decides'); }
-          else if (tx.edits.length) { v.say('Saved ' + col.header); }
+          else if (tx.edits.length) { v.say((tx.status === 'pending' ? 'Sending ' : 'Saved ') + col.header); }
           return true;
         }, (err) => { v.say('Not saved: ' + err.message); return false; });
+      }
+      nextEditable(r, c, dc) {
+        const m = this.view.model, C = m.shownColumns().length, R = m.rowCount(), step = dc < 0 ? -1 : 1;
+        let i = r * C + c + step;
+        for (; i >= 0 && i < R * C; i += step) { const rr = Math.floor(i / C), cc = i % C; if (m.editing.canEdit(rr, cc)) { return { r: rr, c: cc }; } }
+        return null;
       }
       problem(text, leaving) {
         if (leaving || !this.el) { this.close(false); this.view.say('Not saved: ' + text); return false; }
@@ -6068,6 +6086,7 @@
       applyTransaction(tx) { return this.model.applyTransaction(tx); }
       applyTransactionAsync(tx) { return this.model.applyTransactionAsync(tx); }
       connectLive(feed) { const off = this.model.connectLive(feed); this.live = true; this.renderChrome(); return () => { off(); this.live = false; this.renderChrome(); }; }
+      cellEl(r, c) { const root = this.body.scroller.getRootNode(), id = this.uid + '-r' + r + '-c' + c; return root && root.getElementById ? root.getElementById(id) : this.doc.getElementById(id); }
       focusCell(r, c) { this.model.cellClicked(r, c, {}); this.afterFocus(true); this.body.scroller.focus({ preventScroll: true }); }
       getState() {
         return Object.assign(this.model.getState(), { view: { pinTotals: this.ui.pinTotals, hidden: Array.from(this.ui.hidden), widths: Object.assign({}, this.ui.widths),
@@ -7822,6 +7841,436 @@
     }
     return { "LIVE_STATES": LIVE_STATES, "LiveSetGrid": LiveSetGrid };
   })();
+  /* ---- src/drishti_live-edit-model.js ---- */
+  __m["src/drishti_live-edit-model.js"] = (function () {
+    const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+    function ulid(now, rnd) {
+      let t = now === undefined ? Date.now() : now, out = '';
+      for (let i = 0; i < 10; i++) { out = CROCKFORD[t % 32] + out; t = Math.floor(t / 32); }
+      const bytes = new Uint8Array(16);
+      const c = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+      if (!rnd && c && c.getRandomValues) { c.getRandomValues(bytes); } else { const r = rnd || Math.random; for (let i = 0; i < 16; i++) { bytes[i] = Math.floor(r() * 256); } }
+      for (let i = 0; i < 16; i++) { out += CROCKFORD[bytes[i] % 32]; }
+      return out;
+    }
+    function isMaskedValue(v) { return v !== null && typeof v === 'object' && v.$masked === true; }
+    function option(o) { return o !== null && typeof o === 'object' ? { value: o.value, label: String(o.label !== undefined ? o.label : o.value) } : { value: o, label: String(o) }; }
+    function writeSpec(schema) {
+      const w = schema && schema.write;
+      if (!w || typeof w !== 'object' || !w.columns || typeof w.columns !== 'object') { return null; }
+      const columns = {};
+      Object.keys(w.columns).forEach((name) => {
+        const r = w.columns[name] || {};
+        columns[name] = { type: String(r.type || 'string'), required: r.required === true, min: typeof r.min === 'number' ? r.min : null, max: typeof r.max === 'number' ? r.max : null,
+          pattern: typeof r.pattern === 'string' && r.pattern ? r.pattern : null, options: Array.isArray(r.options) && r.options.length ? r.options.map(option) : null };
+      });
+      if (!Object.keys(columns).length) { return null; }
+      const st = columns.state, decides = !!(st && st.options && st.options.some((o) => o.value === 'released') && st.options.some((o) => o.value === 'rejected'));
+      return { columns: columns, reason: w.reason === 'required' || w.reason === 'optional' ? w.reason : 'none', key: Array.isArray(schema.key) ? schema.key.slice() : [],
+        version: typeof schema.rowVersion === 'string' ? schema.rowVersion : null, decides: decides };
+    }
+    function editorFor(rule) {
+      if (rule.options) { return 'select'; }
+      if (rule.type === 'number' || rule.type === 'integer' || rule.type === 'money') { return 'number'; }
+      if (rule.type === 'date') { return 'date'; }
+      if (rule.type === 'boolean') { return 'checkbox'; }
+      return 'text';
+    }
+    function checkRule(name, rule, v) {
+      if (v === null || v === undefined || v === '') { return rule.required ? name + ' is required' : null; }
+      if (rule.options && !rule.options.some((o) => o.value === v || String(o.value) === String(v))) { return name + ' is not one of ' + rule.options.map((o) => o.label).join(', '); }
+      if (rule.type === 'number' || rule.type === 'integer' || rule.type === 'money') {
+        if (typeof v !== 'number' || isNaN(v)) { return name + ' is not a number'; }
+        if (rule.type === 'integer' && !Number.isInteger(v)) { return name + ' is not a whole number'; }
+        if (rule.min !== null && v < rule.min) { return name + ' is at least ' + rule.min; }
+        if (rule.max !== null && v > rule.max) { return name + ' is at most ' + rule.max; }
+        return null;
+      }
+      if (rule.pattern && !new RegExp('^(?:' + rule.pattern + ')$').test(String(v))) { return name + ' does not match ' + rule.pattern; }
+      return null;
+    }
+    function reasonMode(spec, set) { return spec.decides && set && set.state === 'rejected' ? 'required' : spec.reason; }
+    function checkChange(spec, set, reason) {
+      const bad = {};
+      Object.keys(set).forEach((name) => {
+        const rule = spec.columns[name];
+        if (!rule) { bad[name] = name + ' cannot be changed'; return; }
+        const why = checkRule(name, rule, set[name]);
+        if (why) { bad[name] = why; }
+      });
+      if (reasonMode(spec, set) === 'required' && !String(reason || '').trim()) { bad.reason = 'a reason is required'; }
+      return bad;
+    }
+    function buildChange(spec, row, set, reason, id) {
+      const c = { id: id, op: 'update', key: spec.key.map((k) => row[k]), basedOn: spec.version ? row[spec.version] : 'held', set: Object.assign({}, set) };
+      const r = String(reason || '').trim();
+      if (r) { c.reason = r; }
+      return c;
+    }
+    function mayEdit(spec, row, column, lockedWhy) {
+      return !!spec && !lockedWhy && Object.prototype.hasOwnProperty.call(spec.columns, column) && !isMaskedValue(row[column]) && !!row;
+    }
+    const CODE_STATUS = { 'rdp.write.conflict': 409, 'rdp.write.invalid': 422, 'rdp.write.forbidden': 403, 'rdp.forbidden': 403, 'rdp.write.unsupported': 405, 'rdp.table.unknown': 404 };
+    function outcome(answer, error) {
+      if (!error) {
+        const st = String((answer && answer.state) || 'queued'), kind = ['queued', 'held', 'applied', 'refused'].indexOf(st) >= 0 ? st : 'queued';
+        return { kind: kind, message: String((answer && answer.message) || ''), fields: [], current: null, retry: false };
+      }
+      const e = error.error || {}, s = error.status || CODE_STATUS[e.code] || 0, msg = String(e.message || error.message || 'The change was not sent');
+      const base = { message: msg, fields: Array.isArray(e.fields) ? e.fields.map((f) => ({ column: f.column || null, message: String(f.message || '') })) : [], current: e.current || null, retry: false };
+      if (s === 409) { return Object.assign(base, { kind: 'conflict' }); }
+      if (s === 422) { return Object.assign(base, { kind: 'invalid' }); }
+      if (s === 403) { return Object.assign(base, { kind: 'forbidden' }); }
+      if (s === 405) { return Object.assign(base, { kind: 'unsupported' }); }
+      if (s === 404) { return Object.assign(base, { kind: 'gone' }); }
+      return Object.assign(base, { kind: 'failed', retry: !s || s >= 500 });
+    }
+    function changedWords(current) {
+      if (!current) { return 'The row was changed by someone else'; }
+      const at = String(current.at || '').replace('T', ' ').replace(/Z$/, '').slice(0, 19);
+      return 'Changed by ' + (current.by || 'someone') + (at ? ' at ' + at : '');
+    }
+    class PendingChanges {
+      constructor() {
+        this.rows = new Map();                  // row id -> {id, state, message, columns, change}
+        this.attempts = new Map();              // the signature of a change -> the id it was sent with (a retry reuses it)
+      }
+      idFor(key, basedOn, set, reason) {
+        const sig = JSON.stringify([key, basedOn, set, reason || '']);
+        let id = this.attempts.get(sig);
+        if (!id) { id = ulid(); this.attempts.set(sig, id); }
+        return id;
+      }
+      settled(key, basedOn, set, reason) { this.attempts.delete(JSON.stringify([key, basedOn, set, reason || ''])); }
+      mark(rowId, p) { this.rows.set(rowId, p); }
+      get(rowId) { return this.rows.get(rowId) || null; }
+      arrived(rowId) { return this.rows.delete(rowId); }
+      get size() { return this.rows.size; }
+    }
+    return { "ulid": ulid, "isMaskedValue": isMaskedValue, "writeSpec": writeSpec, "editorFor": editorFor, "checkRule": checkRule, "reasonMode": reasonMode, "checkChange": checkChange, "buildChange": buildChange, "mayEdit": mayEdit, "outcome": outcome, "changedWords": changedWords, "PendingChanges": PendingChanges };
+  })();
+  /* ---- src/drishti_live-edit.js ---- */
+  __m["src/drishti_live-edit.js"] = (function () {
+    var h = __lib("drishti-core").h, announce = __lib("drishti-core").announce;
+    var Form = __lib("drishti-inputs").Form;
+    var editorFor = __m["src/drishti_live-edit-model.js"].editorFor, checkRule = __m["src/drishti_live-edit-model.js"].checkRule, checkChange = __m["src/drishti_live-edit-model.js"].checkChange, buildChange = __m["src/drishti_live-edit-model.js"].buildChange, mayEdit = __m["src/drishti_live-edit-model.js"].mayEdit, outcome = __m["src/drishti_live-edit-model.js"].outcome, changedWords = __m["src/drishti_live-edit-model.js"].changedWords, reasonMode = __m["src/drishti_live-edit-model.js"].reasonMode, PendingChanges = __m["src/drishti_live-edit-model.js"].PendingChanges;
+    const show = (v) => (v === null || v === undefined || v === '' ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+    class LiveEdit {
+      constructor(host, o) {
+        this.host = host;
+        this.doc = host.ownerDocument;
+        this.o = o;
+        this.spec = o.spec;
+        this.pending = new PendingChanges();
+        this.locked = new Map();
+        this.lockAll = null;
+        this.staged = [];
+        this.failed = [];
+        this.panel = null;
+        this.draw();
+      }
+      get cells() { return this.o.mode === 'cells'; }
+      draw() {
+        const d = this.doc, mode = this.spec.reason !== 'none' || this.spec.decides;
+        this.status = h(d, 'p', { cls: 'dg-le-status', attrs: { role: 'status', 'aria-live': 'polite' }, data: { liveEditStatus: '' } });
+        this.alert = h(d, 'div', { cls: 'dg-le-alert', attrs: { role: 'alert', hidden: true }, data: { liveEditAlert: '' } });
+        this.reasonBox = h(d, 'div', { cls: 'dg-le-reason', attrs: { hidden: !mode || !this.cells } });
+        this.reasonIn = h(d, 'input', { cls: 'dg-le-reason-in', attrs: { type: 'text', 'aria-label': 'Reason for the change', placeholder: this.spec.reason === 'required' ? 'Reason (required)' : 'Reason' }, data: { liveEditReason: '' },
+          on: { keydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.sendStaged(); } } } });
+        this.reasonBox.append(h(d, 'label', { text: 'Reason ' }, []), this.reasonIn);
+        this.panelHost = h(d, 'div', { cls: 'dg-le-panel', attrs: { hidden: true }, data: { liveEditPanel: '' } });
+        this.host.append(this.status, this.alert, this.reasonBox, this.panelHost);
+      }
+      column(col) {
+        const rule = this.spec.columns[col.field];
+        if (!this.cells || !rule) { return col; }
+        const name = col.field;
+        return Object.assign({}, col, { editable: (row) => this.may(row, name), editor: editorFor(rule), required: rule.required,
+          options: rule.options ? rule.options.map((x) => ({ value: x.value, label: x.label })) : undefined, validate: (v) => checkRule(name, rule, v) });
+      }
+      gridOptions() { return this.cells ? { editing: { propose: (tx) => this.propose(tx), tabEditable: true } } : {}; }
+      may(row, column) {
+        const id = this.o.idOf(row);
+        return mayEdit(this.spec, row, column, this.lockAll || this.locked.get(id) || null) && !this.pending.get(id);
+      }
+      get editing() { const g = this.o.grid && this.o.grid(); return g ? g.model.editing : null; }
+      mark(rowId, columns, mark, note) { const e = this.editing; if (e) { columns.forEach((c) => e.setMark(rowId, c, mark, note)); } }
+      colId(field) { const g = this.o.grid && this.o.grid(), c = g && g.model.shownColumns().find((x) => x.field === field); return c ? c.id : field; }
+      propose(tx) {
+        const byRow = new Map();
+        tx.edits.forEach((e) => { const x = byRow.get(e.rowId) || { rowId: e.rowId, set: {}, cols: {} }; x.set[e.field] = e.value; x.cols[e.field] = e.colId; byRow.set(e.rowId, x); });
+        const jobs = Array.from(byRow.values());
+        for (const j of jobs) {                                   // the rules first, in the page: nothing is sent when one is broken
+          const bad = checkChange(this.spec, j.set, 'x');
+          const first = Object.keys(bad).filter((k) => k !== 'reason')[0];
+          if (first) { return Promise.reject(new Error(bad[first])); }
+        }
+        this.clearAlert();
+        const need = jobs.some((j) => reasonMode(this.spec, j.set) === 'required') && !this.reasonIn.value.trim();
+        if (need) {
+          jobs.forEach((j) => this.mark(j.rowId, Object.values(j.cols), 'staged', 'Waiting for a reason'));
+          this.staged = this.staged.concat(jobs);
+          this.showStaged();
+          return Promise.resolve();
+        }
+        jobs.forEach((j) => this.mark(j.rowId, Object.values(j.cols), 'sending', 'Sending'));
+        const reason = this.reasonIn.value.trim();
+        this.reasonIn.value = '';
+        jobs.forEach((j) => { this.send(j, reason); });
+        return Promise.resolve();
+      }
+      showStaged() {
+        const d = this.doc, n = this.staged.length;
+        this.alert.hidden = false;
+        this.alert.textContent = '';
+        this.alert.setAttribute('data-kind', 'reason');
+        this.alert.append('A reason is needed to send ' + n + (n === 1 ? ' change' : ' changes') + '. ',
+          h(d, 'button', { cls: 'dg-le-btn', text: 'Send', attrs: { type: 'button' }, data: { act: 'send-staged' }, on: { click: () => this.sendStaged() } }), ' ',
+          h(d, 'button', { cls: 'dg-le-btn', text: 'Discard', attrs: { type: 'button' }, data: { act: 'discard-staged' }, on: { click: () => this.discardStaged() } }));
+        this.reasonBox.hidden = false;
+        this.reasonIn.focus();
+        announce('A reason is needed to send the change');
+      }
+      sendStaged() {
+        if (!this.staged.length) { return; }
+        const reason = this.reasonIn.value.trim();
+        if (!reason) { this.reasonIn.setAttribute('aria-invalid', 'true'); this.reasonIn.focus(); announce('A reason is required'); return; }
+        this.reasonIn.removeAttribute('aria-invalid');
+        const jobs = this.staged;
+        this.staged = [];
+        this.clearAlert();
+        this.reasonIn.value = '';
+        jobs.forEach((j) => { this.mark(j.rowId, Object.values(j.cols), 'sending', 'Sending'); this.send(j, reason); });
+      }
+      discardStaged() {
+        this.staged.forEach((j) => this.mark(j.rowId, Object.values(j.cols), null));
+        this.staged = [];
+        this.clearAlert();
+      }
+      send(j, reason) {
+        const row = this.o.rowOf(j.rowId);
+        if (!row) { return Promise.resolve(outcome(null, { status: 404, error: { message: 'The row is gone' } })); }
+        const change0 = buildChange(this.spec, row, j.set, reason, '');
+        const id = this.pending.idFor(change0.key, change0.basedOn, j.set, reason), change = Object.assign({}, change0, { id: id });
+        this.pending.mark(j.rowId, { id: id, state: 'sending', message: '', columns: Object.keys(j.set) });
+        return Promise.resolve().then(() => this.o.table.write(change)).then((answer) => answer, (error) => { j.error = error; return null; }).then((answer) => {
+          const out = outcome(answer, j.error);
+          j.error = null;
+          if (!out.retry) { this.pending.settled(change.key, change.basedOn, j.set, reason); }
+          this.settle(j, change, out, reason);
+          return out;
+        });
+      }
+      settle(j, change, out, reason) {
+        const cols = Object.values(j.cols), field = Object.keys(j.set), rowId = j.rowId, row = this.o.rowOf(rowId);
+        const clear = () => { this.pending.arrived(rowId); this.mark(rowId, cols, null); };
+        if (out.kind === 'queued' || out.kind === 'held' || out.kind === 'applied') {
+          this.pending.mark(rowId, { id: change.id, state: out.kind, message: out.message, columns: field });
+          this.mark(rowId, cols, out.kind, out.message || out.kind);
+          this.say(this.describe(row, j.set) + ': ' + (out.kind === 'held' ? 'held' + (out.message ? ', ' + out.message : '') : out.kind === 'queued' ? 'queued' + (out.message ? ', ' + out.message : '') : 'applied, waiting for the table'));
+          return;
+        }
+        clear();
+        if (out.kind === 'refused') { this.fail(out.message || 'The change was refused', rowId); return; }
+        if (out.kind === 'conflict') { this.conflict(rowId, j, out); return; }
+        if (out.kind === 'invalid') {
+          out.fields.forEach((f) => { const c = f.column && j.cols[f.column]; if (c) { this.mark(rowId, [c], 'invalid', f.message); } });
+          this.fail(out.fields.length ? out.fields.map((f) => (f.column ? f.column + ': ' : '') + f.message).join('; ') : out.message, rowId);
+          if (this.panel) { this.panel.invalid(out); }
+          return;
+        }
+        if (out.kind === 'forbidden' || out.kind === 'unsupported') {
+          if (out.kind === 'unsupported') { this.lockAll = out.message; } else { this.locked.set(rowId, out.message); }
+          this.fail(out.message + ' (read only)', rowId);
+          this.afterChange();
+          return;
+        }
+        if (out.kind === 'gone') { this.say(this.describe(row, j.set) + ': the row is gone'); this.o.drop(rowId); if (this.panel) { this.closePanel(); } return; }
+        this.failed.push({ j: j, reason: reason });                                  // the network: the same change id goes again
+        this.fail(out.message + ' ', rowId, true);
+      }
+      describe(row, set) { return (row ? this.o.idOf(row) : '') + ' ' + Object.keys(set).map((k) => (this.o.label ? this.o.label(k) : k) + ' ' + show(set[k])).join(', '); }
+      conflict(rowId, j, out) {
+        const d = this.doc, row = this.o.rowOf(rowId), cols = Object.keys(j.set);
+        this.conflictOf = { rowId: rowId, j: j, out: out };
+        const caught = row && this.spec.version && out.current && row[this.spec.version] === out.current.version;
+        const now = row ? cols.map((c) => (this.o.label ? this.o.label(c) : c) + ' is now ' + (caught ? show(row[c]) : 'being updated')).join(', ') : '';
+        this.alert.hidden = false;
+        this.alert.textContent = '';
+        this.alert.setAttribute('data-kind', 'conflict');
+        this.alert.append(changedWords(out.current) + '. ' + now + '. ',
+          h(d, 'button', { cls: 'dg-le-btn', text: 'Edit again', attrs: { type: 'button' }, data: { act: 'edit-again' }, on: { click: () => this.editAgain(rowId, cols[0]) } }));
+        this.say('Not saved: the row was changed by someone else');
+        announce('Not saved: the row was changed by someone else');
+      }
+      editAgain(rowId, column) {
+        this.clearAlert();
+        if (!this.cells) { const row = this.o.rowOf(rowId); if (row) { this.openPanel(row); } return; }
+        const g = this.o.grid(), m = g.model, c = m.shownColumns().findIndex((x) => x.field === column);
+        let r = -1;
+        for (let i = 0; i < m.rowCount(); i++) { if (m.idAt(i) === rowId) { r = i; break; } }
+        if (r >= 0 && c >= 0) { g.startEditing(r, c); }
+      }
+      fail(message, rowId, retry) {
+        const d = this.doc;
+        this.alert.hidden = false;
+        this.alert.textContent = '';
+        this.alert.setAttribute('data-kind', retry ? 'failed' : 'refused');
+        this.alert.append(message);
+        if (retry) { this.alert.append(h(d, 'button', { cls: 'dg-le-btn', text: 'Try again', attrs: { type: 'button' }, data: { act: 'retry' }, on: { click: () => this.retry() } })); }
+        this.say('Not saved: ' + message);
+        announce('Not saved: ' + message);
+      }
+      retry() {
+        const jobs = this.failed;
+        this.failed = [];
+        this.clearAlert();
+        jobs.forEach((x) => { this.mark(x.j.rowId, Object.values(x.j.cols), 'sending', 'Sending'); this.send(x.j, x.reason); });
+      }
+      clearAlert() { this.conflictOf = null; this.alert.hidden = true; this.alert.textContent = ''; this.alert.removeAttribute('data-kind'); }
+      say(text) { this.status.textContent = text; }
+      afterChange() { const g = this.o.grid && this.o.grid(); if (g && g.refresh) { g.refresh(); } }
+      patched(rowIds) {
+        rowIds.forEach((id) => {
+          const p = this.pending.get(id);
+          if (p) { this.pending.arrived(id); const e = this.editing; if (e) { p.columns.forEach((c) => e.setMark(id, this.colId(c), null)); } }
+          if (this.panel && this.panel.rowId === id) { this.panel.rowChanged(this.o.rowOf(id)); }
+          if (this.conflictOf && this.conflictOf.rowId === id) { this.conflict(id, this.conflictOf.j, this.conflictOf.out); }   // the newer row arrived: its value is told
+        });
+      }
+      reset() {
+        const e = this.editing;
+        this.pending.rows.forEach((p, id) => { if (e) { p.columns.forEach((c) => e.setMark(id, this.colId(c), null)); } });
+        this.pending.rows.clear();
+      }
+      select(ids) {
+        if (this.cells) { return; }
+        const row = ids.length === 1 ? this.o.rowOf(ids[0]) : null;
+        if (row) { this.openPanel(row); } else { this.closePanel(); }
+      }
+      openPanel(row) {
+        this.closePanel();
+        this.panel = new EditPanel(this.panelHost, this, row);
+        this.panelHost.hidden = false;
+      }
+      closePanel() { if (this.panel) { this.panel.destroy(); this.panel = null; } this.panelHost.hidden = true; }
+      destroy() { this.closePanel(); this.host.textContent = ''; }
+    }
+    class EditPanel {
+      constructor(host, ctl, row) {
+        this.host = host;
+        this.ctl = ctl;
+        this.doc = host.ownerDocument;
+        this.rowId = ctl.o.idOf(row);
+        this.row = row;
+        this.opened = Object.assign({}, row);
+        this.version = ctl.spec.version ? row[ctl.spec.version] : null;
+        this.draw();
+      }
+      draw() {
+        const d = this.doc, c = this.ctl, spec = c.spec;
+        this.host.textContent = '';
+        this.host.setAttribute('data-record', this.rowId);
+        const lock = c.lockAll || c.locked.get(this.rowId);
+        const cols = Object.keys(spec.columns).filter((k) => !(this.opened[k] && this.opened[k].$masked === true));
+        this.banner = h(d, 'p', { cls: 'dg-le-note', attrs: { role: 'status', 'aria-live': 'polite', hidden: true } });
+        this.note = h(d, 'p', { cls: 'dg-le-status', attrs: { role: 'status', 'aria-live': 'polite' }, data: { panelStatus: '' } });
+        this.host.append(h(d, 'h3', { cls: 'dg-le-title', text: this.rowId }), this.banner);
+        if (lock || !cols.length) { this.host.append(h(d, 'p', { cls: 'dg-le-note', text: lock ? lock + ' (read only)' : 'Nothing here can be changed.', data: { why: 'readonly' } })); return; }
+        const props = {}, value = {}, required = [];
+        cols.forEach((k) => {
+          const r = spec.columns[k], num = r.type === 'number' || r.type === 'integer' || r.type === 'money';
+          const p = { title: c.o.label ? c.o.label(k) : k, type: num ? (r.type === 'integer' ? 'integer' : 'number') : 'string', hook: 'live-edit-' + k };
+          if (r.options) { p.enum = r.options.map((x) => x.value); p.enumLabels = r.options.map((x) => x.label); p.widget = 'select'; p.allowEmpty = false; }
+          if (r.min !== null) { p.minimum = r.min; }
+          if (r.max !== null) { p.maximum = r.max; }
+          if (r.pattern) { p.pattern = r.pattern; }
+          props[k] = p;
+          if (r.required) { required.push(k); }
+          if (this.opened[k] !== undefined && this.opened[k] !== null) { value[k] = this.opened[k]; }
+        });
+        if (spec.reason !== 'none' || spec.decides) {
+          props.reason = { type: 'string', title: 'Reason', widget: 'textarea', hook: 'live-edit-reason', description: spec.reason === 'required' ? 'Required: it goes in the audit.' : 'It goes in the audit.' };
+          if (spec.reason === 'required') { required.push('reason'); }
+        }
+        const fh = h(d, 'div', { cls: 'dg-le-form' });
+        this.host.append(fh, this.note);
+        this.form = new Form(fh, { schema: { type: 'object', properties: props, required: required, order: Object.keys(props) }, value: value, submitLabel: 'Save', doneText: '', resetButton: false,
+          cancelLabel: 'Cancel', onCancel: () => { c.closePanel(); }, label: 'Edit ' + this.rowId, onSubmit: (v) => this.save(v) });
+      }
+      save(values) {
+        const c = this.ctl, set = {};
+        Object.keys(c.spec.columns).forEach((k) => {
+          if (!(k in values) && this.opened[k] === undefined) { return; }
+          const v = values[k] === undefined || values[k] === '' ? null : values[k], was = this.opened[k] === undefined ? null : this.opened[k];
+          if (k in values && v !== was) { set[k] = v; }
+        });
+        if (!Object.keys(set).length) { this.say('Nothing changed'); return Promise.resolve(null); }
+        const reason = String(values.reason || '').trim(), bad = checkChange(c.spec, set, reason);
+        if (Object.keys(bad).length) { this.form.setErrors(bad); throw new Error(bad[Object.keys(bad)[0]]); }
+        const cols = {};
+        Object.keys(set).forEach((k) => { cols[k] = c.colId(k); });
+        this.say('Sending…');
+        return c.send({ rowId: this.rowId, set: set, cols: cols }, reason).then((out) => {
+          if (out.kind === 'conflict') { this.say(''); this.banner.hidden = true; throw new Error(changedWords(out.current) + ': edit again on the new version'); }
+          if (out.kind === 'invalid') { this.invalid(out); throw new Error(out.message); }
+          if (['forbidden', 'unsupported', 'refused', 'failed'].indexOf(out.kind) >= 0) { throw new Error(out.message); }
+          this.say(out.kind === 'held' ? 'Held' + (out.message ? ': ' + out.message : '') : out.kind === 'queued' ? 'Queued' + (out.message ? ': ' + out.message : '') : 'Applied, waiting for the table');
+          return out;
+        });
+      }
+      invalid(out) {
+        if (!this.form) { return; }
+        const errs = {};
+        out.fields.forEach((f) => { errs[f.column || 'reason'] = f.message; });
+        this.form.setErrors(errs);
+      }
+      say(text) { if (this.note) { this.note.textContent = text; } }
+      rowChanged(row) {
+        if (!row) { return; }
+        this.row = row;
+        const v = this.ctl.spec.version ? row[this.ctl.spec.version] : null;
+        if (v === this.version) { return; }
+        const d = this.doc;
+        this.banner.hidden = false;
+        this.banner.textContent = 'Changed since you opened it: now version ' + v + '. ';
+        this.banner.append(h(d, 'button', { cls: 'dg-le-btn', text: 'Reload', attrs: { type: 'button' }, data: { act: 'reload' }, on: { click: () => { this.opened = Object.assign({}, row); this.version = v; this.draw(); } } }));
+      }
+      destroy() { if (this.form) { this.form.destroy(); this.form = null; } this.host.textContent = ''; this.host.removeAttribute('data-record'); }
+    }
+    class LiveNotices {
+      constructor(host, o) {
+        this.host = host;
+        this.doc = host.ownerDocument;
+        this.o = o;
+        this.fresh = 0;
+        const d = this.doc;
+        this.banner = h(d, 'p', { cls: 'dg-le-banner', attrs: { role: 'status', hidden: true }, data: { liveBanner: '' } });
+        this.news = h(d, 'button', { cls: 'dg-le-new', attrs: { type: 'button', hidden: true }, data: { liveNew: '' }, on: { click: () => this.top() } });
+        host.append(this.banner, this.news);
+      }
+      state(schema) {
+        const st = schema && schema.live && schema.live.state, why = schema && schema.live && schema.live.reason;
+        const text = st === 'paused' ? 'Live updates are paused' + (why ? ': ' + why : '') + '. The rows are as they were.' : st === 'stale' ? 'The rows may be out of date' + (why ? ': ' + why : '') + '.' : '';
+        this.banner.hidden = !text;
+        this.banner.textContent = text;
+        if (text) { this.banner.setAttribute('data-state', st); } else { this.banner.removeAttribute('data-state'); }
+      }
+      arrived(n, scrolled) {
+        const s = this.o.scroller && this.o.scroller();
+        if (!n || !s || (scrolled === undefined ? s.scrollTop : scrolled) <= 8) { return; }
+        this.fresh += n;
+        this.news.hidden = false;
+        this.news.textContent = this.fresh + ' new';
+        this.news.setAttribute('aria-label', this.fresh + ' new rows above: show them');
+        if (!this.watching) { this.watching = true; s.addEventListener('scroll', () => { if (s.scrollTop <= 8) { this.clear(); } }); }
+      }
+      top() { const s = this.o.scroller && this.o.scroller(); if (s) { s.scrollTop = 0; } this.clear(); }
+      clear() { this.fresh = 0; this.news.hidden = true; this.news.textContent = ''; }
+      destroy() { this.banner.remove(); this.news.remove(); }
+    }
+    return { "LiveEdit": LiveEdit, "LiveNotices": LiveNotices };
+  })();
   /* ---- src/drishti_plain-render.js ---- */
   __m["src/drishti_plain-render.js"] = (function () {
     var escapeHtml = __lib("drishti-core").escapeHtml;
@@ -7855,7 +8304,7 @@
   __m["src/drishti_index.js"] = (function () {
     var defineGridElement = __m["src/drishti_grid-element.js"].defineGridElement;
     function install(root) { if (root && root.document && root.customElements) { defineGridElement(root.customElements, root); } }
-    return { "install": install, "ADDITIVE_FUNCS": __m["src/drishti_columns.js"].ADDITIVE_FUNCS, "normalizeColumn": __m["src/drishti_columns.js"].normalizeColumn, "getValue": __m["src/drishti_columns.js"].getValue, "formatValue": __m["src/drishti_columns.js"].formatValue, "nestedText": __m["src/drishti_columns.js"].nestedText, "ColumnModel": __m["src/drishti_columns.js"].ColumnModel, "AGG_FUNCS": __m["src/drishti_aggregate.js"].AGG_FUNCS, "aggFunc": __m["src/drishti_aggregate.js"].aggFunc, "registerAggFunc": __m["src/drishti_aggregate.js"].registerAggFunc, "unregisterAggFunc": __m["src/drishti_aggregate.js"].unregisterAggFunc, "parseMeasure": __m["src/drishti_aggregate.js"].parseMeasure, "isServerMeasure": __m["src/drishti_aggregate.js"].isServerMeasure, "aggregate": __m["src/drishti_aggregate.js"].aggregate, "SEP": __m["src/drishti_pivot.js"].SEP, "BLANK": __m["src/drishti_pivot.js"].BLANK, "memberText": __m["src/drishti_pivot.js"].memberText, "valueLabel": __m["src/drishti_pivot.js"].valueLabel, "normalizeView": __m["src/drishti_pivot.js"].normalizeView, "serverRequest": __m["src/drishti_pivot.js"].serverRequest, "memberFilters": __m["src/drishti_pivot.js"].memberFilters, "PivotState": __m["src/drishti_pivot.js"].PivotState, "pivotLocal": __m["src/drishti_pivot.js"].pivotLocal, "pivotApplyUpdates": __m["src/drishti_pivot-answer.js"].pivotApplyUpdates, "mergeAnswer": __m["src/drishti_pivot-answer.js"].mergeAnswer, "applyValueFilters": __m["src/drishti_pivot-answer.js"].applyValueFilters, "resultColumns": __m["src/drishti_pivot-answer.js"].resultColumns, "cellValue": __m["src/drishti_pivot-answer.js"].cellValue, "measureText": __m["src/drishti_pivot-answer.js"].measureText, "answerFormat": __m["src/drishti_pivot-answer.js"].answerFormat, "answerScales": __m["src/drishti_pivot-answer.js"].answerScales, "WELLS": __m["src/drishti_wells.js"].WELLS, "VALUE_FUNCS": __m["src/drishti_wells.js"].VALUE_FUNCS, "FUNC_LABELS": __m["src/drishti_wells.js"].FUNC_LABELS, "FUNC_ARGS": __m["src/drishti_wells.js"].FUNC_ARGS, "funcLabel": __m["src/drishti_wells.js"].funcLabel, "WellsModel": __m["src/drishti_wells.js"].WellsModel, "fieldIcon": __m["src/drishti_grid-fields.js"].fieldIcon, "fieldGroups": __m["src/drishti_grid-fields.js"].fieldGroups, "pickField": __m["src/drishti_grid-fields.js"].pickField, "openPicker": __m["src/drishti_grid-fields.js"].openPicker, "ViewPicker": __m["src/drishti_grid-views.js"].ViewPicker, "ClientRowModel": __m["src/drishti_client-rows.js"].ClientRowModel, "ServerRowModel": __m["src/drishti_server-rows.js"].ServerRowModel, "memoryDatasource": __m["src/drishti_server-rows.js"].memoryDatasource, "MAX_SCROLL_HEIGHT": __m["src/drishti_viewport.js"].MAX_SCROLL_HEIGHT, "columnAt": __m["src/drishti_viewport.js"].columnAt, "Viewport": __m["src/drishti_viewport.js"].Viewport, "SelectionModel": __m["src/drishti_selection.js"].SelectionModel, "rangeStats": __m["src/drishti_selection.js"].rangeStats, "toTsv": __m["src/drishti_selection.js"].toTsv, "rangeCells": __m["src/drishti_selection.js"].rangeCells, "crc32": __m["src/drishti_export.js"].crc32, "zipStore": __m["src/drishti_export.js"].zipStore, "excelFormat": __m["src/drishti_export.js"].excelFormat, "toXlsx": __m["src/drishti_export.js"].toXlsx, "XLSX_TYPE": __m["src/drishti_export.js"].XLSX_TYPE, "GridNavigator": __m["src/drishti_keyboard.js"].GridNavigator, "keyLabel": __m["src/drishti_keyboard.js"].keyLabel, "GridModel": __m["src/drishti_grid.js"].GridModel, "createGridModel": __m["src/drishti_grid.js"].createGridModel, "LAYOUTS": __m["src/drishti_grid-model-base.js"].LAYOUTS, "DENSITIES": __m["src/drishti_grid-model-base.js"].DENSITIES, "placeGrandRow": __m["src/drishti_grid-model-base.js"].placeGrandRow, "GridModelBase": __m["src/drishti_grid-model-base.js"].GridModelBase, "GRID_EVENTS": __m["src/drishti_grid-live.js"].GRID_EVENTS, "domEventName": __m["src/drishti_grid-live.js"].domEventName, "GridLive": __m["src/drishti_grid-live.js"].GridLive, "EDITORS": __m["src/drishti_grid-edit.js"].EDITORS, "editorOf": __m["src/drishti_grid-edit.js"].editorOf, "parseCellText": __m["src/drishti_grid-edit.js"].parseCellText, "validateCell": __m["src/drishti_grid-edit.js"].validateCell, "parseTsv": __m["src/drishti_grid-edit.js"].parseTsv, "GridEditing": __m["src/drishti_grid-edit.js"].GridEditing, "CellEditor": __m["src/drishti_grid-editors.js"].CellEditor, "manualFeed": __m["src/drishti_live.js"].manualFeed, "ROW_KEY": __m["src/drishti_live-model.js"].ROW_KEY, "ROW_VERSION": __m["src/drishti_live-model.js"].ROW_VERSION, "WINDOW_ROWS": __m["src/drishti_live-model.js"].WINDOW_ROWS, "gridRow": __m["src/drishti_live-model.js"].gridRow, "gridColumns": __m["src/drishti_live-model.js"].gridColumns, "LiveRows": __m["src/drishti_live-model.js"].LiveRows, "windowIds": __m["src/drishti_live-model.js"].windowIds, "editItems": __m["src/drishti_live-model.js"].editItems, "editSchema": __m["src/drishti_live-model.js"].editSchema, "pivotLayout": __m["src/drishti_live-model.js"].pivotLayout, "pivotHref": __m["src/drishti_live-model.js"].pivotHref, "linkFor": __m["src/drishti_live-model.js"].linkFor, "maskedPaths": __m["src/drishti_live-model.js"].maskedPaths, "changedFields": __m["src/drishti_live-model.js"].changedFields, "httpLiveApi": __m["src/drishti_live-model.js"].httpLiveApi, "inferType": __m["src/drishti_live-model.js"].inferType, "digValue": __m["src/drishti_live-model.js"].digValue, "staticSpec": __m["src/drishti_live-model.js"].staticSpec, "staticApi": __m["src/drishti_live-model.js"].staticApi, "stateWords": __m["src/drishti_live-panel.js"].stateWords, "isPending": __m["src/drishti_live-panel.js"].isPending, "itemsText": __m["src/drishti_live-panel.js"].itemsText, "RecordPanel": __m["src/drishti_live-panel.js"].RecordPanel, "LIVE_STATES": __m["src/drishti_live-set.js"].LIVE_STATES, "LiveSetGrid": __m["src/drishti_live-set.js"].LiveSetGrid, "renderWindow": __m["src/drishti_plain-render.js"].renderWindow, "renderText": __m["src/drishti_plain-render.js"].renderText, "renderHtml": __m["src/drishti_plain-render.js"].renderHtml, "docTable": __m["src/drishti_doc-table.js"].docTable, "docPivotable": __m["src/drishti_doc-table.js"].docPivotable, "docDrill": __m["src/drishti_doc-table.js"].docDrill, "heatBucket": __m["src/drishti_doc-table.js"].heatBucket, "docPivot": __m["src/drishti_doc-table.js"].docPivot, "docPlainTable": __m["src/drishti_doc-table.js"].docPlainTable, "pageInfo": __m["src/drishti_doc-behave.js"].pageInfo, "enhanceDocTables": __m["src/drishti_doc-behave.js"].enhanceDocTables, "consoleTables": __m["src/drishti_doc-console.js"].consoleTables, "rowSelection": __m["src/drishti_doc-select.js"].rowSelection, "VIEW_EVENTS": __m["src/drishti_grid-ui.js"].VIEW_EVENTS, "PHONE_WIDTH": __m["src/drishti_grid-ui.js"].PHONE_WIDTH, "FUNCTION_KEYS": __m["src/drishti_grid-ui.js"].FUNCTION_KEYS, "CF_TYPES": __m["src/drishti_grid-ui.js"].CF_TYPES, "headerSpans": __m["src/drishti_grid-ui.js"].headerSpans, "pivotColumnLabels": __m["src/drishti_grid-ui.js"].pivotColumnLabels, "markGroups": __m["src/drishti_grid-ui.js"].markGroups, "isTotalCell": __m["src/drishti_grid-ui.js"].isTotalCell, "nonAdditiveNote": __m["src/drishti_grid-ui.js"].nonAdditiveNote, "colourScaleAlpha": __m["src/drishti_grid-ui.js"].colourScaleAlpha, "dataBarWidth": __m["src/drishti_grid-ui.js"].dataBarWidth, "cfBackground": __m["src/drishti_grid-ui.js"].cfBackground, "thresholdHit": __m["src/drishti_grid-ui.js"].thresholdHit, "figureRange": __m["src/drishti_grid-ui.js"].figureRange, "ruleFor": __m["src/drishti_grid-ui.js"].ruleFor, "phoneColumns": __m["src/drishti_grid-ui.js"].phoneColumns, "pivotMeasures": __m["src/drishti_grid-ui.js"].pivotMeasures, "columnMenuItems": __m["src/drishti_grid-ui.js"].columnMenuItems, "cellMenuItems": __m["src/drishti_grid-ui.js"].cellMenuItems, "commandText": __m["src/drishti_grid-ui.js"].commandText, "parseCommand": __m["src/drishti_grid-ui.js"].parseCommand, "parseCondition": __m["src/drishti_grid-ui.js"].parseCondition, "conditionText": __m["src/drishti_grid-ui.js"].conditionText, "statusItems": __m["src/drishti_grid-ui.js"].statusItems, "cellLook": __m["src/drishti_grid-ui.js"].cellLook, "FlashTracker": __m["src/drishti_grid-ui.js"].FlashTracker, "Menu": __m["src/drishti_grid-dom.js"].Menu, "Notes": __m["src/drishti_grid-dom.js"].Notes, "sparkline": __m["src/drishti_grid-explain.js"].sparkline, "renderExplain": __m["src/drishti_grid-explain.js"].renderExplain, "sparklineCell": __m["src/drishti_cells.js"].sparklineCell, "bulletCell": __m["src/drishti_cells.js"].bulletCell, "barCell": __m["src/drishti_cells.js"].barCell, "ruleText": __m["src/drishti_grid-rules.js"].ruleText, "ruleProblems": __m["src/drishti_grid-rules.js"].ruleProblems, "ruleFormSchema": __m["src/drishti_grid-rules.js"].ruleFormSchema, "openRuleBuilder": __m["src/drishti_grid-rules.js"].openRuleBuilder, "encodeView": __m["src/drishti_grid-rules.js"].encodeView, "decodeView": __m["src/drishti_grid-rules.js"].decodeView, "shareLink": __m["src/drishti_grid-rules.js"].shareLink, "readSharedView": __m["src/drishti_grid-rules.js"].readSharedView, "heatPivotPreset": __m["src/drishti_grid-rules.js"].heatPivotPreset, "localDrill": __m["src/drishti_grid-actions.js"].localDrill, "GridBase": __m["src/drishti_grid-base.js"].GridBase, "Grid": __m["src/drishti_grid-view.js"].Grid, "ELEMENT_NAME": __m["src/drishti_grid-element.js"].ELEMENT_NAME, "defineGridElement": __m["src/drishti_grid-element.js"].defineGridElement, "AG_MAPPING": __m["src/drishti_grid-ag-map.js"].AG_MAPPING, "AG_NOT_COVERED": __m["src/drishti_grid-ag-map.js"].AG_NOT_COVERED, "AG_GRID_OPTIONS": __m["src/drishti_grid-ag-map.js"].AG_GRID_OPTIONS, "AG_COLUMN_KEYS": __m["src/drishti_grid-ag-map.js"].AG_COLUMN_KEYS, "AG_UNSUPPORTED": __m["src/drishti_grid-ag-map.js"].AG_UNSUPPORTED, "AG_NO_OP": __m["src/drishti_grid-ag-map.js"].AG_NO_OP, "AG_EVENTS": __m["src/drishti_grid-ag-map.js"].AG_EVENTS, "agFilterToDrishti": __m["src/drishti_grid-ag-map.js"].agFilterToDrishti, "drishtiFilterToAg": __m["src/drishti_grid-ag-map.js"].drishtiFilterToAg, "translateFilterModel": __m["src/drishti_grid-ag-map.js"].translateFilterModel, "AG_GROUP_COLUMN": __m["src/drishti_grid-ag.js"].AG_GROUP_COLUMN, "AgReport": __m["src/drishti_grid-ag.js"].AgReport, "agAggFunc": __m["src/drishti_grid-ag.js"].agAggFunc, "translateAgOptions": __m["src/drishti_grid-ag.js"].translateAgOptions, "callGetRows": __m["src/drishti_grid-ag-server.js"].callGetRows, "agRequest": __m["src/drishti_grid-ag-server.js"].agRequest, "agDatasource": __m["src/drishti_grid-ag-server.js"].agDatasource, "parseResultField": __m["src/drishti_grid-ag-server.js"].parseResultField, "agServerPivot": __m["src/drishti_grid-ag-server.js"].agServerPivot, "AgEvents": __m["src/drishti_grid-ag-events.js"].AgEvents, "AgColumnsApi": __m["src/drishti_grid-ag-columns.js"].AgColumnsApi, "AgGridApi": __m["src/drishti_grid-ag-api.js"].AgGridApi, "createGridFromAgOptions": __m["src/drishti_grid-ag-api.js"].createGridFromAgOptions };
+    return { "install": install, "ADDITIVE_FUNCS": __m["src/drishti_columns.js"].ADDITIVE_FUNCS, "normalizeColumn": __m["src/drishti_columns.js"].normalizeColumn, "getValue": __m["src/drishti_columns.js"].getValue, "formatValue": __m["src/drishti_columns.js"].formatValue, "nestedText": __m["src/drishti_columns.js"].nestedText, "ColumnModel": __m["src/drishti_columns.js"].ColumnModel, "AGG_FUNCS": __m["src/drishti_aggregate.js"].AGG_FUNCS, "aggFunc": __m["src/drishti_aggregate.js"].aggFunc, "registerAggFunc": __m["src/drishti_aggregate.js"].registerAggFunc, "unregisterAggFunc": __m["src/drishti_aggregate.js"].unregisterAggFunc, "parseMeasure": __m["src/drishti_aggregate.js"].parseMeasure, "isServerMeasure": __m["src/drishti_aggregate.js"].isServerMeasure, "aggregate": __m["src/drishti_aggregate.js"].aggregate, "SEP": __m["src/drishti_pivot.js"].SEP, "BLANK": __m["src/drishti_pivot.js"].BLANK, "memberText": __m["src/drishti_pivot.js"].memberText, "valueLabel": __m["src/drishti_pivot.js"].valueLabel, "normalizeView": __m["src/drishti_pivot.js"].normalizeView, "serverRequest": __m["src/drishti_pivot.js"].serverRequest, "memberFilters": __m["src/drishti_pivot.js"].memberFilters, "PivotState": __m["src/drishti_pivot.js"].PivotState, "pivotLocal": __m["src/drishti_pivot.js"].pivotLocal, "pivotApplyUpdates": __m["src/drishti_pivot-answer.js"].pivotApplyUpdates, "mergeAnswer": __m["src/drishti_pivot-answer.js"].mergeAnswer, "applyValueFilters": __m["src/drishti_pivot-answer.js"].applyValueFilters, "resultColumns": __m["src/drishti_pivot-answer.js"].resultColumns, "cellValue": __m["src/drishti_pivot-answer.js"].cellValue, "measureText": __m["src/drishti_pivot-answer.js"].measureText, "answerFormat": __m["src/drishti_pivot-answer.js"].answerFormat, "answerScales": __m["src/drishti_pivot-answer.js"].answerScales, "WELLS": __m["src/drishti_wells.js"].WELLS, "VALUE_FUNCS": __m["src/drishti_wells.js"].VALUE_FUNCS, "FUNC_LABELS": __m["src/drishti_wells.js"].FUNC_LABELS, "FUNC_ARGS": __m["src/drishti_wells.js"].FUNC_ARGS, "funcLabel": __m["src/drishti_wells.js"].funcLabel, "WellsModel": __m["src/drishti_wells.js"].WellsModel, "fieldIcon": __m["src/drishti_grid-fields.js"].fieldIcon, "fieldGroups": __m["src/drishti_grid-fields.js"].fieldGroups, "pickField": __m["src/drishti_grid-fields.js"].pickField, "openPicker": __m["src/drishti_grid-fields.js"].openPicker, "ViewPicker": __m["src/drishti_grid-views.js"].ViewPicker, "ClientRowModel": __m["src/drishti_client-rows.js"].ClientRowModel, "ServerRowModel": __m["src/drishti_server-rows.js"].ServerRowModel, "memoryDatasource": __m["src/drishti_server-rows.js"].memoryDatasource, "MAX_SCROLL_HEIGHT": __m["src/drishti_viewport.js"].MAX_SCROLL_HEIGHT, "columnAt": __m["src/drishti_viewport.js"].columnAt, "Viewport": __m["src/drishti_viewport.js"].Viewport, "SelectionModel": __m["src/drishti_selection.js"].SelectionModel, "rangeStats": __m["src/drishti_selection.js"].rangeStats, "toTsv": __m["src/drishti_selection.js"].toTsv, "rangeCells": __m["src/drishti_selection.js"].rangeCells, "crc32": __m["src/drishti_export.js"].crc32, "zipStore": __m["src/drishti_export.js"].zipStore, "excelFormat": __m["src/drishti_export.js"].excelFormat, "toXlsx": __m["src/drishti_export.js"].toXlsx, "XLSX_TYPE": __m["src/drishti_export.js"].XLSX_TYPE, "GridNavigator": __m["src/drishti_keyboard.js"].GridNavigator, "keyLabel": __m["src/drishti_keyboard.js"].keyLabel, "GridModel": __m["src/drishti_grid.js"].GridModel, "createGridModel": __m["src/drishti_grid.js"].createGridModel, "LAYOUTS": __m["src/drishti_grid-model-base.js"].LAYOUTS, "DENSITIES": __m["src/drishti_grid-model-base.js"].DENSITIES, "placeGrandRow": __m["src/drishti_grid-model-base.js"].placeGrandRow, "GridModelBase": __m["src/drishti_grid-model-base.js"].GridModelBase, "GRID_EVENTS": __m["src/drishti_grid-live.js"].GRID_EVENTS, "domEventName": __m["src/drishti_grid-live.js"].domEventName, "GridLive": __m["src/drishti_grid-live.js"].GridLive, "EDITORS": __m["src/drishti_grid-edit.js"].EDITORS, "editorOf": __m["src/drishti_grid-edit.js"].editorOf, "parseCellText": __m["src/drishti_grid-edit.js"].parseCellText, "validateCell": __m["src/drishti_grid-edit.js"].validateCell, "parseTsv": __m["src/drishti_grid-edit.js"].parseTsv, "GridEditing": __m["src/drishti_grid-edit.js"].GridEditing, "CellEditor": __m["src/drishti_grid-editors.js"].CellEditor, "manualFeed": __m["src/drishti_live.js"].manualFeed, "ROW_KEY": __m["src/drishti_live-model.js"].ROW_KEY, "ROW_VERSION": __m["src/drishti_live-model.js"].ROW_VERSION, "WINDOW_ROWS": __m["src/drishti_live-model.js"].WINDOW_ROWS, "gridRow": __m["src/drishti_live-model.js"].gridRow, "gridColumns": __m["src/drishti_live-model.js"].gridColumns, "LiveRows": __m["src/drishti_live-model.js"].LiveRows, "windowIds": __m["src/drishti_live-model.js"].windowIds, "editItems": __m["src/drishti_live-model.js"].editItems, "editSchema": __m["src/drishti_live-model.js"].editSchema, "pivotLayout": __m["src/drishti_live-model.js"].pivotLayout, "pivotHref": __m["src/drishti_live-model.js"].pivotHref, "linkFor": __m["src/drishti_live-model.js"].linkFor, "maskedPaths": __m["src/drishti_live-model.js"].maskedPaths, "changedFields": __m["src/drishti_live-model.js"].changedFields, "httpLiveApi": __m["src/drishti_live-model.js"].httpLiveApi, "inferType": __m["src/drishti_live-model.js"].inferType, "digValue": __m["src/drishti_live-model.js"].digValue, "staticSpec": __m["src/drishti_live-model.js"].staticSpec, "staticApi": __m["src/drishti_live-model.js"].staticApi, "stateWords": __m["src/drishti_live-panel.js"].stateWords, "isPending": __m["src/drishti_live-panel.js"].isPending, "itemsText": __m["src/drishti_live-panel.js"].itemsText, "RecordPanel": __m["src/drishti_live-panel.js"].RecordPanel, "LIVE_STATES": __m["src/drishti_live-set.js"].LIVE_STATES, "LiveSetGrid": __m["src/drishti_live-set.js"].LiveSetGrid, "ulid": __m["src/drishti_live-edit-model.js"].ulid, "isMaskedValue": __m["src/drishti_live-edit-model.js"].isMaskedValue, "writeSpec": __m["src/drishti_live-edit-model.js"].writeSpec, "editorFor": __m["src/drishti_live-edit-model.js"].editorFor, "checkRule": __m["src/drishti_live-edit-model.js"].checkRule, "reasonMode": __m["src/drishti_live-edit-model.js"].reasonMode, "checkChange": __m["src/drishti_live-edit-model.js"].checkChange, "buildChange": __m["src/drishti_live-edit-model.js"].buildChange, "mayEdit": __m["src/drishti_live-edit-model.js"].mayEdit, "outcome": __m["src/drishti_live-edit-model.js"].outcome, "changedWords": __m["src/drishti_live-edit-model.js"].changedWords, "PendingChanges": __m["src/drishti_live-edit-model.js"].PendingChanges, "LiveEdit": __m["src/drishti_live-edit.js"].LiveEdit, "LiveNotices": __m["src/drishti_live-edit.js"].LiveNotices, "renderWindow": __m["src/drishti_plain-render.js"].renderWindow, "renderText": __m["src/drishti_plain-render.js"].renderText, "renderHtml": __m["src/drishti_plain-render.js"].renderHtml, "docTable": __m["src/drishti_doc-table.js"].docTable, "docPivotable": __m["src/drishti_doc-table.js"].docPivotable, "docDrill": __m["src/drishti_doc-table.js"].docDrill, "heatBucket": __m["src/drishti_doc-table.js"].heatBucket, "docPivot": __m["src/drishti_doc-table.js"].docPivot, "docPlainTable": __m["src/drishti_doc-table.js"].docPlainTable, "pageInfo": __m["src/drishti_doc-behave.js"].pageInfo, "enhanceDocTables": __m["src/drishti_doc-behave.js"].enhanceDocTables, "consoleTables": __m["src/drishti_doc-console.js"].consoleTables, "rowSelection": __m["src/drishti_doc-select.js"].rowSelection, "VIEW_EVENTS": __m["src/drishti_grid-ui.js"].VIEW_EVENTS, "PHONE_WIDTH": __m["src/drishti_grid-ui.js"].PHONE_WIDTH, "FUNCTION_KEYS": __m["src/drishti_grid-ui.js"].FUNCTION_KEYS, "CF_TYPES": __m["src/drishti_grid-ui.js"].CF_TYPES, "headerSpans": __m["src/drishti_grid-ui.js"].headerSpans, "pivotColumnLabels": __m["src/drishti_grid-ui.js"].pivotColumnLabels, "markGroups": __m["src/drishti_grid-ui.js"].markGroups, "isTotalCell": __m["src/drishti_grid-ui.js"].isTotalCell, "nonAdditiveNote": __m["src/drishti_grid-ui.js"].nonAdditiveNote, "colourScaleAlpha": __m["src/drishti_grid-ui.js"].colourScaleAlpha, "dataBarWidth": __m["src/drishti_grid-ui.js"].dataBarWidth, "cfBackground": __m["src/drishti_grid-ui.js"].cfBackground, "thresholdHit": __m["src/drishti_grid-ui.js"].thresholdHit, "figureRange": __m["src/drishti_grid-ui.js"].figureRange, "ruleFor": __m["src/drishti_grid-ui.js"].ruleFor, "phoneColumns": __m["src/drishti_grid-ui.js"].phoneColumns, "pivotMeasures": __m["src/drishti_grid-ui.js"].pivotMeasures, "columnMenuItems": __m["src/drishti_grid-ui.js"].columnMenuItems, "cellMenuItems": __m["src/drishti_grid-ui.js"].cellMenuItems, "commandText": __m["src/drishti_grid-ui.js"].commandText, "parseCommand": __m["src/drishti_grid-ui.js"].parseCommand, "parseCondition": __m["src/drishti_grid-ui.js"].parseCondition, "conditionText": __m["src/drishti_grid-ui.js"].conditionText, "statusItems": __m["src/drishti_grid-ui.js"].statusItems, "cellLook": __m["src/drishti_grid-ui.js"].cellLook, "FlashTracker": __m["src/drishti_grid-ui.js"].FlashTracker, "Menu": __m["src/drishti_grid-dom.js"].Menu, "Notes": __m["src/drishti_grid-dom.js"].Notes, "sparkline": __m["src/drishti_grid-explain.js"].sparkline, "renderExplain": __m["src/drishti_grid-explain.js"].renderExplain, "sparklineCell": __m["src/drishti_cells.js"].sparklineCell, "bulletCell": __m["src/drishti_cells.js"].bulletCell, "barCell": __m["src/drishti_cells.js"].barCell, "ruleText": __m["src/drishti_grid-rules.js"].ruleText, "ruleProblems": __m["src/drishti_grid-rules.js"].ruleProblems, "ruleFormSchema": __m["src/drishti_grid-rules.js"].ruleFormSchema, "openRuleBuilder": __m["src/drishti_grid-rules.js"].openRuleBuilder, "encodeView": __m["src/drishti_grid-rules.js"].encodeView, "decodeView": __m["src/drishti_grid-rules.js"].decodeView, "shareLink": __m["src/drishti_grid-rules.js"].shareLink, "readSharedView": __m["src/drishti_grid-rules.js"].readSharedView, "heatPivotPreset": __m["src/drishti_grid-rules.js"].heatPivotPreset, "localDrill": __m["src/drishti_grid-actions.js"].localDrill, "GridBase": __m["src/drishti_grid-base.js"].GridBase, "Grid": __m["src/drishti_grid-view.js"].Grid, "ELEMENT_NAME": __m["src/drishti_grid-element.js"].ELEMENT_NAME, "defineGridElement": __m["src/drishti_grid-element.js"].defineGridElement, "AG_MAPPING": __m["src/drishti_grid-ag-map.js"].AG_MAPPING, "AG_NOT_COVERED": __m["src/drishti_grid-ag-map.js"].AG_NOT_COVERED, "AG_GRID_OPTIONS": __m["src/drishti_grid-ag-map.js"].AG_GRID_OPTIONS, "AG_COLUMN_KEYS": __m["src/drishti_grid-ag-map.js"].AG_COLUMN_KEYS, "AG_UNSUPPORTED": __m["src/drishti_grid-ag-map.js"].AG_UNSUPPORTED, "AG_NO_OP": __m["src/drishti_grid-ag-map.js"].AG_NO_OP, "AG_EVENTS": __m["src/drishti_grid-ag-map.js"].AG_EVENTS, "agFilterToDrishti": __m["src/drishti_grid-ag-map.js"].agFilterToDrishti, "drishtiFilterToAg": __m["src/drishti_grid-ag-map.js"].drishtiFilterToAg, "translateFilterModel": __m["src/drishti_grid-ag-map.js"].translateFilterModel, "AG_GROUP_COLUMN": __m["src/drishti_grid-ag.js"].AG_GROUP_COLUMN, "AgReport": __m["src/drishti_grid-ag.js"].AgReport, "agAggFunc": __m["src/drishti_grid-ag.js"].agAggFunc, "translateAgOptions": __m["src/drishti_grid-ag.js"].translateAgOptions, "callGetRows": __m["src/drishti_grid-ag-server.js"].callGetRows, "agRequest": __m["src/drishti_grid-ag-server.js"].agRequest, "agDatasource": __m["src/drishti_grid-ag-server.js"].agDatasource, "parseResultField": __m["src/drishti_grid-ag-server.js"].parseResultField, "agServerPivot": __m["src/drishti_grid-ag-server.js"].agServerPivot, "AgEvents": __m["src/drishti_grid-ag-events.js"].AgEvents, "AgColumnsApi": __m["src/drishti_grid-ag-columns.js"].AgColumnsApi, "AgGridApi": __m["src/drishti_grid-ag-api.js"].AgGridApi, "createGridFromAgOptions": __m["src/drishti_grid-ag-api.js"].createGridFromAgOptions };
   })();
   return Object.freeze(Object.assign({ library: "drishti-grid", version: "3.1.0" }, __m["src/drishti_index.js"]));
 });

@@ -20,7 +20,9 @@
    old and new values, applied by row id (rows re-sorted and re-filtered in place, totals by difference), told as cellValueChanged per
    cell and editTransaction once, kept for undo and redo. A paste from Excel (tab-separated text, quoted cells, a single value filling a
    range) and Delete over a range are transactions too. With a write-back hook the server hears each transaction: applied, refused
-   (put back), or proposed for a second person (four eyes: the cells are marked until the proposal is approved or rejected). */
+   (put back), or proposed for a second person (four eyes: the cells are marked until the proposal is approved or rejected). With a propose
+   hook (a live table's edit, drishti_live-edit.js) the row is never changed here: the hook sends the change, the cells carry its mark
+   (sending, queued, held, applied, invalid) and the new value shows when the table's own patch arrives. */
 
 /**
  * One cell's change.
@@ -147,6 +149,9 @@ export function parseTsv(text) {
   return rows;
 }
 
+/** @private the marks that keep a cell from being edited again (a change not settled) */
+const HOLDS = ['proposed', 'sending', 'queued', 'held', 'applied', 'staged'];
+
 /** @private a row as a plain object (rows read from Arrow are views) */
 function plain(row) { return row && typeof row.toObject === 'function' ? row.toObject() : Object.assign({}, row); }
 
@@ -167,8 +172,31 @@ export class GridEditing {
     this.redoStack = [];
     this.seq = 0;
     this.marks = new Map();
+    this.notes = new Map();
     this.proposals = new Map();
   }
+
+  /**
+   * A cell's mark and its words (a live edit's states); a cell with a pending mark is not edited again until it is cleared.
+   * @param {string} rowId
+   * @param {string} colId
+   * @param {?string} mark sending, queued, held, applied, staged, invalid (null clears)
+   * @param {string} [note]
+   * @returns {void}
+   */
+  setMark(rowId, colId, mark, note) {
+    const k = rowId + '\u001f' + colId;
+    if (mark) { this.marks.set(k, mark); if (note) { this.notes.set(k, note); } else { this.notes.delete(k); } } else { this.marks.delete(k); this.notes.delete(k); }
+    this.grid.events.emit('changed', { what: 'edit' });
+  }
+
+  /**
+   * A cell's words for its mark, or null.
+   * @param {string} rowId
+   * @param {string} colId
+   * @returns {?string}
+   */
+  noteOf(rowId, colId) { return this.notes.get(rowId + '\u001f' + colId) || null; }
 
   /**
    * Whether a shown cell may be edited.
@@ -179,7 +207,7 @@ export class GridEditing {
   canEdit(r, c) {
     const g = this.grid, x = g.rowAt(r), col = g.shownColumns()[c];
     if (!x || x.kind !== 'leaf' || !col || g.pivotMode || g.serverSide || col.valueGetter || col.rowHeader) { return false; }
-    if (this.marks.get(x.id + '\u001f' + col.id) === 'proposed') { return false; }
+    if (HOLDS.indexOf(this.marks.get(x.id + '\u001f' + col.id)) >= 0) { return false; }
     return typeof col.editable === 'function' ? !!col.editable(x.row) : !!col.editable;
   }
 
@@ -235,6 +263,9 @@ export class GridEditing {
     const g = this.grid;
     if (!edits.length) { return Promise.resolve({ id: 0, source: source, edits: [], status: 'applied', proposalId: null }); }
     const tx = { id: ++this.seq, source: source, edits: edits, status: 'pending', proposalId: null };
+    if (this.o.propose && source !== 'undo' && source !== 'redo') {            // a live table: the hook sends it, the row stays as it is
+      return Promise.resolve().then(() => this.o.propose(this.describe(tx))).then(() => tx);
+    }
     this.write(edits, 'value');
     edits.forEach((e) => this.marks.set(e.rowId + '\u001f' + e.colId, this.o.fourEyes ? 'proposed' : 'edited'));
     if (source !== 'undo' && source !== 'redo') { this.undoStack.push(tx); if (this.undoStack.length > this.o.undoLimit) { this.undoStack.shift(); } this.redoStack = []; }

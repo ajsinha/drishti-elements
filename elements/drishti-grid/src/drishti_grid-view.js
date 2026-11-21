@@ -448,6 +448,14 @@ export class Grid extends GridBase {
   connectLive(feed) { const off = this.model.connectLive(feed); this.live = true; this.renderChrome(); return () => { off(); this.live = false; this.renderChrome(); }; }
 
   /**
+   * A cell's element by its place (the grid may sit in a shadow root, where the document does not look).
+   * @param {number} r
+   * @param {number} c
+   * @returns {?HTMLElement}
+   */
+  cellEl(r, c) { const root = this.body.scroller.getRootNode(), id = this.uid + '-r' + r + '-c' + c; return root && root.getElementById ? root.getElementById(id) : this.doc.getElementById(id); }
+
+  /**
    * Puts the focus on a cell (and the range there) and scrolls it into view.
    * @param {number} r
    * @param {number} c

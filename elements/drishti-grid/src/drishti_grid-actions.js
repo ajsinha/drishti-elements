@@ -45,7 +45,7 @@ export function onKey(v, e) {
     e.preventDefault();
     const f = m.navigator.focus;
     if (!f) { return; }
-    const cell = v.doc.getElementById(v.uid + '-r' + f.row + '-c' + f.col), r = cell ? cell.getBoundingClientRect() : { left: 40, bottom: 40 };
+    const cell = v.cellEl(f.row, f.col), r = cell ? cell.getBoundingClientRect() : { left: 40, bottom: 40 };
     v.openCellMenu(f.row, f.col, { x: r.left + 8, y: r.bottom });
     return;
   }
