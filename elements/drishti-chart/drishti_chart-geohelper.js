@@ -153,7 +153,7 @@
         series.push({ type: 'scatter', coordinateSystem: 'geo', z: 5, symbol: 'circle', name: 'places',
           data: geo.points.map((p) => {
             const h = hi.has(p.code);
-            return { name: p.code, code: p.code, value: p.xy.slice(), symbolSize: h ? 11 : 7,
+            return { name: p.code, code: p.code, value: p.xy.slice(), symbolSize: h ? 11 : paint(p.code) ? 7 : 5,
               itemStyle: { color: h ? t.accent : (paint(p.code) || t.muted), opacity: sel && !sel.has(p.code) ? 0.4 : 1, borderColor: !ok || ok.has(p.code) ? t.ink : t.border, borderWidth: h ? 1.5 : 1 } };
           }) });
       }

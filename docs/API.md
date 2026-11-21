@@ -16001,7 +16001,7 @@ Returns `{name: string, project: function(number, number): number[], extent: Obj
 
 #### `US_INSETS`
 
-The insets of the United States: Alaska and Hawaii, each in its own Albers, scaled and set under the lower 48's south-west.
+The insets of the United States: Alaska and Hawaii, each in its own Albers, scaled and set under the lower 48's south-west; area is the lon/lat box ([west, south, east, north]) whose points are drawn in the inset (a point given by its longitude and latitude).
 
 #### `prepareRegions(geo)`
 
@@ -16034,6 +16034,18 @@ The place a code or name means on a level: an ISO alpha-3 or alpha-2 country, an
 | `code` | `*` |  |
 
 Returns `?{code: string, name: string}`.
+
+#### `locate(geo, lon, lat)`
+
+A longitude and latitude on a level's map ([x, y] projected): the level's projection, or for the United States a point in Alaska or Hawaii placed in its inset, as the state's shape is.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `geo` | `RegionGeo` |  |
+| `lon` | `number` |  |
+| `lat` | `number` |  |
+
+Returns `number[]`.
 
 #### `createGeoLoader(o)`
 
@@ -17091,12 +17103,12 @@ Returns `Object`: the engine's option.
 
 #### `drawMap(E, G, el, d, t, onLink, chartsOut)`
 
-Draws a map panel from the console's shapes; resolves with its clickable places and its note.
+Draws a map panel with a map helper; resolves with its clickable places and its note.
 
 | Parameter | Type | Meaning |
 |---|---|---|
 | `E` | `Object` | the engine (echarts) |
-| `G` | `Object` | the console's map helper (drishti_geomap.js: world, region, find, option, codeOf) |
+| `G` | `Object` | the map helper (world, region, find, option, codeOf): drishti-chart's geo part (createGeoHelper) or a host's own |
 | `el` | `HTMLElement` | the chart's container |
 | `d` | `Object` | the map panel's data (mode, region, highlight, shade, link, unit) |
 | `t` | `Object&lt;string, string&gt;` | panelTokens of the view |
@@ -17205,6 +17217,39 @@ Starts drishti-chart in a page (the bundle calls it when it loads; nothing happe
 
 Returns `void`.
 
+### drishti_geohelper.js
+
+#### `geoHelper(o)`
+
+The map helper of a maps folder: one per folder in a page (every map of the page shares its files and cache), unless fetchJson is given (a test's reader: a helper of its own).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `GeoHelperOptions` |  |
+
+Returns `GeoHelper`.
+
+#### `createGeoHelper(o)`
+
+A map helper of its own (geoHelper shares one per folder).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `GeoHelperOptions` |  |
+
+Returns `GeoHelper`.
+
+#### `buildGeoOption(cfg, register)`
+
+The ECharts option of a world or region map over the projected shapes (an identity projection: the helper projected them).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `cfg` | `GeoMapConfig` |  |
+| `register` | `function(Object): void` | registers the level's shapes with the engine |
+
+Returns `Object`.
+
 ### Types of drishti-chart
 
 #### `BulletOptions` : `Object`
@@ -17249,7 +17294,7 @@ A chart's frames.
 | `list` | `Array&lt;{code: string, name: string, point: boolean}&gt;` | every place |
 | `fit` | `number[]` | [minX, minY, maxX, maxY] the view fits |
 | `all` | `number[]` | [minX, minY, maxX, maxY] of everything drawn |
-| `frames` | `Array&lt;{code: string, box: number[]}&gt;` | inset frames (Alaska, Hawaii) |
+| `frames` | `Array&lt;{code: string, box: number[], k: number, dx: number, dy: number}&gt;` | inset frames (Alaska, Hawaii): the box drawn and the scale and offset that place the inset's own projection in it |
 
 #### `FacetOptions` : `Object`
 
@@ -17269,7 +17314,7 @@ A chart's frames.
 |---|---|---|
 | `engine` | `function(): Promise&lt;Object&gt;` | loads the engine (ECharts) and resolves with it (the host's loader: its own policy for scripts) |
 | `[gl]` | `function(): Promise&lt;void&gt;` | loads ECharts GL (the surface in 3D); without it a 3D surface is drawn as its heatmap |
-| `[geo]` | `function(): Promise&lt;Object&gt;` | the console's map helper (drishti_geomap.js); without it a map says it did not load |
+| `[geo]` | `function(): Promise&lt;Object&gt;` | resolves with the map helper (loadPart('drishti-chart', 'geo').then((P) =&gt; P.geoHelper()), or a host's own of the same shape); without it a map says it did not load |
 | `[graph]` | `function(): Promise&lt;Object&gt;` | loads drishti-graph and resolves with its API (drawGraphPanel draws a graph panel); without it a graph panel says it did not load |
 | `[onLink]` | `function(Object, HTMLElement): void` | a point, a node or a place that names an entity was clicked ({kind, id}, the container) |
 | `[onPlaces]` | `function(HTMLElement, Array&lt;{name: string, link: Object, text: string}&gt;, string): void` | a map's clickable places and its note, for the host to list |
@@ -17366,6 +17411,50 @@ The options of a chart (the spec says what to draw; these say how it lives in it
 | `[download]` | `function(string, (string\|Blob), string): void` | where exports go (default: a download) |
 | `[height]` | `number` | the drawing's height in pixels (default 300; a map 440) |
 | `[asOf]` | `string` | the data's date, for the status line |
+
+#### `GeoHelperOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[base]` | `string` | the maps folder (default: drishti-core's static root + "vendor/echarts/maps/") |
+| `[fetchJson]` | `function(string): Promise&lt;Object&gt;` | how to read a file (default: fetch, same origin) |
+| `[engine]` | `(Object\|function(): Object)` | ECharts, or a function that gives it (default: the page's window.echarts when a map is drawn); the shapes are registered with it under drishti-geo-world and drishti-geo-&lt;ISO3&gt; |
+
+#### `GeoHelper` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `world` | `function(): Promise&lt;Object&gt;` | the world (a RegionGeo with by.iso3 and by.iso2 too) |
+| `region` | `function(string): Promise&lt;Object&gt;` | one country's regions by ISO alpha-3 (a RegionGeo) |
+| `find` | `function(Object, *): ?{iso3: string, iso2: ?string, name: string}` | a country of the world by code or name |
+| `place` | `function(Object, *): ?{code: string, name: string}` | a place of a level by code, short code or name |
+| `project` | `function(Object, number, number): number[]` | a longitude and latitude on the level's map |
+| `bounds` | `function(Object): {fit: number[], all: number[]}` | the box the map fits and the box of everything drawn |
+| `option` | `function(Object): Object` | the ECharts option of a map (see GeoMapConfig) |
+| `codeOf` | `function(Object): ?string` | the place code of an ECharts click or hover on a map built by option() |
+| `loads` | `string[]` | the files read so far (for a test) |
+| `base` | `string` | the maps folder |
+
+#### `GeoMapConfig` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `level` | `('world'\|'region')` | the world's countries, or one country's regions |
+| `geo` | `Object` | world() or region(iso3) |
+| `[t]` | `Object&lt;string, string&gt;` | the theme's colours (panelTokens: ink, muted, border, surface, link, accent, pos, mono) |
+| `[items]` | `Array&lt;{code: string, value: ?number, text: ?string}&gt;` | the figures that shade the places (a code, short code or name) |
+| `[highlight]` | `string[]` | places drawn in the accent colour, with their names |
+| `[clickable]` | `?string[]` | null: every place; else the places a click opens (the others say so on hover) |
+| `[linked]` | `boolean` | whether clicking opens anything at all |
+| `[selected]` | `string[]` | the places a cross-filter keeps (the others dimmed) |
+| `[bubbles]` | `Array&lt;{code: string, lon: number, lat: number, value: number, name: string, text: string}&gt;` | a layer of circles sized by value, each at a place (code) or a longitude and latitude |
+| `[legend]` | `string` | the title of the colour scale; unit: appended to a figure |
+| `[unit]` | `string` |  |
+| `[numText]` | `function(number): string` | a figure as text (default panelCompact) |
+| `[openText]` | `string` | the hover text of a place a click opens; closedText: of one it does not |
+| `[closedText]` | `string` |  |
+| `[width]` | `number` | the drawing's width and height in pixels (fit the map to it; default 800 by 400) |
+| `[height]` | `number` |  |
 
 ## drishti-graph
 
@@ -21791,7 +21880,8 @@ Returns `void`.
 | `[label]` | `string` | the region's accessible name (default: the title) |
 | `[locale]` | `string` | how times are printed (default: the page's) |
 | `[libraries]` | `Object&lt;string, Object&gt;` | the libraries a kind draws with, given by the host (drishti-chart, drishti-graph); else the ones on the page, else loaded by drishti-core's loader the first time a view has such a panel |
-| `[geo]` | `function(): Promise&lt;Object&gt;` | the host's map helper for map panels (world, region, find, option, codeOf) |
+| `[geo]` | `(function(): Promise&lt;Object&gt;\|boolean)` | the map helper of map panels (world, region, find, option, codeOf): by default drishti-chart's geo part (loaded the first time a view has a map, with the vendored Natural Earth shapes); a host's own function overrides it; false: no maps (a map panel says so in words) |
+| `[mapsBase]` | `string` | the folder of the map shapes for the default helper (default: the static root's vendor/echarts/maps/) |
 | `[gl]` | `function(): Promise&lt;void&gt;` | loads the 3D engine for a surface's 3D view |
 | `[live]` | `import('./drishti_views-live.js').LiveOptions` | the view's live stream over drishti-events (subscribed after the first paint) |
 

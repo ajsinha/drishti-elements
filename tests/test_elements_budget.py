@@ -53,7 +53,8 @@ def test_every_library_has_a_budget():
 # a library's parts (files beside its bundle, loaded only when needed) and their sheets: bytes
 # (each its size when 3.0.0 was made ready, plus about 5%)
 PARTS = {"drishti-events/drishti_events-worker.js": 2_500, "drishti-events/drishti_events-mock.js": 22_500,
-         "drishti-events/drishti_events-inspector.js": 18_300, "drishti-events/drishti_events-inspector.css": 3_600}
+         "drishti-events/drishti_events-inspector.js": 18_300, "drishti-events/drishti_events-inspector.css": 3_600,
+         "drishti-chart/drishti_chart-geohelper.js": 14_400}   # the geo part (the map helper of view map panels): 13,627 when written, plus about 5%
 
 
 @pytest.mark.parametrize("part,budget", sorted(PARTS.items()))
