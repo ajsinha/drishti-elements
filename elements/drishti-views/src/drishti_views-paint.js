@@ -168,11 +168,12 @@ export class ViewHandle {
 
   /** @private */
   links(sr) {
-    const doc = this.el.ownerDocument;
-    return sheetPaths().map((p) => {
+    const doc = this.el.ownerDocument, pack = this.packSheet(doc);
+    if (pack) { this.styled = this.styled || new Set(); this.styled.add(pack.href); }          // a pack's one stylesheet stands for every sheet
+    return (pack ? [pack.href] : sheetPaths().map((p) => staticUrl(p))).map((href) => {
       const l = doc.createElement('link');
       l.rel = 'stylesheet';
-      l.href = staticUrl(p);
+      l.href = href;
       const loaded = new Promise((r) => { l.addEventListener('load', r, { once: true }); l.addEventListener('error', r, { once: true }); });
       sr.appendChild(l);
       return loaded;
