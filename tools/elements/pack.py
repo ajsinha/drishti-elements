@@ -37,6 +37,9 @@ JS_NAME, CSS_NAME, RECORD = "drishti-elements.js", "drishti-elements.css", "dris
 LICENCE_BLOCK = re.compile(r"^/\*\n( \*[^\n]*\n)+? \*/\n")
 
 
+DATA_FILES = ("data/formats.yaml", "data/world-regions.yaml")
+
+
 def body(text: str) -> str:
     """A sheet or bundle without its own licence header (the packed file carries it once, at the top)."""
     return LICENCE_BLOCK.sub("", text, count=1).strip("\n") + "\n"
@@ -52,8 +55,10 @@ PRELUDE = ("(function (root) {\n"
 
 
 def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = True,
-         maps: bool = False, train: dist.Train | None = None) -> dict:
-    """Writes the packed JavaScript and style sheet (and what they read at run time) into ``out``; returns the record of what is inside."""
+         maps: bool = False, train: dist.Train | None = None, data: bool = False) -> dict:
+    """Writes the packed JavaScript and style sheet (and what they read at run time) into ``out``; returns the record of what is inside.
+    With ``data`` the shared tables a server reads too (``data/formats.yaml``, ``data/world-regions.yaml``) ride along under ``data/``,
+    listed with their hashes like every other file: one pinned folder holds both the painter and the tables its host formats with."""
     train = train or dist.Train()
     names = train.resolve(libs)
     table = dist.themes()
@@ -94,6 +99,9 @@ def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = T
                 css_parts.append(f"/* ---- {c} ({n}) ---- */\n" + body((dist.ROOT / c).read_text(encoding="utf-8")))
     files = {JS_NAME: "".join(js).encode("utf-8"), CSS_NAME: (dist.HEADER_CSS + "".join(css_parts)).encode("utf-8")}
     files.update(extra)
+    if data:
+        for t in DATA_FILES:
+            files[t] = (dist.ROOT / t).read_bytes()
     out.mkdir(parents=True, exist_ok=True)
     dist.write_tree(files, out)
     record = {"elements": train.version, "libraries": {n: train.version for n in names},

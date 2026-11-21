@@ -14,7 +14,7 @@
 # See the LICENSE file in the root of this repository.
 """Drishti Elements for other applications (docs/USING.md).
 
-    python3 tools/elements/cli.py pack --libs core,grid,chart [--theme dark] [--out DIR] [--no-engines] [--maps]
+    python3 tools/elements/cli.py pack --libs core,grid,chart [--theme dark] [--out DIR] [--no-engines] [--maps] [--data]
     python3 tools/elements/cli.py dist [--out DIR]
 
 pack writes one JavaScript file and one style sheet with the named libraries; dist writes the release tree and its zip.
@@ -41,7 +41,7 @@ def human(n: int) -> str:
 
 def cmd_pack(a) -> int:
     try:
-        rec = packer.pack([x for x in a.libs.split(",") if x.strip()], Path(a.out), theme=a.theme, engines=not a.no_engines, maps=a.maps)
+        rec = packer.pack([x for x in a.libs.split(",") if x.strip()], Path(a.out), theme=a.theme, engines=not a.no_engines, maps=a.maps, data=a.data)
     except dist.DistError as e:
         print(f"elements pack: {e}", file=sys.stderr)
         return 1
@@ -77,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default=str(DEFAULT_OUT / "pack"), help="the folder to write (default dist/pack)")
     p.add_argument("--no-engines", action="store_true", help="leave the vendored engines (ECharts) out: the page loads its own first")
     p.add_argument("--maps", action="store_true", help="copy drishti-chart's map shapes (vendor/echarts/maps) beside the files")
+    p.add_argument("--data", action="store_true", help="copy the shared tables a server formats with (data/formats.yaml, data/world-regions.yaml) under data/")
     d = sub.add_parser("dist", help="the release tree drishti-elements-<version>/ and its zip (SRI hashes, themes, gallery)")
     d.set_defaults(func=cmd_dist)
     d.add_argument("--out", default=str(DEFAULT_OUT), help="the folder to write (default dist)")

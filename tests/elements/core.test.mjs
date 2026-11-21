@@ -38,6 +38,11 @@ test('the server named formats: amount, signed, pct, compact, dates; null is emp
   assert.equal(C.formatNamed('signed0', 12), '+12');
   assert.equal(C.formatNamed('signed0', -0.4), '0');                     // rounds to zero: no sign
   assert.equal(C.formatNamed('pct2', 0.01234), '1.23%');
+  assert.equal(C.formatNamed('pct4', 0.0123456), '1.2346%');             // level 1.2 names, Drishti's definitions
+  assert.equal(C.formatNamed('bp1', 12.34), '+12.3 bp');
+  assert.equal(C.formatNamed('bp1', -0.04), '0.0 bp');                    // rounds to zero: no sign
+  assert.equal(C.formatNamed('df4', 0.987654), '0.9877');
+  assert.equal(C.formatNamed('price4', 1234.56789), '1,234.5679');
   assert.equal(C.formatNamed('compact', 1234567), '1.2m');
   assert.equal(C.formatNamed('compact', -2.5e9), M + '2.5bn');
   assert.equal(C.formatNamed('compact', 999), '999.0');                   // the server's: one decimal below a thousand too
@@ -49,10 +54,11 @@ test('the server named formats: amount, signed, pct, compact, dates; null is emp
   assert.equal(C.formatNamed('amount0', C.MASK), C.MASK);
 });
 
-test('a pack format defined at run time is used like a bundled one (bp1 from the core pack)', () => {
-  assert.equal(C.hasFormat('bp1'), false);
-  C.defineFormats({ bp1: { type: 'number', decimals: 1, sign: 'always', suffix: ' bp' } });
-  assert.equal(C.formatNamed('bp1', 12.34), '+12.3 bp');
+test('a pack format defined at run time is used like a bundled one (rate5 from the core pack)', () => {
+  assert.equal(C.hasFormat('rate5'), false);
+  C.defineFormats({ rate5: { type: 'number', decimals: 5, grouping: false } });
+  assert.equal(C.formatNamed('rate5', 1234.123456), '1234.12346');
+  assert.equal(C.hasFormat('bp1'), true);                                // bundled since Rachana level 1.2
   assert.equal(C.formatBasisPoints(0.0012, { scale: 10000 }), '+12.0 bp');
 });
 
