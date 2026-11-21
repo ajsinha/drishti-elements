@@ -27,6 +27,16 @@ Each release lists what changed, by library. One version for every library: the 
   columns, named areas, tabs, folds, sections, a sticky area, the divider; the container's medium and narrow forms in the phone order),
   frames of the live stream applied in one animation frame, the cards drawn instead of a view, navigation in place; `registerKind`.
   Speed budgets in `tests/views_budget.json`.
+- **drishti-views** (step 4, the kinds of words and tables): `kv` and `provenance` (label and value pairs), `status` (the values as
+  toned chips), `metric` (one large figure, its change, unit and caption; updated in place by a patch), `markdown` (a basic markup of
+  headings, emphasis, code, lists and links built as DOM nodes; a tag in the text stays text, an address an href may not carry stays
+  text), `links` (with badges and statuses; a denied or missing one is not a link), `timeline` (oldest first, "3 more events"),
+  `table` (sort by a column, a numeric column ordered by its text's number; a filter box; rows a hundred at a time; rows with children
+  opened and closed, a level's own column heads, subtotals and a total; a row with a `pick` raises the handle's new `pick` event),
+  `ladder` (the current row marked `aria-current`), `pivot` (rows nested by their path, groups opened and closed, the column across,
+  row and grand totals, heat over the values) and `tabs` (fields and whole panels per tab, as tabs or columns, nesting at most four
+  deep). A patch that replaces a table keeps its sort, filter and open rows. The ViewModel schema re-synced from drishti-rachana's
+  g1/integration (only its `$id` changed).
 
 ## 3.0.0
 

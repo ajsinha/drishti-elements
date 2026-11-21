@@ -15,8 +15,8 @@
 -->
 # Views: the design of drishti-views and the open ViewModel
 
-**Status: a design, being built on the branch `feature/views`. Steps 1 to 3 of section 13.1 are built** (the specification, the
-validator, the painter's core), on contract 1.x as decision N3 of drishti-rachana's plan set it: the specification's one home is
+**Status: a design, being built on the branch `feature/views`. Steps 1 to 4 of section 13.1 are built** (the specification, the
+validator, the painter's core, the kinds of words and tables), on contract 1.x as decision N3 of drishti-rachana's plan set it: the specification's one home is
 drishti-rachana's `spec/1/viewmodel.schema.json`, kept here as a pinned copy, and version 1 keeps the reference's field names (`contract`,
 `fmt`, `ev`, `title.pill`, `provenance`, the panel fields `error`, `denied`, `empty`, `wire`, `compute`), which the painter draws as they
 are. Where this document's field names differ (sections 2 to 5), contract 1.x is what is built; the differences are listed in

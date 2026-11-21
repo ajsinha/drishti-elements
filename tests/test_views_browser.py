@@ -108,7 +108,8 @@ def test_the_screen_and_every_panel_state_drawn_in_a_shadow_root_styled_in_both_
         assert by["failed"][1] == "error" and "E-2041 the capacity service did not answer" in by["failed"][3]
         assert by["hidden"][1] == "denied" and "No access" in by["hidden"][3] and "no access to team" in by["hidden"][3]
         assert by["nothing"][1] == "empty" and "No data available" in by["nothing"][3]
-        assert by["summary"][1] == "unknown-kind" and 'does not draw the kind "kv"' in by["summary"][3]
+        assert by["summary"][1] == "ready" and "Europe, Middle East and Africa" in by["summary"][3]
+        assert by["trend"][1] == "unknown-kind" and 'does not draw the kind "line"' in by["trend"][3]
         tags = await ev(pg, "{ code: R.querySelector('[data-panel=orders] .dv-code').textContent, key: R.querySelector('[data-panel=orders] .dv-key').textContent, inferred: R.querySelector('[data-panel=nothing] .dv-tag').getAttribute('title'), err: R.querySelector('[data-panel=failed] [role=alert]') !== null }")
         assert tags == {"code": "ORD", "key": "F3", "inferred": "a dated list was found", "err": True}
         cols = await ev(pg, "[...R.querySelectorAll('.dv-grid > .dv-area')].map((a) => [a.dataset.area, [...a.querySelectorAll('.dv-panel')].map((p) => p.dataset.panel)])")
@@ -221,7 +222,7 @@ def test_frames_strip_panel_provenance_old_frames_unknown_ops_deleted_and_restor
         await frame(pg)
         got = await ev(pg, """[R.querySelector('.dv-fig[data-index="0"] dd').textContent, R.querySelector('.dv-fig[data-index="0"] dd') === window.__dd,
             R.querySelector('[data-panel=notes]').dataset.state, window.__harness.handle.metrics(), window.__harness.handle.viewModel.provenance.generation]""")
-        assert got[0] == "18,432,850" and got[1] is True and got[2] == "unknown-kind" and got[4] == 42
+        assert got[0] == "18,432,850" and got[1] is True and got[2] == "ready" and got[4] == 42
         m = got[3]
         assert m["dropped"] == 1 and m["ignored"] == 2 and m["patches"] == 3 and m["paints"] == 1
         assert any(e["type"] == "patch" for e in await pg.evaluate("window.__harness.events"))
@@ -246,7 +247,7 @@ def test_computing_stale_waiting_and_a_partial_view(browsers):
             orders: [R.querySelector('[data-panel=orders]').classList.contains('dv-stale'), R.querySelector('[data-panel=orders] .dv-chip').getAttribute('title')],
             waits: [R.querySelector('[data-panel=by-country]').dataset.state, R.querySelector('[data-panel=by-country] .dv-panel-b').textContent.trim()],
             banner: R.querySelector('.dv-banner').textContent }""")
-        assert got["booked"] == ["unknown-kind", "Computing…"]      # a result is shown under a quiet mark while it computes
+        assert got["booked"] == ["ready", "Computing…"]      # a result is shown under a quiet mark while it computes
         assert got["orders"] == [True, "orders-service · 2026-11-19T09:20:00Z"]
         assert got["waits"] == ["waiting", "pick a region to see its countries"]
         assert got["banner"] == "Part of this view did not answerNode-b did not answer".replace("Node", "node")
@@ -311,4 +312,84 @@ def test_speed_first_paint_ready_and_patch_to_pixel_within_their_budgets(browser
         assert r["apply"] <= BUDGET["patch-apply-ms"] * k, r
         assert r["p99"] <= BUDGET["patch-to-pixel-p99-ms"] * k, r
         print("views speed:", json.dumps(r))
+    run(browsers, body, "view=V001")
+
+
+KINDS_VIEW = {
+    "contract": "1.0", "ref": {"kind": "account", "id": "A-7"}, "title": {"pill": "Account", "id": "A-7"},
+    "panels": [
+        {"id": "facts", "kind": "kv", "title": "Facts", "data": {"fields": [{"label": "Owner", "text": "Ann"}, {"label": "Since", "text": "2019"}]}},
+        {"id": "health", "kind": "status", "data": {"fields": [{"label": "Feed", "text": "ok", "tone": "ok"}, {"label": "Limits", "text": "near", "tone": "warn"}]}},
+        {"id": "fig", "kind": "metric", "data": {"value": {"text": "1,204.5", "emphasis": True}, "delta": {"text": "+2.1%", "tone": "pos"}, "unit": "k", "caption": "orders today"}},
+        {"id": "note", "kind": "markdown", "data": {"text": "# Heading\nSome **bold** and *soft* `code` [docs](https://example.org/x) [bad](javascript:alert(1)) <b>tag</b>\n\n- one\n- two\n\n```\nraw <i>\n```"}},
+        {"id": "rel", "kind": "links", "data": {"links": [{"label": "Parent", "text": "Group B", "link": {"kind": "order", "id": "B", "mnemonic": "GRP"}, "badge": "2", "status": "resolved"},
+                                                        {"label": "Owner", "text": "Ops", "link": None, "badge": None, "status": "denied"}]}},
+        {"id": "events", "kind": "timeline", "data": {"events": [{"date": "2026-03-01", "label": "Second"}, {"date": "2026-01-05", "label": "First", "status": "done", "tone": "ok"}], "more": 3}},
+        {"id": "rows", "kind": "table", "data": {"columns": ["Name", "Amount"], "numeric": [False, True], "search": True, "expand": 0, "more": "Showing 3 of 3",
+            "rows": [{"cells": [{"text": "Beta"}, {"text": "1,200"}], "highlight": False, "path": "b", "pick": "B", "children": [{"cells": [{"text": "Beta child"}, {"text": "200"}], "highlight": False, "path": "b/1"}]},
+                     {"cells": [{"text": "Alpha"}, {"text": "(50)"}], "highlight": False, "path": "a"},
+                     {"cells": [{"text": "Gamma"}, {"text": "9"}], "highlight": True, "path": "g"}],
+            "total": {"cells": [{"text": "Total"}, {"text": "1,159"}], "highlight": False, "path": None}}},
+        {"id": "sched", "kind": "ladder", "data": {"columns": ["Date", "Flow"], "rows": [{"cells": [{"text": "2026-01"}, {"text": "10"}], "highlight": False, "path": None},
+                                                                                     {"cells": [{"text": "2026-02"}, {"text": "11"}], "highlight": True, "path": None}]}},
+        {"id": "piv", "kind": "pivot", "data": {"by": "Region", "across": "Quarter", "columns": ["Q1", "Q2"], "heat": True,
+            "rows": [{"label": "EMEA", "path": ["EMEA"], "group": True, "cells": [{"text": "10"}, {"text": "20"}], "values": [10, 20], "total": {"text": "30"}},
+                     {"label": "UK", "path": ["EMEA", "UK"], "cells": [{"text": "4"}, {"text": "5"}], "values": [4, 5], "total": {"text": "9"}},
+                     {"label": "APAC", "path": ["APAC"], "cells": [{"text": "1"}, {"text": "2"}], "values": [1, 2], "total": {"text": "3"}}],
+            "totals": [{"text": "11"}, {"text": "22"}], "more": 4}},
+        {"id": "tb", "kind": "tabs", "data": {"layout": "tabs", "tabs": [{"title": "One", "fields": [{"label": "a", "text": "1"}], "panels": [{"id": "inner", "kind": "kv", "data": {"fields": [{"label": "deep", "text": "yes"}]}}]},
+                                                                      {"title": "Two", "fields": [{"label": "b", "text": "2"}]}]}}]}
+
+
+def test_the_kinds_of_words_and_tables(browsers):
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", KINDS_VIEW)
+        await frame(pg)
+        states = await ev(pg, "[...R.querySelectorAll('.dv-grid .dv-panel')].map((p) => p.dataset.state)")
+        assert set(states) == {"ready"}, states
+        got = await ev(pg, """{
+          kv: [...R.querySelectorAll('[data-panel=facts] dt, [data-panel=facts] dd')].map((x) => x.textContent),
+          chips: [...R.querySelectorAll('[data-panel=health] dd .dv-chip')].map((x) => x.className),
+          metric: [R.querySelector('.dv-metric-value').textContent, R.querySelector('.dv-metric-delta').className, R.querySelector('.dv-metric-unit').textContent, R.querySelector('.dv-metric-caption').textContent],
+          md: [R.querySelector('.dv-md h4').textContent, R.querySelector('.dv-md strong').textContent, R.querySelector('.dv-md em').textContent, R.querySelector('.dv-md p code').textContent,
+               [...R.querySelectorAll('.dv-md a')].map((a) => a.getAttribute('href')), R.querySelectorAll('.dv-md b, .dv-md i').length, R.querySelectorAll('.dv-md li').length, R.querySelector('.dv-md pre').textContent],
+          links: [...R.querySelectorAll('.dv-links li')].map((li) => [li.querySelector('.dv-link') ? li.querySelector('.dv-link').textContent : null, li.textContent]),
+          tl: [...R.querySelectorAll('.dv-tl-label')].map((x) => x.textContent).concat([R.querySelector('[data-panel=events] .dv-more').textContent]) }""")
+        assert got["kv"] == ["Owner", "Ann", "Since", "2019"]
+        assert got["chips"] == ["dv-cell dv-t-ok dv-chip", "dv-cell dv-t-warn dv-chip"]
+        assert got["metric"] == ["1,204.5", "dv-cell dv-t-pos dv-metric-delta", "k", "orders today"]
+        md = got["md"]
+        assert md[:4] == ["Heading", "bold", "soft", "code"] and md[4] == ["https://example.org/x"] and md[5] == 0 and md[6] == 2 and md[7] == "raw <i>"
+        assert got["links"][0][0] == "Group B" and "no access" in got["links"][1][1] and got["links"][1][0] is None
+        assert got["tl"] == ["First", "Second", "3 more events"]
+        rows = "[...R.querySelectorAll('[data-panel=rows] tbody tr')].map((r) => r.textContent)"
+        assert await ev(pg, rows) == ["▸Beta1,200", "Alpha(50)", "Gamma9"]
+        assert await ev(pg, "R.querySelector('[data-panel=rows] tfoot').textContent") == "Total1,159"
+        await ev(pg, "R.querySelectorAll('[data-panel=rows] thead .dv-sort')[1].click()")
+        assert await ev(pg, rows) == ["Alpha(50)", "Gamma9", "▸Beta1,200"]                       # numeric order of the text
+        assert await ev(pg, "R.querySelectorAll('[data-panel=rows] thead th')[1].getAttribute('aria-sort')") == "ascending"
+        await ev(pg, "R.querySelector('[data-panel=rows] .dv-twisty').click()")
+        assert await ev(pg, rows) == ["Alpha(50)", "Gamma9", "▾Beta1,200", "Beta child200"]
+        await ev(pg, "(() => { const f = R.querySelector('[data-panel=rows] .dv-filter'); f.value = 'child'; f.dispatchEvent(new Event('input')); })()")
+        assert await ev(pg, rows) == ["▾Beta1,200", "Beta child200"]
+        await ev(pg, "R.querySelector('[data-panel=rows] tr[data-pick]').click()")
+        assert {"type": "pick", "code": None, "detail": "B"} in await pg.evaluate("window.__harness.events")
+        lad = await ev(pg, "[...R.querySelectorAll('[data-panel=sched] tbody tr')].map((r) => r.getAttribute('aria-current'))")
+        assert lad == [None, "true"]
+        piv = await ev(pg, """[[...R.querySelectorAll('[data-panel=piv] thead tr')].map((r) => r.textContent), [...R.querySelectorAll('[data-panel=piv] tbody tr')].map((r) => r.textContent),
+            R.querySelector('[data-panel=piv] tfoot').textContent, R.querySelectorAll('[data-panel=piv] .dv-heat').length, R.querySelector('[data-panel=piv] .dv-more').textContent]""")
+        assert piv[0] == ["Quarter", "RegionQ1Q2Total"] and piv[1] == ["▾EMEA102030", "UK459", "APAC123"] and piv[2] == "Total1122" and piv[3] == 6 and piv[4] == "4 more rows"
+        await ev(pg, "R.querySelector('[data-panel=piv] .dv-twisty').click()")
+        assert await ev(pg, "[...R.querySelectorAll('[data-panel=piv] tbody tr')].map((r) => r.textContent)") == ["▸EMEA102030", "APAC123"]
+        tabs = await ev(pg, """[[...R.querySelectorAll('[data-panel=tb] [role=tab]')].map((t) => [t.textContent, t.getAttribute('aria-selected')]),
+            R.querySelector('[data-panel=inner]').dataset.state, R.querySelector('[data-panel=inner] dd').textContent, [...R.querySelectorAll('[data-panel=tb] [role=tabpanel]')].map((p) => p.hidden)]""")
+        assert tabs == [[["One", "true"], ["Two", "false"]], "ready", "yes", [False, True]]
+        await ev(pg, "R.querySelector('[data-panel=tb] [role=tab]').focus()")
+        await pg.keyboard.press("ArrowRight")
+        assert await ev(pg, "[...R.querySelectorAll('[data-panel=tb] [role=tabpanel]')].map((p) => p.hidden)") == [True, False]
+        await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels.find((x) => x.id === 'fig')));
+            p.data.value.text = '1,300.0'; H.handle.patch({ seq: 1, patches: [{ op: 'panel', panel: p }] }); }""")
+        await frame(pg)
+        assert await ev(pg, "R.querySelector('.dv-metric-value').textContent") == "1,300.0"
+        await shot(pg, "views-kinds.png")
     run(browsers, body, "view=V001")

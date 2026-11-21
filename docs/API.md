@@ -21300,7 +21300,7 @@ Returns `?{element: HTMLElement, body: HTMLElement, panel: Object, state: string
 
 ##### `ViewHandle.on(name, fn)`
 
-Listens to the view's events: ready, error, issues, link*, key*, patch, navigate, dispose (* cancelable). Each is also a DOM event elements-view:&lt;name&gt; on the container.
+Listens to the view's events: ready, error, issues, link*, key*, patch, navigate, pick (a row with a pick: {panel, pick, ev}), dispose (* cancelable). Each is also a DOM event elements-view:&lt;name&gt; on the container.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -21360,6 +21360,56 @@ const view = paint(document.getElementById('orders'), '/views/orders.json'); vie
 The kinds that have a painter, in the order they were registered.
 
 Returns `string[]`.
+
+### drishti_views-words.js
+
+#### `inlineNodes(doc, text)`
+
+The inline parts of a line: code, strong, emphasis and links (an address an href may carry: http, https, mailto or relative; anything else is drawn as text).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `doc` | `Document` |  |
+| `text` | `string` |  |
+
+Returns `Node[]`.
+
+#### `markupNodes(doc, text)`
+
+Text in the basic markup as nodes: # headings (drawn one level under the panel's title), paragraphs, - and 1. lists, ``` code blocks, and the inline parts. No HTML is read: a tag in the text is text.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `doc` | `Document` |  |
+| `text` | `string` |  |
+
+Returns `DocumentFragment`.
+
+#### `LINK_STATUS`
+
+The words of the link statuses (a status outside them is drawn as its own word).
+
+### drishti_views-tables.js
+
+#### `PAGE_ROWS`
+
+Rows drawn at first, and added by each "Show more".
+
+#### `numberOfText(t)`
+
+The number a formatted text shows ("1,234.5", "-4.2%", "(1,200)", "12.3m"), or NaN: the order of a numeric column.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `t` | `string` |  |
+
+Returns `number`.
+
+### drishti_views-tabs.js
+
+#### `MAX_NESTING`
+
+How deep tabs may nest panels.
 
 ### drishti_index.js
 

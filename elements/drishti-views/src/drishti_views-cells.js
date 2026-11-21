@@ -48,7 +48,17 @@ export const MESSAGES = Object.freeze({
   fold: 'Fold {title}',
   unfold: 'Open {title}',
   keys: 'Function keys',
-  divider: 'Divider between {a} and {b}: drag, or use the arrow keys'
+  divider: 'Divider between {a} and {b}: drag, or use the arrow keys',
+  moreEvents: '{count} more events',
+  moreRows: '{count} more rows',
+  showMore: 'Show {count} more',
+  filterRows: 'Filter the rows',
+  rowsMatch: '{count} rows match',
+  sortBy: 'Sort by {label}',
+  expandRow: 'Open {label}',
+  collapseRow: 'Close {label}',
+  total: 'Total',
+  tooDeep: 'Panels nest at most four deep'
 });
 
 /** The tones of the specification; a word outside it is drawn untoned. */

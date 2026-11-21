@@ -33,8 +33,8 @@
   };
   H.paint = (view, extra) => {
     H.handle = V.paint(el, view, Object.assign({}, H.options, extra || {}));
-    ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate'].forEach((n) => H.handle.on(n, (e) => {
-      H.events.push({ type: n, code: e.detail && e.detail.code, detail: n === 'issues' ? e.detail.issues.length : (n === 'link' ? e.detail.link : (n === 'key' ? e.detail.key : null)) });
+    ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick'].forEach((n) => H.handle.on(n, (e) => {
+      H.events.push({ type: n, code: e.detail && e.detail.code, detail: n === 'issues' ? e.detail.issues.length : (n === 'link' ? e.detail.link : (n === 'key' ? e.detail.key : (n === 'pick' ? e.detail.pick : null))) });
     }));
     return H.handle.ready;
   };

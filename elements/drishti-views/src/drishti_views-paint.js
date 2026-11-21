@@ -32,7 +32,7 @@ import { Patcher } from './drishti_views-patch.js';
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'dispose'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'dispose'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -309,7 +309,7 @@ export class ViewHandle {
   }
 
   /**
-   * Listens to the view's events: ready, error, issues, link*, key*, patch, navigate, dispose (* cancelable). Each is also a DOM event
+   * Listens to the view's events: ready, error, issues, link*, key*, patch, navigate, pick (a row with a pick: {panel, pick, ev}), dispose (* cancelable). Each is also a DOM event
    * elements-view:<name> on the container.
    * @param {string} name
    * @param {function(Object): void} fn receives {type, detail, preventDefault}
