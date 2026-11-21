@@ -20,7 +20,7 @@ Each release lists what changed, by library. One version for every library: the 
 ## Unreleased
 
 - **The painter in a shadow root takes a pack's stylesheet** (drishti-views): when the page links `drishti-elements.css` (a pack), the view's shadow root links it once
-  instead of asking for one file per library (404s in a pack, an unstyled grid).
+  instead of asking for one file per library (404s in a pack, an unstyled grid); the loader adds no per-library sheet to a page that links the pack's.
 - **The grid's live-mode edit UI** (drishti-grid, drishti-views): for a live table whose declaration says `edit: cells` or `beside`, the grid reads the
   schema's `write` (only those columns, their rules, the reason mode; no `write`, no edit control) and edits it: cells mode an editor by each rule
   (number, text, pick list, date), beside mode a record panel (a drishti-inputs form) with Save and Cancel; a masked cell is never editable. The

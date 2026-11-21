@@ -148,6 +148,7 @@ export function loaded(name) { return registry().libs[name] || null; }
 
 function addCss(doc, href) {
   if (doc.querySelector('link[data-drishti-elements="' + href + '"]')) { return; }
+  if (doc.querySelector('link[rel~="stylesheet"][href$="/drishti-elements.css"], link[rel~="stylesheet"][href="drishti-elements.css"]')) { return; }   // a pack's one stylesheet has every library's rules
   const abs = (u) => { try { return new URL(u, doc.baseURI).href.split('?')[0]; } catch (e) { return String(u).split('?')[0]; } };
   const plain = abs(href);                          // the page's own <link href="../css/x.css"> is the same sheet as the loader's address
   const present = Array.prototype.some.call(doc.querySelectorAll('link[rel="stylesheet"]'), (l) => abs(l.getAttribute('href') || '') === plain);
