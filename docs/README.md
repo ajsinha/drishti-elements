@@ -17,7 +17,10 @@
 
 | Document | What it holds |
 |---|---|
-| [USING.md](USING.md) | installing the release tree, a first page, picking libraries, connecting to a server, drishti-events, drishti-views |
+| [USING.md](USING.md) | the widgets: installing the release tree, a first page, picking libraries, packing two files, connecting to a server, integrity and CSP |
+| [VIEWS.md](VIEWS.md) | the painter: paint a ViewModel, `<elements-view>`, live frames, datasets, the builders, maps |
+| [EVENTS.md](EVENTS.md) | drishti-events: topics, publish and subscribe, a server, tabs, the inspector, a persistent queue |
+| [TUTORIALS.md](TUTORIALS.md) | four hands-on tutorials with commands: the gallery, a grid and a whole screen, events, a two-file pack |
 | [DESIGN.md](DESIGN.md) | the ten libraries and the rules each keeps; how drishti-events keeps its promises |
 | [API.md](API.md) | every library's functions, classes, options and events, generated from the typed JSDoc |
 | [MIGRATING_TO_3.md](MIGRATING_TO_3.md) | moving a host from 2.4 to 3.0: every removal and its replacement |

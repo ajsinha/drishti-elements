@@ -15,7 +15,7 @@
 
 3.0.0 is a breaking release for a host that used drishti-data's live client or the shared-bus channel names. Every removal has one
 replacement; nothing is aliased. The reasons and the new library are in the CHANGELOG (3.0.0-rc.1 and 3.0.0) and in
-[USING](USING.md) (drishti-events). 3.1.0 adds drishti-views and breaks nothing.
+[EVENTS](EVENTS.md) (drishti-events). 3.1.0 adds drishti-views and breaks nothing.
 
 ## Connections and feeds (drishti-data to drishti-events)
 

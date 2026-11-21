@@ -167,7 +167,7 @@ constructs a `WebSocket`, an `EventSource`, a `BroadcastChannel` or a `SharedWor
 sink, the feed monitor, the core's selection constant) is gone with no alias (guards in `tests/test_elements_guards.py`). It names no host:
 its files, the gallery's Eventing pages and the conformance vectors carry no host's routes, settings keys, header names, error codes or
 vocabulary (a guard too). The wire protocol is [CONTRACTS.md](CONTRACTS.md#the-events-contract-drishti-events-protocol-version-1); how to use it
-is [USING.md](USING.md#drishti-events). It is plain ES modules under `elements/drishti-events/src/`; three **parts** are files of their own beside
+is [EVENTS.md](EVENTS.md). It is plain ES modules under `elements/drishti-events/src/`; three **parts** are files of their own beside
 the bundle, loaded only when needed by drishti-core's `loadPart(library, part)`: the shared hub's worker, the mock server (demos and tests;
 never needed in production) and the inspector.
 

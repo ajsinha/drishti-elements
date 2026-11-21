@@ -30,7 +30,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ("README", "USING", "DESIGN", "API", "CONTRACTS", "THEMING", "MOVING_FROM_AG_GRID")
+DOCS = ("README", "USING", "EVENTS", "VIEWS", "TUTORIALS", "DESIGN", "API", "CONTRACTS", "THEMING", "MOVING_FROM_AG_GRID")
 FOOTER = "Proprietary. Copyright (c) 2026 Ashutosh Sinha. All rights reserved. No licence is granted: see LICENSE."
 STYLE = """:root{--bg:#fff;--ink:#14202b;--mute:#52606d;--line:#d5dce3;--link:#0a5cad;--code:#f3f6f9}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1419;--ink:#e3e9ef;--mute:#9aa7b4;--line:#2a3640;--link:#6db3ff;--code:#17202a}}
