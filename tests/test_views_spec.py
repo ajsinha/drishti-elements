@@ -74,16 +74,16 @@ def test_the_pin_is_the_hash_of_the_specification_at_the_pinned_commit():
 
 def test_the_fire_cases_fixture_names_the_rachana_commit_and_the_hash_it_was_made_from():
     fx = json.loads(FIRE.read_text(encoding="utf-8"))
-    assert fx.get("commit") and fx.get("ref") and len(fx.get("sha256", "")) == 64 and fx["cases"], (
-        "tests/support/fire_cases.json has no pin: node tools/views/fire_fixture.mjs <drishti-rachana checkout>")
+    assert fx.get("commit") and len(fx.get("sha256", "")) == 64 and fx["cases"], (
+        "tests/support/fire_cases.json has no pin: node tools/views/fire_fixture.mjs --pin <drishti-rachana commit>")
 
 
-def test_the_fire_cases_fixture_is_the_cases_at_its_commit_and_they_have_not_moved_since():
+def test_the_fire_cases_fixture_is_the_cases_at_its_pinned_commit():
+    """Only the pinned commit is compared, never a moving branch: moving the pin is one deliberate command."""
     fx = json.loads(FIRE.read_text(encoding="utf-8"))
-    assert _fire_hash(fx["commit"]) == fx["sha256"], "the fixture's hash is not the fire cases at its commit " + fx["commit"]
-    now = _fire_hash(fx["ref"])
-    assert now == fx["sha256"], ("drishti-rachana's fire cases at " + fx["ref"] + " changed since the fixture was made: "
-                                 "node tools/views/fire_fixture.mjs " + "<drishti-rachana checkout>" + " (needs its runtime bundle built) and commit the new fixture")
+    assert _fire_hash(fx["commit"]) == fx["sha256"], (
+        "the fire cases at the pinned drishti-rachana commit " + fx["commit"] + " differ from tests/support/fire_cases.json: regenerate it with "
+        "`node tools/views/fire_fixture.mjs --pin <commit>` (the pinned commit again, or the new one) and commit the fixture")
 
 
 def test_a_keyword_the_validator_does_not_implement_is_refused():

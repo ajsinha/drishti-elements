@@ -18,30 +18,46 @@
    effects, problems: as the case file names them) and the ViewModel the host's next bind answers. The painter's browser test fires
    the same steps and compares; nothing here evaluates an expression for the painter, it only records what the reference runtime did.
 
-     node tools/views/fire_fixture.mjs ../drishti-rachana [--only id,id]
+     node tools/views/fire_fixture.mjs --pin <commit> [--repo ../drishti-rachana] [--only id,id]
 
-   Needs the runtime bundle built there (python3 tools/js/build_js.py): js/packages/rachana/dist/rachana.tools.js. */
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+   The one deliberate command that moves the pin: it checks <commit> out of the repository into a temporary worktree (target/tmp), builds the
+   runtime bundle there (python3 tools/js/build_js.py), records the commit and the hash of its fire cases in the fixture and removes the worktree.
+   Without --pin the fixture is regenerated at the commit it already names. */
+import { readFileSync, writeFileSync, readdirSync, rmSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const root = resolve(process.argv[2] || '../drishti-rachana');
-const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
+const arg = (n) => (process.argv.includes(n) ? process.argv[process.argv.indexOf(n) + 1] : null);
+const only = arg('--only') ? arg('--only').split(',') : null;
+const repo = resolve(arg('--repo') || process.env.DRISHTI_RACHANA || '../drishti-rachana');
+const fixture = new URL('../../tests/support/fire_cases.json', import.meta.url);
+const pin = arg('--pin') || JSON.parse(readFileSync(fixture, 'utf8')).commit;
+const sh = (cwd, cmd, ...a) => execFileSync(cmd, a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
+const full = sh(repo, 'git', 'rev-parse', '--verify', pin + '^{commit}');
+const root = resolve(new URL('../../target/tmp/fire-pin-' + full.slice(0, 12), import.meta.url).pathname);
+rmSync(root, { recursive: true, force: true });
+mkdirSync(resolve(root, '..'), { recursive: true });
+sh(repo, 'git', 'worktree', 'add', '--quiet', '--detach', root, full);
+try {
+  sh(root, 'python3', 'tools/js/build_js.py');
+  await main();
+} finally {
+  try { sh(repo, 'git', 'worktree', 'remove', '--force', root); } catch (e) { rmSync(root, { recursive: true, force: true }); }
+}
+async function main() {
 const require = createRequire(import.meta.url);
 const yaml = require(join(root, 'js/vendor/js-yaml/4.1.0/js-yaml.min.js'));
 const rt = await import(pathToFileURL(join(root, 'js/packages/rachana/dist/rachana.tools.js')).href);
 rt.init('core', JSON.stringify([readFileSync(join(root, 'spec/1/formats.yaml'), 'utf8')]));
 const dir = join(root, 'conformance/1/fire');
 // The pin (G2 gate F15): the Rachana commit the cases are from and the hash of the case files (each file's name, a NUL, its bytes, in name order). tests/test_views_spec.py
-// reads the same files at this commit, and at `ref` (where Rachana's fire cases live now), and fails when they differ: regenerate with this script. The files must be committed.
-const git = (...a) => execFileSync('git', ['-C', root, ...a], { encoding: 'utf8' }).trim();
-if (git('status', '--porcelain', '--', 'conformance/1/fire')) { throw new Error('conformance/1/fire has uncommitted changes in ' + root + ': commit them first, the pin names a commit'); }
+// reads the same files at that commit and fails when they differ from the fixture: regenerate with `--pin <commit>`. Nothing moving is compared.
 const hash = createHash('sha256');
 for (const f of readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) { hash.update(f + '\0'); hash.update(readFileSync(join(dir, f))); }
-const out = { source: 'drishti-rachana conformance/1/fire', commit: git('rev-parse', 'HEAD'), ref: process.env.DRISHTI_RACHANA_REF || 'origin/g2/integration', sha256: hash.digest('hex'), cases: [] };
+const out = { source: 'drishti-rachana conformance/1/fire', commit: full, sha256: hash.digest('hex'), cases: [] };
 for (const f of readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) {
   const doc = yaml.load(readFileSync(join(dir, f), 'utf8'));
   for (const c of doc.cases) {
@@ -60,5 +76,6 @@ for (const f of readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) {
       viewModel: got.steps[i].viewModel })) });
   }
 }
-writeFileSync(new URL('../../tests/support/fire_cases.json', import.meta.url), JSON.stringify(out));
-console.log(out.cases.length + ' cases');
+writeFileSync(fixture, JSON.stringify(out));
+console.log(out.cases.length + ' cases at ' + full);
+}

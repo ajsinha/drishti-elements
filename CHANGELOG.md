@@ -42,7 +42,7 @@ Each release lists what changed, by library. One version for every library: the 
   inline style a strict CSP (`style-src-attr`) refused.
 - **Test pins and flake** (G2 gate F15, F18): `tests/support/fire_cases.json` carries the drishti-rachana commit and the hash of the `fire` case
   files it was made from (`tools/views/fire_fixture.mjs` writes both); `tests/test_views_spec.py` reads Rachana's files by that commit, never by the
-  branch the sibling checkout has out, and fails when the cases at the fixture's `ref` changed since. The ViewModel schema pin is read the same way.
+  branch the sibling checkout has out, and fails when the cases at the pinned commit differ from the fixture, naming the one command that moves the pin: `node tools/views/fire_fixture.mjs --pin <commit>` (checks the commit out, builds its runtime, rewrites the fixture). No moving ref is compared. The ViewModel schema pin is read the same way.
   The Node timing budgets measure CPU time, and the 200 KB validation budget takes the least of its rounds, so a parallel run no longer fails them
   (160 runs of the Node suite, eight at a time: no failure).
 
