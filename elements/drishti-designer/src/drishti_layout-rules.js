@@ -36,15 +36,6 @@ export const DEFAULT_MIN_SPAN = 3;
  */
 
 /**
- * n between lo and hi.
- * @param {number} n
- * @param {number} lo
- * @param {number} hi
- * @returns {number}
- */
-export { clamp };
-
-/**
  * A width in columns, between the minimum and the whole grid.
  * @param {number} n
  * @param {number} [min=3]

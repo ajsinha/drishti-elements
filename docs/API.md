@@ -103,6 +103,20 @@ Returns `string} for example formatNumber(-1234.5, {decimals: 2`: ) is "−1,234
 formatNumber(0.1234, {decimals: 1, scale: 100, suffix: '%'})   // "12.3%"
 ```
 
+#### `formatCount(n)`
+
+A count in whole numbers with thousands separators (the way every library writes "1,234 rows"): a number's text without decimals.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `*` |  |
+
+Returns `string`.
+
+```js
+formatCount(1234567)   // "1,234,567"
+```
+
 #### `formatPercent(v, o)`
 
 A fraction as a percentage (0.1234 reads "12.3%").
@@ -1816,6 +1830,32 @@ Whether a value is blank (null, undefined, '' or NaN).
 
 Returns `boolean`.
 
+#### `searchWords(q, fold)`
+
+The words of a quick search, the one reader of it for every library: lower-cased (or as `fold` makes them), split at spaces, a "quoted phrase" kept as one word (an unclosed quote takes the rest of the text). A row, node or option matches when every word is found in it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `q` | `*` | what was typed |
+| `[fold]` | `function(string): string` | the text's case and accent folding (default: lower case) |
+
+Returns `string[]`.
+
+```js
+searchWords('Desk "new york" fx')   // ['desk', 'new york', 'fx']
+```
+
+#### `hasWords(hay, words)`
+
+Whether folded text holds every word of a search.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `hay` | `string` | the text, folded as the words are |
+| `words` | `string[]` | from searchWords |
+
+Returns `boolean`.
+
 #### `compareValues(a, b)`
 
 The natural order of two values (blanks are not handled here: see compareRows).
@@ -1916,6 +1956,128 @@ The order of two sort keys (textSortKey): numbers and dates before text, numbers
 |---|---|---|
 | `a` | `{n: number, s: string}` |  |
 | `b` | `{n: number, s: string}` |  |
+
+Returns `number`.
+
+### drishti_aggregate.js
+
+#### `AGG_FUNCS`
+
+The functions by name.
+
+#### `aggFunc(name)`
+
+A function by its name or a usual alias (average, distinct), or a registered one; null when the browser does not compute it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `?AggFunc`.
+
+#### `registerAggFunc(name, fn, o)`
+
+Registers a host's own aggregation for client-side rows (the AG Grid-style adapter's aggFuncs): it is given every member's value of a cell or total and answers the figure; the state is the list of values, so a total is still made from its own members, never from other cells' figures. A built-in name cannot be replaced. The name must be a plain word (it goes into a measure's text, name(FIELD)).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `fn` | `function(Array&lt;*&gt;): *` | the figure of the members' values |
+| `[o]` | `{label: string, numeric: boolean}` |  |
+
+Returns `AggFunc`.
+
+#### `unregisterAggFunc(name)`
+
+Forgets a registered aggregation (a grid that registered it is gone).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `boolean`: whether it was registered.
+
+#### `aggregate(values, func)`
+
+The aggregate of some values by a function (a one-off: a selection's figure, a group's, a chart's category). The mask is never summed: a masked member makes every numeric aggregation (sum, min, max, avg) masked, and a distinct count counts all masks as one value.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `values` | `Iterable&lt;*&gt;` |  |
+| `func` | `string` |  |
+
+Returns `*`.
+
+#### `isMasked(v)`
+
+Whether a value is the Data Protocol's mask ({"$masked": true}): a value the reader may not see.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+
+Returns `boolean`.
+
+### drishti_util.js
+
+#### `isObject(v)`
+
+Whether a value is a plain object (not null, not a list).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+
+Returns `boolean`.
+
+#### `clamp(v, lo, hi)`
+
+A number held between two bounds.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `number` |  |
+| `lo` | `number` |  |
+| `hi` | `number` |  |
+
+Returns `number`.
+
+#### `pad(n, width)`
+
+A whole number as text of a width, with leading zeros (pad(7) is "07").
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+| `[width=2]` | `number` |  |
+
+Returns `string`.
+
+#### `copyText(win, text)`
+
+Writes text to the system clipboard when the page has one; a refusal (no permission, no clipboard) is not an error.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[win]` | `Window` | default: the global |
+| `text` | `string` |  |
+
+Returns `boolean`: whether a write was started.
+
+#### `fetcher(custom, win)`
+
+The fetch to use: the one given, else the page's own, bound to it; null when there is none.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[custom]` | `function` |  |
+| `[win]` | `Object` | default: the global |
+
+Returns `?function`.
+
+#### `now()`
+
+A fine clock in milliseconds (performance.now where there is one, else the date).
 
 Returns `number`.
 
@@ -2194,6 +2356,18 @@ Starts drishti-core in a page (the bundle calls it when it loads; nothing happen
 Returns `void`.
 
 ### Types of drishti-core
+
+#### `AggFunc` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `label` | `string` |  |
+| `init` | `function(): *` |  |
+| `add` | `function(*, *): *` | the state with one more value (returns the state) |
+| `merge` | `function(*, *): *` | two states as one |
+| `result` | `function(*): *` | the figure |
+| `numeric` | `boolean` | whether the values are numbers |
 
 #### `ClientOptions` : `Object`
 
@@ -6150,6 +6324,29 @@ Forgets a registered aggregation (a grid that registered it is gone).
 
 Returns `boolean`: whether it was registered.
 
+#### `aggregate(values, func)`
+
+The aggregate of some values by a function (a one-off: a selection's figure, a group's, a chart's category). The mask is never summed: a masked member makes every numeric aggregation (sum, min, max, avg) masked, and a distinct count counts all masks as one value.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `values` | `Iterable&lt;*&gt;` |  |
+| `func` | `string` |  |
+
+Returns `*`.
+
+#### `isMaskedValue(v)`
+
+Whether a value is the Data Protocol's mask ({"$masked": true}): a value the reader may not see.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+
+Returns `boolean`.
+
+### drishti_aggregate.js
+
 #### `parseMeasure(measure)`
 
 A measure's text read: func(field), or count() for the members; null when it is not that simple form (var(99, 1d), ratio(...)).
@@ -6170,17 +6367,6 @@ Whether a measure must be asked of the server for every cell and total: the brow
 | `[column]` | `function(string): ?Object` | a field's column ({additive}) |
 
 Returns `boolean`.
-
-#### `aggregate(values, func)`
-
-The aggregate of some rows' values by a function (a one-off: a selection's figure, a group's).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `values` | `Iterable&lt;*&gt;` |  |
-| `func` | `string` |  |
-
-Returns `*`.
 
 ### drishti_pivot.js
 
@@ -8828,16 +9014,6 @@ A ULID: 26 characters, a time (48 bits) then randomness (80 bits), sortable by c
 
 Returns `string`.
 
-#### `isMaskedValue(v)`
-
-Whether a cell value is masked for the reader.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `v` | `*` |  |
-
-Returns `boolean`.
-
 #### `writeSpec(schema)`
 
 What the reader may change, from the table's schema: null when the schema has no `write` (a read-only table: no edit control at all).
@@ -11402,18 +11578,6 @@ Returns `void`.
 
 ### Types of drishti-grid
 
-#### `AggFunc` : `Object`
-
-| Name | Type | Meaning |
-|---|---|---|
-| `name` | `string` |  |
-| `label` | `string` |  |
-| `init` | `function(): *` |  |
-| `add` | `function(*, *): *` | the state with one more value (returns the state) |
-| `merge` | `function(*, *): *` | two states as one |
-| `result` | `function(*): *` | the figure |
-| `numeric` | `boolean` | whether the values are numbers |
-
 #### `CellDrawOptions` : `Object`
 
 | Name | Type | Meaning |
@@ -13630,18 +13794,6 @@ The tallest a panel is, in rows.
 
 A panel narrower than this is unreadable.
 
-#### `clamp(n, lo, hi)`
-
-n between lo and hi.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `n` | `number` |  |
-| `lo` | `number` |  |
-| `hi` | `number` |  |
-
-Returns `number`.
-
 #### `clampSpan(n, min, grid)`
 
 A width in columns, between the minimum and the whole grid.
@@ -14326,6 +14478,20 @@ Returns `void`.
 Stops listening (the page leaves the designer).
 
 Returns `void`.
+
+### drishti_util.js
+
+#### `clamp(v, lo, hi)`
+
+A number held between two bounds.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `number` |  |
+| `lo` | `number` |  |
+| `hi` | `number` |  |
+
+Returns `number`.
 
 ### drishti_palette.js
 
@@ -22572,16 +22738,6 @@ The forms a dataset's rows come in.
 
 How many rows a chart or a tree reads from a source by address at most.
 
-#### `isMasked(v)`
-
-Whether a value is the Data Protocol's mask ({"$masked": true}).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `v` | `*` |  |
-
-Returns `boolean`.
-
 #### `valueText(v, fmt, type)`
 
 A raw value as text, by a format name (drishti-core's named formats) and the field's type; the mask as the mask, nothing as ''.
@@ -22615,17 +22771,6 @@ The fields of rows given without any: every own key of the first 50 rows, in ord
 | `rows` | `Object[]` |  |
 
 Returns `Array&lt;{name: string, type: string}&gt;`.
-
-#### `aggregate(values, agg)`
-
-Combines numbers by an aggregation; the mask and nothing are left out (a masked member masks a sum: the figure is not shown).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `values` | `Array&lt;*&gt;` |  |
-| `agg` | `string` |  |
-
-Returns `*`.
 
 #### `derive(rows, q)`
 
@@ -22713,6 +22858,29 @@ The datasets of a view, by name (made when the view is drawn; nothing is read un
 | `env` | `Object` | see Dataset |
 
 Returns `Map&lt;string, Dataset&gt;`.
+
+### drishti_aggregate.js
+
+#### `isMasked(v)`
+
+Whether a value is the Data Protocol's mask ({"$masked": true}): a value the reader may not see.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+
+Returns `boolean`.
+
+#### `aggregate(values, func)`
+
+The aggregate of some values by a function (a one-off: a selection's figure, a group's, a chart's category). The mask is never summed: a masked member makes every numeric aggregation (sum, min, max, avg) masked, and a distinct count counts all masks as one value.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `values` | `Iterable&lt;*&gt;` |  |
+| `func` | `string` |  |
+
+Returns `*`.
 
 ### drishti_views-datakinds.js
 

@@ -25,8 +25,9 @@ ELEMENTS = Path(__file__).resolve().parent.parent / "elements"
 CSS = Path(__file__).resolve().parent.parent / "css"
 # bytes; about 15% over the size when written (2026-11-16); raised the same day for the chart (more kinds, the world regions) and data (worker, feed monitor);
 # inputs raised to 310,000 for the studio widgets (split pane, tabs, navigator list, column mapping: 295,747 with them);
+# core raised to 190,000 (185,217 with the aggregation engine and the shared helpers folded in from the grid, views, chart and others; the other bundles shrank);
 # the chart again for the generic kinds (segmented scatter, matrix, lollipop, 3D trace, heatmap tracks)
-BUNDLES = {"drishti-core": 180_000, "drishti-inputs": 310_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
+BUNDLES = {"drishti-core": 190_000, "drishti-inputs": 310_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
            "drishti-data": 42_000, "drishti-chart": 320_000, "drishti-graph": 165_000,
            "drishti-views": 232_000,   # drishti-views: 225,026 with the form panel, the actions and the control change (forms.js), 210,615 before; 210,615 with contract 1.2 (state, effects, marks that fire; the live kind, bullet, the series legend, the point event; was 182,651 with 1.1), plus about 5%
            "drishti-events": 200_000}  # drishti-events: 190,414 when 3.0.0 was made ready, plus about 5% (the design's 110,000 assumed far
