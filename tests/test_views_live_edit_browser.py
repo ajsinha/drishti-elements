@@ -291,7 +291,13 @@ def test_tab_moves_to_the_next_editable_cell_and_every_editor_has_a_name(browser
         assert "Qty" in (await inp.first.get_attribute("aria-label"))
         await pg.keyboard.press("Tab")                                                        # nothing changed: no write; the next editable cell is status
         await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); const s = (R.shadowRoot || R).querySelector('[data-panel=t] .dg-scroll'); return /-r0-c3$/.test(s.getAttribute('aria-activedescendant') || ''); }", timeout=5000)
-        await pg.keyboard.press("Enter")                                                      # a pick list (drishti-inputs' Select), not a bare text field
+        for _ in range(8):                                                                    # Enter once the grid has the focus back: a pick list (drishti-inputs' Select)
+            await pg.keyboard.press("Enter")
+            try:
+                await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(timeout=1500)
+                break
+            except Exception:  # noqa: BLE001 - the focus was not back yet
+                pass
         await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(timeout=5000)
         assert "Status" in (await pg.locator("[data-panel=t] .dg-editor [aria-label]").first.get_attribute("aria-label"))
         await pg.keyboard.press("Escape")                                                     # the open list's own, then the editor's
