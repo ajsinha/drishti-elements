@@ -287,7 +287,8 @@ export function normalizeOptions(list) {
 
 /**
  * Options that match a search, best first: the label that is the word, then the label starting with it, then a word of it starting
- * with it, then containing it; the detail last. Every word of the search must match.
+ * with it, then containing it; the detail last. Every word of the search must match; items that match nothing are left out (items that are
+ * plain strings, numbers or {value} are read as their label and come back as given).
  * @param {Array<{label: string, detail: string}>} items
  * @param {string} q
  * @returns {Array<Object>}
@@ -296,13 +297,14 @@ export function searchOptions(items, q) {
   const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) { return items.slice(); }
   const scored = [];
-  items.forEach((it, i) => {
+  items.forEach((raw, i) => {
+    const it = raw !== null && typeof raw === 'object' && typeof raw.label === 'string' ? raw : normalizeOptions([raw])[0];   // a string, a number or {value} alone is a label too
     const l = it.label.toLowerCase(), d = (it.detail || '').toLowerCase();
     let score = 0;
     for (const w of words) {
       if (l === w) { score += 5; } else if (l.indexOf(w) === 0) { score += 4; } else if (new RegExp('[\\s\\-_./(]' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(l)) { score += 3; } else if (l.indexOf(w) >= 0) { score += 2; } else if (d.indexOf(w) >= 0) { score += 1; } else { return; }
     }
-    scored.push({ it: it, score: score, i: i });
+    scored.push({ it: raw, score: score, i: i });
   });
   return scored.sort((a, b) => b.score - a.score || a.i - b.i).map((x) => x.it);
 }

@@ -123,6 +123,48 @@
   }));
 
   demos.push(inputDemo({
+    id: 'split-pane', title: 'Split pane', about: 'drishti_split-pane.js', types: ['SplitPaneOptions'],
+    summary: 'Two or more panes with a draggable separator: minimum and maximum sizes, the arrows, Home, End and Enter on the separator, sizes kept as shares of the container and remembered when asked.',
+    values: { direction: 'horizontal', label: 'Editor and preview' },
+    examples: [{ title: 'Side by side', values: {} }, { title: 'One above another', values: { direction: 'vertical' } }],
+    build: (values) => build('drishti-split', 'SplitPane', Object.assign({ panes: [{ id: 'editor', content: 'Editor (minimum 120 px)', size: 1, min: 120 }, { id: 'preview', content: 'Preview', size: 2, min: 120 },
+      { id: 'help', content: 'Help (at most 320 px)', size: 1, min: 80, max: 320 }] }, typed(values, ['direction', 'label', 'persistKey', 'step'])))
+  }));
+
+  demos.push(inputDemo({
+    id: 'tabs', title: 'Tabs', about: 'drishti_tabs.js', types: ['TabsOptions'],
+    summary: 'A tablist over panels: arrows, Home and End, a disabled tab skipped, a badge, a closable tab, a panel made the first time it opens; horizontal or vertical.',
+    values: { label: 'Sections', orientation: 'horizontal' },
+    examples: [{ title: 'Horizontal', values: {} }, { title: 'Vertical, Enter or Space opens', values: { orientation: 'vertical', manual: true } }],
+    build: (values) => build('drishti-tabs', 'Tabs', Object.assign({ tabs: [{ id: 'overview', label: 'Overview', content: 'The overview panel.' }, { id: 'problems', label: 'Problems', badge: 3, content: 'Three problems.' },
+      { id: 'later', label: 'Later', disabled: true, content: 'Not yet.' }, { id: 'history', label: 'History', closable: true, content: 'The history panel.' }] }, typed(values, ['orientation', 'manual', 'label', 'value'])))
+  }));
+
+  demos.push(inputDemo({
+    id: 'nav-list', title: 'Navigator list', about: 'drishti_nav-list.js', types: ['NavListOptions'],
+    summary: 'A searchable list under headings that may nest into a tree: the search matches label, detail and group and keeps a match\'s parents; the arrows, Right and Left, Enter.',
+    values: { label: 'Blocks', placeholder: 'Search blocks' },
+    examples: [{ title: 'Blocks by group', values: {} }, { title: 'Branches open', values: { expanded: true } }],
+    build: function (values, ctx) {
+      const items = ctx.memo('nav-items', () => [{ id: 'kv', label: 'Key values', detail: 'fields', group: 'Text' }, { id: 'note', label: 'Note', group: 'Text' }, { id: 'grid', label: 'Grid', detail: 'rows', group: 'Data' },
+        { id: 'chart', label: 'Chart', group: 'Data', children: [{ id: 'bar', label: 'Bar' }, { id: 'line', label: 'Line' }] }, { id: 'tree', label: 'Tree', group: 'Data', disabled: true }]);
+      return build('drishti-nav-list', 'NavList', Object.assign({ items: items }, typed(values, ['label', 'placeholder', 'search', 'expanded', 'empty'])), new Map([[items, 'items']]));
+    }
+  }));
+
+  demos.push(inputDemo({
+    id: 'column-map', title: 'Column mapping', about: 'drishti_column-map.js', types: ['ColumnMapOptions'],
+    summary: 'A table of a program\'s own columns, each with a select of your columns: the same names start mapped, a required column left out and a type that does not fit are said in words.',
+    values: { label: 'Trade columns', unique: false },
+    examples: [{ title: 'Trade columns (NOTIONAL is a string in your file)', values: {} }, { title: 'Each column used once', values: { unique: true } }],
+    build: function (values, ctx) {
+      const targets = ctx.memo('cm-targets', () => [{ name: 'TRADE_ID', type: 'string', required: true }, { name: 'NOTIONAL', type: 'number', required: true }, { name: 'DESK', type: 'string' }, { name: 'TRADE_DATE', type: 'date', required: true }]);
+      const columns = ctx.memo('cm-columns', () => [{ name: 'trade_id', type: 'string' }, { name: 'notional', type: 'string' }, { name: 'desk', type: 'string' }, { name: 'trade_date', type: 'date' }, { name: 'qty', type: 'number' }]);
+      return build('drishti-column-map', 'ColumnMap', Object.assign({ targets: targets, columns: columns }, typed(values, ['label', 'unique', 'autoMatch', 'disabled'])), new Map([[targets, 'targets'], [columns, 'columns']]));
+    }
+  }));
+
+  demos.push(inputDemo({
     id: 'file-drop', title: 'File drop', about: 'drishti_file-drop.js', keys: ['drishti_file-drop.js'], types: ['FileDropOptions'],
     summary: 'A file to send: dropped or chosen, its type said and checked, then its name, a progress bar and Cancel; send() streams it, nothing held in memory.',
     values: { label: 'Drop a data file here' },

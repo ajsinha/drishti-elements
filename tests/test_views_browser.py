@@ -550,3 +550,29 @@ def test_the_elements_view_element_inline_property_attributes_and_leaving_the_pa
         await pg.evaluate("() => { window.__h = document.getElementById('ev1').handle; document.getElementById('ev1').remove(); }")
         assert await pg.evaluate("window.__h.disposed") is True
     run(browsers, body, "view=V002")
+
+
+def test_a_view_with_only_the_minimum_draws_without_the_ref_warning_when_asked_to_complete_it(browsers):
+    async def body(pg):
+        got = await pg.evaluate("""async () => {
+            const V = window.Drishti.elements.views, warned = [], keep = console.warn, vm = () => ({ contract: '1.0', title: { id: 'Minimal' }, strip: [], panels: [], keys: [] });
+            console.warn = (...a) => { warned.push(String(a[0]) + ' ' + JSON.stringify(a[1] || [])); };
+            const out = {};
+            try {
+                for (const complete of [false, true]) {
+                    const host = document.createElement('div');
+                    document.body.appendChild(host);
+                    const input = vm(), before = warned.length, issues = [];
+                    const h = V.paint(host, input, { complete: complete, shadow: false });
+                    h.on('issues', (e) => issues.push(...e.issues.map((i) => i.message || i.code)));
+                    await h.ready;
+                    out[complete] = { warned: warned.length - before, text: host.textContent.indexOf('Minimal') >= 0, refAdded: 'ref' in input, mentionsRef: warned.slice(before).join(' ').indexOf('ref') >= 0 };
+                    host.remove();
+                }
+            } finally { console.warn = keep; }
+            return out;
+        }""")
+        assert got["false"]["warned"] == 1 and got["false"]["mentionsRef"] is True       # as sent, the contract's required ref is missing: one warning
+        assert got["true"]["warned"] == 0 and got["true"]["text"] is True                # completed on a copy: drawn, no warning
+        assert got["true"]["refAdded"] is False                                          # the caller's object is not changed
+    run(browsers, body, "view=V007")

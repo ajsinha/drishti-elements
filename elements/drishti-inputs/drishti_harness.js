@@ -194,6 +194,23 @@
     }, (e) => { out.textContent = 'Arrow: ' + e.message; throw e; });
   };
 
+  /* ---- the studio widgets: split pane, tabs, navigator list, column mapping --------------------------------------------------------- */
+  H.split = new I.SplitPane(document.getElementById('hx-split'), { direction: 'horizontal', label: 'Editor and preview', persistKey: 'hx-split', panes: [
+    { id: 'left', content: 'Left pane', size: 1, min: 100 }, { id: 'middle', content: 'Middle pane', size: 2, min: 100 }, { id: 'right', content: 'Right pane', size: 1, min: 100, max: 400 }] });
+  H.tabs = new I.Tabs(document.getElementById('hx-tabs'), { label: 'Sections', value: 'b', tabs: [
+    { id: 'a', label: 'Overview', content: 'Overview panel' }, { id: 'b', label: 'Problems', badge: 3, content: () => { H.tabMade = (H.tabMade || 0) + 1; return 'Problems panel'; } },
+    { id: 'c', label: 'Disabled', disabled: true, content: 'never' }, { id: 'd', label: 'History', closable: true, content: 'History panel' }] });
+  H.nav = new I.NavList(document.getElementById('hx-nav'), { label: 'Blocks', placeholder: 'Search blocks', items: [
+    { id: 'kv', label: 'Key values', detail: 'fields', group: 'Text' }, { id: 'note', label: 'Note', group: 'Text' },
+    { id: 'grid', label: 'Grid', detail: 'rows', group: 'Data' }, { id: 'chart', label: 'Chart', group: 'Data', children: [{ id: 'bar', label: 'Bar' }, { id: 'line', label: 'Line' }] },
+    { id: 'tree', label: 'Tree', group: 'Data', disabled: true }, { id: 'misc', label: 'Misc' }] });
+  const LOCAL = [{ name: 'TRADE_ID', type: 'string', required: true }, { name: 'NOTIONAL', type: 'number', required: true, description: 'Amount in the trade currency' }, { name: 'DESK', type: 'string' }, { name: 'TRADE_DATE', type: 'date', required: true }];
+  const CALLER = [{ name: 'trade_id', type: 'string' }, { name: 'notional', type: 'string' }, { name: 'desk', type: 'string' }, { name: 'trade_date', type: 'date' }, { name: 'qty', type: 'number' }];
+  H.colmap = new I.ColumnMap(document.getElementById('hx-colmap'), { label: 'Trade columns', targets: LOCAL, columns: CALLER });
+  H.colform = new I.Form(document.getElementById('hx-colform'), { schema: { type: 'object', required: ['map', 'kind'], properties: {
+    map: { type: 'columnmap', title: 'Columns', options: { targets: LOCAL, columns: CALLER, unique: true } },
+    kind: { type: 'string', title: 'Kind', enum: ['a', 'b'], widget: 'select', hook: 'kind' } } }, label: 'Column form' });
+
   document.getElementById('hx-theme').addEventListener('click', () => {
     core.setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'terminal' : 'light', { persist: false });
   });

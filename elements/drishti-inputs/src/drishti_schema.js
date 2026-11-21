@@ -20,11 +20,12 @@
    four-eyes proposal's diff) are listed by path. Paths read "legs[1].notional". */
 import { formatNumber, formatDate, isoDate, parseNumberText } from '../../drishti-core/src/drishti_index.js';
 import { parseTime, parseDateTime } from './drishti_time-picker.js';
+import { identityMap, mapProblems } from './drishti_column-map-rules.js';
 
 /**
  * A field of a form schema.
  * @typedef {Object} FieldSchema
- * @property {('string'|'number'|'integer'|'money'|'boolean'|'date'|'time'|'datetime'|'daterange'|'array'|'object')} type money: a number
+ * @property {('string'|'number'|'integer'|'money'|'boolean'|'date'|'time'|'datetime'|'daterange'|'array'|'object'|'columnmap')} type money: a number
  *   shown grouped with its currency; time: "HH:MM"; datetime: "YYYY-MM-DDTHH:MM" in its timeZone
  * @property {string} [title] the label (default: the key in words)
  * @property {string} [description] help under the field
@@ -49,8 +50,8 @@ import { parseTime, parseDateTime } from './drishti_time-picker.js';
  * @property {Object<string, FieldSchema>} [properties] object: its fields
  * @property {string[]} [required] object: the keys that must have a value
  * @property {string[]} [order] object: the order of its fields (default: as written)
- * @property {string} [widget] how it is drawn: text, textarea, select, radio, checkbox, switch, multiselect, combobox, tree, date, daterange, code, formula (one line, options.mode and options.complete)
- * @property {Object} [options] the widget's options (a combobox's source, a tree's nodes, a code editor's mode)
+ * @property {string} [widget] how it is drawn: text, textarea, select, radio, checkbox, switch, multiselect, combobox, tree, date, daterange, code, formula (one line, options.mode and options.complete), columnmap. An enum with up to three values is radios and with more a select; widget: 'select' (or 'radio') forces the one you want whatever the count
+ * @property {Object} [options] the widget's options (a combobox's source, a tree's nodes, a code editor's mode; a columnmap's targets, columns and unique)
  * @property {boolean} [readOnly]
  * @property {string} [placeholder]
  * @property {string} [currency] money: its currency code (USD), or the key of the field that holds it (a sibling, or "/path")
@@ -179,6 +180,7 @@ export function defaults(schema) {
     case 'object': { const o = {}; fieldsOf(schema).forEach((f) => { const d = defaults(f.field); if (d !== undefined) { o[f.key] = d; } }); return o; }
     case 'array': return Array.from({ length: schema.minItems || 0 }, () => defaults(schema.items || { type: 'string' }));
     case 'boolean': return false;
+    case 'columnmap': return schema.options && schema.options.targets ? identityMap(schema.options.targets, schema.options.columns) : {};
     default: return undefined;
   }
 }
@@ -197,6 +199,10 @@ function enumLabel(field, v) { const i = (field.enum || []).indexOf(v); return f
  */
 export function fieldProblem(field, v, c) {
   const L = c.label;
+  if (field.type === 'columnmap') {                 // a mapping of local columns on the caller's: its own rules (options.targets, columns, unique)
+    const bad = mapProblems(field.options || {}, v);
+    return bad.length ? bad[0].message + (bad.length > 1 ? ' (and ' + (bad.length - 1) + ' more)' : '') : null;
+  }
   if ((blank(v) && !(Array.isArray(v) && field.minItems)) || (field.type === 'boolean' && v === false && c.required && field.widget === 'checkbox')) {
     if (!c.required) { return null; }
     return field.type === 'array' || field.widget === 'multiselect' ? 'Pick at least one for ' + L.toLowerCase() : field.enum || field.widget === 'combobox' || field.widget === 'tree' ? 'Pick ' + L.toLowerCase() : L + ' is required';

@@ -30,6 +30,7 @@ import { Combobox } from './drishti_combobox.js';
 import { TreePicker } from './drishti_tree-picker.js';
 import { CodeEditor } from './drishti_code-editor.js';
 import { Select } from './drishti_select.js';
+import { ColumnMap } from './drishti_column-map.js';
 import { upgradeCodeArea } from './drishti_code-upgrade.js';
 
 const WIDGETS = new Map();
@@ -72,6 +73,7 @@ export function defineWidget(name, factory) { WIDGETS.set(name, factory); }
 export function defaultWidget(fs) {
   if (fs.enum) { return fs.enum.length <= 3 ? 'radio' : 'select'; }
   if (fs.type === 'boolean') { return 'checkbox'; }
+  if (fs.type === 'columnmap') { return 'columnmap'; }
   if (fs.type === 'date' || fs.type === 'time' || fs.type === 'datetime' || fs.type === 'daterange' || fs.type === 'money') { return fs.type; }
   if (fs.type === 'array' && fs.items && fs.items.enum) { return 'multiselect'; }
   if (fs.format === 'textarea') { return 'textarea'; }
@@ -208,6 +210,7 @@ export function drawField(form, f) {
     case 'daterange': control = mount(DateRangePicker, { value: v }); break;
     case 'multiselect': control = mount(MultiSelect, { options: fs.items && fs.items.enum ? opts() : (fs.options || {}).options, value: v || [] }); break;
     case 'combobox': control = mount(Combobox, { value: v === undefined || v === null ? null : { value: v, label: String(v) } }); break;
+    case 'columnmap': control = mount(ColumnMap, { value: v, disabled: ro }); break;
     case 'tree': control = mount(TreePicker, { value: v || [] }); break;
     case 'code': control = mount(CodeEditor, { value: v || '', readOnly: ro, height: (fs.options && fs.options.height) || 120 }); break;
     case 'formula': {                                         // a one-line code editor; the input holds the value (upgradeCodeArea)

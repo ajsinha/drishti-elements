@@ -24,7 +24,7 @@ version above (not Drishti's own).
 | Library | What it is |
 |---|---|
 | [drishti-core](#drishti-core) | Formats, theme, API client, events, accessibility, resize, keys, dialogs, drawers and toasts, the filter model every library shares, the element maker and placements, Explain's drawing, chips for list attributes, the CSV writer, reading typed numbers, loading vendored engines |
-| [drishti-inputs](#drishti-inputs) | Inputs: business-date and range pickers with holiday calendars, the on/off switch, the tree picker, the multi-select, the combobox with server type-ahead (on its own field or a page's), forms from a schema (live or embedded, steps, named fields, hooks, custom widgets, time, date-and-time and money) with four eyes, the time and date-and-time pickers, the filter bar, the code editor over CodeMirror, and a page's own date fields and checkbox lists upgraded in place |
+| [drishti-inputs](#drishti-inputs) | Inputs: business-date and range pickers with holiday calendars, the on/off switch, the tree picker, the multi-select, the combobox with server type-ahead (on its own field or a page's), forms from a schema (live or embedded, steps, named fields, hooks, custom widgets, time, date-and-time and money) with four eyes, the time and date-and-time pickers, the filter bar, the code editor over CodeMirror, a resizable split pane, tabs, a searchable grouped list and tree, a column-mapping table, and a page's own date fields and checkbox lists upgraded in place |
 | [drishti-grid](#drishti-grid) | The grid: its engine (columns, row models, virtual scrolling, pivot, selection, export, keyboard) and its look (Grid and &lt;drishti-grid&gt; in three layouts and three densities), cell editing with undo, paste, write-back and four eyes, and the AG Grid-style adapter (createGridFromAgOptions) |
 | [drishti-tree](#drishti-tree) | The tree: hierarchies as an org chart, an indented tree with measures (on drishti-grid's tree data), a sunburst and an icicle; expand and collapse, search with breadcrumbs, measures on nodes with non-additive ones (◆) asked of the server and never summed, Explain, re-parenting in an edit mode that proposes the move for four eyes, the outline of an authoring screen (marks, a hiding filter, a designer's selection followed both ways, moves by drag or Alt+arrows), export, keyboard and ARIA |
 | [drishti-designer](#drishti-designer) | The designer kit: the layout canvas over a layout model (grid or flow: place, move, resize with snap, multi-select, align, distribute, z-order, groups, copy and paste, a phone's order, the keys, undo and redo on one command stack), the palette, the inspector (a form from a schema), the outline (drishti-tree's, drag to re-order or re-parent), the YAML pane kept in step with the model both ways (completion and lint from a JSON Schema) and the designer shell (three panes, Visual / YAML / Both, versions, Validate, Preview, History, Impact, Propose for review) |
@@ -2867,7 +2867,7 @@ Returns `Array&lt;{value: *, label: string, detail: string, disabled: boolean, g
 
 #### `searchOptions(items, q)`
 
-Options that match a search, best first: the label that is the word, then the label starting with it, then a word of it starting with it, then containing it; the detail last. Every word of the search must match.
+Options that match a search, best first: the label that is the word, then the label starting with it, then a word of it starting with it, then containing it; the detail last. Every word of the search must match; items that match nothing are left out (items that are plain strings, numbers or {value} are read as their label and come back as given).
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -3801,6 +3801,298 @@ Gives a &lt;drishti-select&gt; element the properties a native select had, read 
 | `box` | `HTMLElement` |  |
 
 Returns `void`.
+
+### drishti_split-pane.js
+
+#### class `SplitPane`
+
+A split pane. Events: resize {sizes: {id: share}, px: {id: px}} (on every move; a drag also emits resized {…} when it ends).
+
+##### `new SplitPane(host, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `options` | `SplitPaneOptions` |  |
+
+##### `SplitPane.getSizes()`
+
+The panes' shares of the container, by id (they add up to one).
+
+Returns `Object&lt;string, number&gt;`.
+
+##### `SplitPane.sizesPx()`
+
+The panes' sizes in px as drawn, by id.
+
+Returns `Object&lt;string, number&gt;`.
+
+##### `SplitPane.setSizes(sizes)`
+
+Sets the shares by id (any numbers; they are scaled to add up to one); a pane left out keeps its share. No event.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sizes` | `Object&lt;string, number&gt;` |  |
+
+Returns `void`.
+
+##### `SplitPane.pane(id)`
+
+A pane's element, to fill or read.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `(HTMLElement\|null)`.
+
+##### `SplitPane.getValue()`
+
+The value is the shares by id.
+
+Returns `Object&lt;string, number&gt;`.
+
+##### `SplitPane.setValue(v)`
+
+Sets the shares (as setSizes).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `Object&lt;string, number&gt;` |  |
+
+Returns `void`.
+
+##### `SplitPane.destroy()`
+
+Takes the split out of its element (the panes' content stays in the page's hands: it is removed with the element).
+
+Returns `void`.
+
+### drishti_tabs.js
+
+#### class `Tabs`
+
+Tabs. Events: change {value, previous}, close {value} (the tab is removed unless the listener's page keeps it by calling addTab again).
+
+##### `new Tabs(host, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `options` | `TabsOptions` |  |
+
+##### `Tabs.getValue()`
+
+The open tab's id.
+
+Returns `(string\|null)`.
+
+##### `Tabs.setValue(id, tell)`
+
+Opens a tab by id (a disabled or unknown id is ignored).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `[tell=false]` | `boolean` | emit change |
+
+Returns `void`.
+
+##### `Tabs.panel(id)`
+
+A tab's panel element.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `(HTMLElement\|null)`.
+
+##### `Tabs.addTab(def, open)`
+
+Adds a tab at the end (an existing id is replaced).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `def` | `TabDef` |  |
+| `[open=false]` | `boolean` | open it |
+
+Returns `void`.
+
+##### `Tabs.removeTab(id, quiet)`
+
+Removes a tab; when it was open the next enabled one (or the one before) opens.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `[quiet=false]` | `boolean` | no change event for the tab that opens instead |
+
+Returns `void`.
+
+##### `Tabs.setBadge(id, badge)`
+
+Changes a tab's badge (a count or word; empty removes it).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `badge` | `(string\|number)` |  |
+
+Returns `void`.
+
+### drishti_nav-list.js
+
+#### class `NavList`
+
+A navigator. Events: change {value, item}, expand {id, open}, search {query, count}.
+
+##### `new NavList(host, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `options` | `NavListOptions` |  |
+
+##### `NavList.toggle(id, open)`
+
+Opens or closes a branch (no argument: turns it).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `[open]` | `boolean` |  |
+
+Returns `void`.
+
+##### `NavList.getValue()`
+
+The picked item's id.
+
+Returns `(string\|null)`.
+
+##### `NavList.setValue(id)`
+
+Picks an item by id, without an event (its parents open).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `(string\|null)` |  |
+
+Returns `void`.
+
+##### `NavList.setItems(items)`
+
+Replaces the items.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `items` | `NavItem[]` |  |
+
+Returns `void`.
+
+##### `NavList.setQuery(q)`
+
+Sets the search words (the list filters; same as typing).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `q` | `string` |  |
+
+Returns `void`.
+
+##### `NavList.focus()`
+
+Moves the focus to the search field (or the list when there is none).
+
+Returns `void`.
+
+### drishti_column-map.js
+
+#### class `ColumnMap`
+
+A column mapping. Events: change {value, problems}.
+
+##### `new ColumnMap(host, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `options` | `ColumnMapOptions` |  |
+
+##### `ColumnMap.matchByName()`
+
+Puts every local column on the caller's column of its name, leaving the rest as they are.
+
+Returns `void`.
+
+##### `ColumnMap.getValue()`
+
+The mapping: {local column: caller's column}, without the unmapped.
+
+Returns `Object&lt;string, string&gt;`.
+
+##### `ColumnMap.setValue(v)`
+
+Sets the mapping (no event).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `Object&lt;string, string&gt;` |  |
+
+Returns `void`.
+
+##### `ColumnMap.problems()`
+
+The problems of the mapping now, in words.
+
+Returns `Array&lt;{name: string, message: string}&gt;`.
+
+##### `ColumnMap.setColumns(columns)`
+
+Replaces the caller's columns (a mapped column that is gone stays in the mapping and is reported).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `columns` | `Array&lt;(string\|{name: string, type: string})&gt;` |  |
+
+Returns `void`.
+
+### drishti_column-map-rules.js
+
+#### `identityMap(targets, columns)`
+
+The starting mapping: each local column on the caller's column of the same name; failing that of the same name in any case or without spaces, underscores or hyphens (when exactly one column is such). Local columns with no match are left out.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `targets` | `LocalColumn[]` |  |
+| `columns` | `Array&lt;(string\|{name: string, type: string})&gt;` |  |
+
+Returns `Object&lt;string, string&gt;`.
+
+#### `mapProblems(spec, value)`
+
+Every problem of a mapping, in words: a required local column not mapped, a column that is not the caller's, a type that does not fit and (with unique) a column used twice.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `{targets: LocalColumn[], columns: Array, unique: boolean}` |  |
+| `value` | `Object&lt;string, string&gt;` | local name to the caller's column |
+
+Returns `Array&lt;{name: string, message: string}&gt;`.
+
+#### `typesFit(want, have)`
+
+Whether the type of a caller's column fits what a local column expects. Unknown on either side fits; a string accepts anything; a number accepts an integer; a date-time accepts a date; nothing else crosses.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `want` | `string` | the local column's type |
+| `have` | `string` | the caller's column's type |
+
+Returns `boolean`.
 
 ### drishti_schema.js
 
@@ -5165,6 +5457,28 @@ An entry of the function catalogue (the server's: GET /api/v1/functions, or a pa
 | `[kind]` | `string` | function, field, keyword, measure |
 | `[insert]` | `string` | the text put in (default: the name, with "(" for a function) |
 
+#### `LocalColumn` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `[type]` | `string` | string, number, integer, boolean, date, datetime or time |
+| `[required]` | `boolean` |  |
+| `[label]` | `string` |  |
+
+#### `ColumnMapOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `targets` | `Array&lt;{name: string, type: string, required: boolean, label: string, description: string}&gt;` | the local columns, in order |
+| `columns` | `Array&lt;(string\|{name: string, type: string})&gt;` | the caller's columns |
+| `[value]` | `Object&lt;string, string&gt;` | the mapping to start from; local columns left out start on a column of their name when there is one |
+| `[autoMatch=true]` | `boolean` | start unmapped local columns on the column of the same name |
+| `[unique=false]` | `boolean` | a caller's column may be used for one local column only |
+| `[disabled=false]` | `boolean` |  |
+| `[label]` | `string` | names the table |
+| `[emptyLabel='(not mapped)']` | `string` | the select's words for no column |
+
 #### `ComboboxOptions` : `Object`
 
 | Name | Type | Meaning |
@@ -5368,6 +5682,29 @@ A custom widget: draws a field's control. Returns its element and, as it can, se
 | `[maxChips]` | `number` |  |
 | `[placeholder]` | `string` |  |
 
+#### `NavItem` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `label` | `string` |  |
+| `[detail]` | `string` | a second line of words, searched too |
+| `[group]` | `string` | the heading it sits under (top-level items) |
+| `[children]` | `NavItem[]` | makes it a branch |
+| `[disabled]` | `boolean` |  |
+
+#### `NavListOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `items` | `NavItem[]` |  |
+| `[value]` | `string` | the picked item's id |
+| `[search=true]` | `boolean` | show the search field |
+| `[placeholder]` | `string` | the search field's words |
+| `[empty]` | `string` | the words when nothing matches |
+| `[label]` | `string` | names the list (aria-label) |
+| `[expanded=false]` | `boolean` | branches start open |
+
 #### `QueryField` : `Object`
 
 | Name | Type | Meaning |
@@ -5399,7 +5736,7 @@ A field of a form schema.
 
 | Name | Type | Meaning |
 |---|---|---|
-| `type` | `('string'\|'number'\|'integer'\|'money'\|'boolean'\|'date'\|'time'\|'datetime'\|'daterange'\|'array'\|'object')` | money: a number shown grouped with its currency; time: "HH:MM"; datetime: "YYYY-MM-DDTHH:MM" in its timeZone |
+| `type` | `('string'\|'number'\|'integer'\|'money'\|'boolean'\|'date'\|'time'\|'datetime'\|'daterange'\|'array'\|'object'\|'columnmap')` | money: a number shown grouped with its currency; time: "HH:MM"; datetime: "YYYY-MM-DDTHH:MM" in its timeZone |
 | `[title]` | `string` | the label (default: the key in words) |
 | `[description]` | `string` | help under the field |
 | `[default]` | `*` |  |
@@ -5423,8 +5760,8 @@ A field of a form schema.
 | `[properties]` | `Object&lt;string, FieldSchema&gt;` | object: its fields |
 | `[required]` | `string[]` | object: the keys that must have a value |
 | `[order]` | `string[]` | object: the order of its fields (default: as written) |
-| `[widget]` | `string` | how it is drawn: text, textarea, select, radio, checkbox, switch, multiselect, combobox, tree, date, daterange, code, formula (one line, options.mode and options.complete) |
-| `[options]` | `Object` | the widget's options (a combobox's source, a tree's nodes, a code editor's mode) |
+| `[widget]` | `string` | how it is drawn: text, textarea, select, radio, checkbox, switch, multiselect, combobox, tree, date, daterange, code, formula (one line, options.mode and options.complete), columnmap. An enum with up to three values is radios and with more a select; widget: 'select' (or 'radio') forces the one you want whatever the count |
+| `[options]` | `Object` | the widget's options (a combobox's source, a tree's nodes, a code editor's mode; a columnmap's targets, columns and unique) |
 | `[readOnly]` | `boolean` |  |
 | `[placeholder]` | `string` |  |
 | `[currency]` | `string` | money: its currency code (USD), or the key of the field that holds it (a sibling, or "/path") |
@@ -5461,6 +5798,27 @@ A field of a form schema.
 | `[renderOption]` | `function(Object, HTMLElement): void` | draws an option's content |
 | `[native=false]` | `boolean` | a change also fires input and change on the host, as a native select's did (a page's own listeners and delegated handlers keep working); selectElement turns it on, and so does the attribute native on a page's &lt;drishti-select&gt; |
 
+#### `SplitPaneDef` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[id]` | `string` | the pane's name (default pane&lt;n&gt;) |
+| `[content]` | `(HTMLElement\|string)` | an element put into the pane, or text |
+| `[size]` | `number` | its starting share (a number; shares are scaled to add up to one; default: equal) |
+| `[min=80]` | `number` | its smallest size in px |
+| `[max]` | `number` | its largest size in px |
+| `[label]` | `string` | what the separator before it resizes (aria-label), default "Resize &lt;previous&gt; and &lt;this&gt;" |
+
+#### `SplitPaneOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[direction='horizontal']` | `('horizontal'\|'vertical')` | horizontal puts the panes side by side |
+| `panes` | `SplitPaneDef[]` | at least two |
+| `[persistKey]` | `string` | remember the sizes in local storage under this key |
+| `[step=10]` | `number` | px one arrow key moves a separator |
+| `[label]` | `string` | names the group (aria-label) |
+
 #### `SwitchOptions` : `Object`
 
 | Name | Type | Meaning |
@@ -5469,6 +5827,27 @@ A field of a form schema.
 | `[help]` | `string` | what the switch does, on its ? (title and aria-description) |
 | `[value=false]` | `boolean` | on or off |
 | `[disabled=false]` | `boolean` |  |
+
+#### `TabDef` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `label` | `string` |  |
+| `[content]` | `(HTMLElement\|string\|function(): (HTMLElement\|string))` | the panel: an element, text or a function called the first time it opens |
+| `[badge]` | `(string\|number)` | a small count or word beside the label |
+| `[disabled]` | `boolean` |  |
+| `[closable]` | `boolean` |  |
+
+#### `TabsOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `tabs` | `TabDef[]` |  |
+| `[value]` | `string` | the open tab's id (default the first enabled one) |
+| `[orientation='horizontal']` | `('horizontal'\|'vertical')` |  |
+| `[manual=false]` | `boolean` | arrows only move the focus; Enter or Space opens |
+| `[label]` | `string` | names the tablist |
 
 #### `TimePickerOptions` : `Object`
 
@@ -22102,6 +22481,7 @@ Returns `void`.
 | `[header='full']` | `('full'\|'strip'\|'none')` | how much of the header is drawn |
 | `[panels]` | `string[]` | draw only these panel ids |
 | `[validate='warn']` | `('off'\|'warn'\|'refuse')` | warn: paint and report the issues; refuse: do not paint an invalid view |
+| `[complete=false]` | `boolean` | fill the fields contract 1 requires and the producer left out (ref, provenance, timings, a title's pill ...) with null or the type's empty value before checking, on a copy: a view made by hand, or by a producer that sends the minimum, then draws without the console warning "has no ref" (the contract still requires them of a producer that claims to follow it) |
 | `[keys=false]` | `boolean` | the view's function keys answer the keyboard (inside the view) |
 | `[links]` | `{href: function(Object): ?string, resolveView: function(Object): *}` | href: an address for a Link (else a link is a button that raises the link event); resolveView: a ViewModel, an address or a promise of either for a Link, painted in place with a back step |
 | `[fetch]` | `function(string, Object): Promise&lt;Response&gt;` | the host's fetch, for a view given by its address |

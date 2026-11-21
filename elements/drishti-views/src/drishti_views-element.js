@@ -24,7 +24,7 @@ import { paint } from './drishti_views-paint.js';
 export const VIEW_ELEMENT = 'elements-view';
 
 /** The attributes the element reads (each as the option of the same name; live is the events address). */
-export const VIEW_ATTRIBUTES = Object.freeze(['src', 'density', 'header', 'panels', 'locale', 'validate', 'label', 'live']);
+export const VIEW_ATTRIBUTES = Object.freeze(['src', 'density', 'header', 'panels', 'locale', 'validate', 'label', 'live', 'complete']);
 
 /**
  * Registers <elements-view> (or another tag) in a window's custom elements; nothing when the window has none or the tag is taken.
@@ -69,6 +69,7 @@ export function define(o) {
       if (!source) { return; }
       const o = Object.assign({}, this._options);
       ['density', 'header', 'locale', 'validate', 'label'].forEach((a) => { if (this.hasAttribute(a)) { o[a] = this.getAttribute(a); } });
+      if (this.hasAttribute('complete')) { o.complete = true; }
       if (this.hasAttribute('panels')) { o.panels = this.getAttribute('panels').split(',').map((s) => s.trim()).filter(Boolean); }
       if (this.getAttribute('live')) { o.live = Object.assign({}, o.live || {}, { url: this.getAttribute('live') }); }
       this.handle = paint(this, source, o);

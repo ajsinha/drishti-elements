@@ -30,6 +30,11 @@ export { FieldPicker } from './drishti_field-picker.js';
 export { MultiSelect } from './drishti_multiselect.js';
 export { TypeAhead, Combobox } from './drishti_combobox.js';
 export { Select, selectElement, selectProperties } from './drishti_select.js';
+export { SplitPane } from './drishti_split-pane.js';
+export { Tabs } from './drishti_tabs.js';
+export { NavList } from './drishti_nav-list.js';
+export { ColumnMap } from './drishti_column-map.js';
+export { identityMap, mapProblems, typesFit } from './drishti_column-map-rules.js';
 export { words, pathParts, getPath, setPath, conditionHolds, fieldsOf, defaults, fieldProblem, validate, visibleValue, changes,
   parseField, currencyOf, offeredValues } from './drishti_schema.js';
 export { FileDrop, acceptedName } from './drishti_file-drop.js';

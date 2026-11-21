@@ -482,3 +482,135 @@ def test_the_live_client_reconnects_and_resumes_and_the_arrow_client_reads_by_fl
         assert res["via"] == "arrow-http" and route.asked[-1] == "GET /hx-fixture/trades.arrow"
         assert await pg.locator("#hx-arrow-grid .dg-row").count() > 5
     run(browsers, body)
+
+
+def test_the_studio_widgets_split_pane_tabs_navigator_list_and_column_mapping(browsers):
+    async def body(pg):
+        await pg.evaluate("() => { try { localStorage.removeItem('drishti.split.hx-split'); } catch (e) {} }")
+        # ---- the split pane: three panes, sizes in shares, the separator by keyboard (arrows, Shift, Home, End, Enter) and by pointer, a maximum, remembered
+        widths = lambda: pg.evaluate("() => Array.from(document.querySelectorAll('#hx-split .di-split-pane')).map((p) => Math.round(p.getBoundingClientRect().width))")
+        w0 = await widths()
+        assert abs(w0[1] - 2 * w0[0]) <= 3 and abs(w0[0] - w0[2]) <= 3                         # shares 1 : 2 : 1
+        bar = "#hx-split .di-split-bar[data-bar='0']"
+        assert await pg.get_attribute(bar, "role") == "separator" and await pg.get_attribute(bar, "aria-orientation") == "vertical"
+        assert await pg.get_attribute(bar, "tabindex") == "0"
+        await pg.focus(bar)
+        for _ in range(3):
+            await pg.keyboard.press("ArrowRight")
+        w1 = await widths()
+        assert abs(w1[0] - (w0[0] + 30)) <= 2 and abs(sum(w1) - sum(w0)) <= 3                   # three steps of 10 px, nothing lost
+        await pg.keyboard.press("Shift+ArrowLeft")                                              # 50 px back
+        assert abs((await widths())[0] - (w1[0] - 50)) <= 2
+        await pg.keyboard.press("Home")
+        assert (await widths())[0] == 100                                                       # its minimum, no smaller
+        await pg.keyboard.press("Enter")                                                        # back to where it began
+        assert abs((await widths())[0] - w0[0]) <= 2
+        assert int(await pg.get_attribute(bar, "aria-valuenow")) == (await widths())[0]
+        # the second separator and the right pane's maximum (400 px)
+        await pg.focus("#hx-split .di-split-bar[data-bar='1']")
+        await pg.keyboard.press("Home")                                                         # middle to its minimum: the right pane takes the room, up to its maximum
+        wr = await widths()
+        assert wr[2] <= 400 and wr[1] >= 100
+        # a pointer drag
+        box = await pg.locator(bar).bounding_box()
+        await pg.mouse.move(box["x"] + 3, box["y"] + 40)
+        await pg.mouse.down()
+        await pg.mouse.move(box["x"] + 63, box["y"] + 40, steps=4)
+        await pg.mouse.up()
+        w2 = await widths()
+        assert w2[0] > wr[0] + 40
+        assert await h(pg, "document.getElementById('hx-split').classList.contains('di-split-dragging')") is False
+        stored = await pg.evaluate("() => JSON.parse(localStorage.getItem('drishti.split.hx-split'))")
+        assert len(stored) == 3 and abs(sum(stored) - 1) < 1e-6                                 # remembered
+        sizes = await h(pg, "window.__harness.split.getSizes()")
+        assert abs(sizes["left"] - stored[0]) < 1e-6
+        # ---- tabs
+        tab = lambda i: f"#hx-tabs [data-tab='{i}']"
+        assert await pg.get_attribute("#hx-tabs .di-tablist", "role") == "tablist"
+        assert await pg.get_attribute(tab("b"), "aria-selected") == "true" and await pg.get_attribute(tab("a"), "aria-selected") == "false"
+        assert await pg.get_attribute(tab("b"), "tabindex") == "0" and await pg.get_attribute(tab("a"), "tabindex") == "-1"
+        panel_id = await pg.get_attribute(tab("b"), "aria-controls")
+        assert await pg.get_attribute(f"#{panel_id}", "role") == "tabpanel" and await pg.get_attribute(f"#{panel_id}", "aria-labelledby") == await pg.get_attribute(tab("b"), "id")
+        assert await pg.text_content("#hx-tabs [data-tab='b'] .di-tab-badge") == "3"
+        assert await h(pg, "window.__harness.tabMade") == 1                                   # its panel is made when it first opens
+        await pg.click(tab("a"))
+        assert await pg.is_visible("#hx-tabs [data-panel='a']") and not await pg.is_visible("#hx-tabs [data-panel='b']")
+        await pg.focus(tab("a"))
+        await pg.keyboard.press("ArrowRight")                                                 # to Problems; opens on focus
+        assert await pg.get_attribute(tab("b"), "aria-selected") == "true"
+        await pg.keyboard.press("ArrowRight")                                                 # the disabled tab is skipped
+        assert await pg.get_attribute(tab("d"), "aria-selected") == "true" and await h(pg, "document.activeElement.dataset.tab") == "d"
+        await pg.keyboard.press("ArrowRight")                                                 # wraps
+        assert await pg.get_attribute(tab("a"), "aria-selected") == "true"
+        await pg.keyboard.press("End")
+        assert await h(pg, "window.__harness.tabs.getValue()") == "d"
+        await pg.click(tab("b"))
+        assert await h(pg, "window.__harness.tabMade") == 1                                   # not made twice
+        await pg.click(tab("c"), force=True)                                                  # disabled: nothing
+        assert await h(pg, "window.__harness.tabs.getValue()") == "b"
+        await pg.focus(tab("d"))
+        await pg.keyboard.press("Delete")                                                     # closable
+        assert await pg.locator(tab("d")).count() == 0 and await pg.locator("#hx-tabs [data-panel='d']").count() == 0
+        # ---- the navigator list
+        rows = lambda: pg.evaluate("() => Array.from(document.querySelectorAll('#hx-nav .di-nav-row')).map((r) => r.querySelector('.di-nav-label').textContent)")
+        assert await rows() == ["Key values", "Note", "Grid", "Chart", "Tree", "Misc"]
+        assert await pg.evaluate("() => Array.from(document.querySelectorAll('#hx-nav .di-nav-group')).map((g) => g.textContent)") == ["Text", "Data"]
+        assert await pg.locator("#hx-nav [role=group]").count() == 2 and await pg.get_attribute("#hx-nav .di-nav-tree", "role") == "tree"
+        assert await pg.get_attribute("#hx-nav [data-id='chart']", "aria-expanded") == "false"
+        search = "#hx-nav .di-nav-search"
+        await pg.fill(search, "ba")                                                           # a match keeps its parent and opens it
+        assert await rows() == ["Chart", "Bar"]
+        assert await pg.get_attribute("#hx-nav [data-id='chart']", "aria-expanded") == "true"
+        await pg.fill(search, "zzz")
+        assert "Nothing matches" in await pg.text_content("#hx-nav .di-nav-empty")
+        await pg.fill(search, "data")                                                         # the group is searched
+        assert await rows() == ["Grid", "Chart", "Bar", "Line", "Tree"]       # a branch's children are in its group
+        await pg.press(search, "Escape")
+        assert len(await rows()) == 6
+        await pg.focus(search)
+        await pg.keyboard.press("ArrowDown")
+        await pg.keyboard.press("ArrowDown")
+        assert await pg.get_attribute(search, "aria-activedescendant") == await pg.get_attribute("#hx-nav [data-id='grid']", "id")
+        await pg.keyboard.press("Enter")
+        assert await h(pg, "window.__harness.nav.getValue()") == "grid" and await pg.get_attribute("#hx-nav [data-id='grid']", "aria-selected") == "true"
+        await pg.keyboard.press("ArrowDown")                                                  # Chart: Right opens (the search is empty), Left closes
+        await pg.keyboard.press("ArrowRight")
+        assert await rows() == ["Key values", "Note", "Grid", "Chart", "Bar", "Line", "Tree", "Misc"]
+        await pg.keyboard.press("ArrowDown")
+        await pg.keyboard.press("ArrowLeft")                                                  # on a child: to its parent
+        assert await pg.get_attribute(search, "aria-activedescendant") == await pg.get_attribute("#hx-nav [data-id='chart']", "id")
+        await pg.keyboard.press("ArrowLeft")
+        assert len(await rows()) == 6
+        await pg.click("#hx-nav [data-id='tree']", force=True)                                            # a disabled item is not picked
+        assert await h(pg, "window.__harness.nav.getValue()") == "grid"
+        await pg.click("#hx-nav [data-id='misc']")
+        assert await h(pg, "window.__harness.nav.getValue()") == "misc"
+        assert any(e["name"] == "change:hx-nav" and e["detail"]["value"] == "misc" for e in await h(pg, "window.__harness.events"))
+        # ---- the column mapping
+        pick = "#hx-colmap tr[data-local='%s'] .di-select-control"
+        assert await pg.text_content("#hx-colmap tr[data-local='TRADE_ID'] .di-select-text") == "trade_id"   # the identity default: the same name in any case
+        assert "NOTIONAL expects a number, but notional is string" in await pg.text_content("#hx-colmap tr[data-local='NOTIONAL'] .di-msg")
+        assert await pg.get_attribute(pick % "NOTIONAL", "aria-invalid") == "true"
+        assert "1 problem" in await pg.text_content("#hx-colmap .di-colmap-summary")
+        assert await pg.locator("#hx-colmap tr[data-local='NOTIONAL'] .di-req").count() == 1 and await pg.locator("#hx-colmap tr[data-local='DESK'] .di-req").count() == 0
+        await pg.click(pick % "NOTIONAL")
+        await pg.click(".di-select-pop [role=option]:has-text('qty')")
+        assert await pg.text_content("#hx-colmap tr[data-local='NOTIONAL'] .di-msg") == ""
+        assert await h(pg, "window.__harness.colmap.getValue().NOTIONAL") == "qty"
+        assert "4 of 4 mapped" in await pg.text_content("#hx-colmap .di-colmap-summary")
+        await pg.click(pick % "TRADE_DATE")
+        await pg.click(".di-select-pop [role=option]:has-text('(not mapped)')")
+        assert "TRADE_DATE is required" in await pg.text_content("#hx-colmap tr[data-local='TRADE_DATE'] .di-msg")
+        assert "TRADE_DATE" not in await h(pg, "Object.keys(window.__harness.colmap.getValue())")
+        await pg.click("#hx-colmap [data-act='match']")                                       # Match by name puts it back
+        assert await h(pg, "window.__harness.colmap.getValue().TRADE_DATE") == "trade_date" and await h(pg, "window.__harness.colmap.getValue().NOTIONAL") == "notional"
+        # ---- the same as a form field, and a forced select
+        res = await h(pg, "window.__harness.colform.validate()")
+        assert res["ok"] is False and res["errors"]["map"].startswith("NOTIONAL expects a number, but notional is string")
+        assert "NOTIONAL expects a number" in await pg.text_content("#hx-colform tr[data-local='NOTIONAL'] .di-msg")
+        assert await pg.locator("#hx-colform [data-path='kind'] drishti-select").count() == 1      # two options, yet a select: widget select forces it
+        assert await pg.locator("#hx-colform [data-path='kind'] input[type=radio]").count() == 0
+        await pg.click("#hx-colform tr[data-local='NOTIONAL'] .di-select-control")
+        await pg.click(".di-select-pop [role=option]:has-text('qty')")
+        assert (await h(pg, "window.__harness.colform.validate()"))["errors"].get("map") is None
+    run(browsers, body)

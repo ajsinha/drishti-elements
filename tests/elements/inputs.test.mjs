@@ -262,3 +262,54 @@ test('the filter bar: a list field takes contains, any of and all of, its values
   m.setCondition('TAGS', 'allOf', '');
   assert.equal(m.model.TAGS, undefined);
 });
+
+test('searchOptions filters: only the options every word matches, plain strings and {value} alone included, the detail searched last', () => {
+  const labels = (list, q) => I.searchOptions(list, q).map((o) => (typeof o === 'object' ? o.label || o.value : o));
+  assert.deepEqual(labels(['alpha', 'beta', 'alphabet'], 'alp'), ['alpha', 'alphabet']);               // plain strings: no throw, and they come back as given
+  assert.deepEqual(labels(['alpha', 'beta'], 'zzz'), []);
+  assert.deepEqual(labels([{ value: 'rates' }, { value: 'fx' }], 'ra'), ['rates']);                   // no label: the value is the label
+  assert.deepEqual(labels([1, 22, 3], '2'), [22]);
+  const grouped = I.normalizeOptions([{ value: 'a', label: 'Spot', group: 'FX' }, { value: 'b', label: 'Swap', group: 'Rates' }]);
+  assert.deepEqual(labels(grouped, 'fx'), []);                                                        // the group is not searched (a list's callers put it in the detail when they want it)
+  assert.deepEqual(labels(I.normalizeOptions([{ value: 'a', label: 'Spot', detail: 'FX desk' }, { value: 'b', label: 'Swap', detail: 'Rates desk' }]), 'swap desk'), ['Swap']);   // every word must match
+  assert.deepEqual(labels(grouped, 'swap fx'), []);
+  assert.equal(I.searchOptions(grouped, '').length, 2);
+  assert.equal(I.searchOptions(grouped, null).length, 2);
+  assert.deepEqual(labels(I.normalizeOptions(['a(b', 'c']), '(b'), ['a(b']);                          // regex characters are plain text
+});
+
+test('a column mapping: the identity default, the types that fit, and every problem in words', () => {
+  const targets = [{ name: 'TRADE_ID', type: 'string', required: true }, { name: 'NOTIONAL', type: 'number', required: true }, { name: 'DESK', type: 'string' }, { name: 'TRADE_DATE', type: 'date', required: true }];
+  const columns = [{ name: 'TRADE_ID', type: 'string' }, { name: 'notional', type: 'string' }, { name: 'Trade Date', type: 'date' }, { name: 'trade-date', type: 'date' }];
+  assert.deepEqual(I.identityMap(targets, columns), { TRADE_ID: 'TRADE_ID', NOTIONAL: 'notional' });   // exact, then the same name in any case; two near matches are left to the person
+  assert.deepEqual(I.identityMap(targets, ['TRADE_ID', 'Desk']), { TRADE_ID: 'TRADE_ID', DESK: 'Desk' });
+  assert.equal(I.typesFit('number', 'integer'), true);
+  assert.equal(I.typesFit('integer', 'number'), false);
+  assert.equal(I.typesFit('string', 'date'), true);
+  assert.equal(I.typesFit('date', 'string'), false);
+  assert.equal(I.typesFit('', 'string'), true);
+  const bad = I.mapProblems({ targets: targets, columns: columns }, { TRADE_ID: 'TRADE_ID', NOTIONAL: 'notional', TRADE_DATE: 'gone' });
+  assert.deepEqual(bad.map((b) => b.name), ['NOTIONAL', 'TRADE_DATE']);
+  assert.equal(bad[0].message, 'NOTIONAL expects a number, but notional is string');
+  assert.equal(bad[1].message, 'TRADE_DATE: "gone" is not one of your columns');
+  assert.deepEqual(I.mapProblems({ targets: targets, columns: columns }, {}).map((b) => b.message), ['TRADE_ID is required: pick the column that holds it', 'NOTIONAL is required: pick the column that holds it', 'TRADE_DATE is required: pick the column that holds it']);
+  assert.deepEqual(I.mapProblems({ targets: [{ name: 'A' }, { name: 'B' }], columns: ['x'], unique: true }, { A: 'x', B: 'x' }).map((b) => b.message), ['x is already used for A']);
+  assert.deepEqual(I.mapProblems({ targets: [{ name: 'A' }, { name: 'B' }], columns: ['x'] }, { A: 'x', B: 'x' }), []);   // twice is allowed unless unique
+});
+
+test('a form field of type columnmap: the default is the identity map and the schema check names the first problem and the count', () => {
+  const schema = { type: 'object', properties: { map: { type: 'columnmap', title: 'Columns', options: { targets: [{ name: 'ID', required: true }, { name: 'QTY', type: 'number', required: true }, { name: 'DESK', required: true }],
+    columns: [{ name: 'ID', type: 'string' }, { name: 'qty', type: 'string' }] } } } };
+  const v = I.defaults(schema);
+  assert.deepEqual(v, { map: { ID: 'ID', QTY: 'qty' } });
+  const r = I.validate(schema, v);
+  assert.equal(r.ok, false);
+  assert.equal(r.errors.map, 'QTY expects a number, but qty is string (and 1 more)');
+  assert.equal(I.validate(schema, { map: { ID: 'ID', QTY: 'qty', DESK: 'ID' } }).errors.map, 'QTY expects a number, but qty is string');
+  assert.equal(I.validate({ type: 'object', properties: { map: { type: 'columnmap', options: { targets: [{ name: 'ID', required: true }], columns: ['ID'] } } } }, { map: { ID: 'ID' } }).ok, true);
+});
+
+test('the studio widgets are exported: SplitPane, Tabs, NavList and ColumnMap, and their elements', () => {
+  ['SplitPane', 'Tabs', 'NavList', 'ColumnMap'].forEach((n) => assert.equal(typeof I[n], 'function', n));
+  ['drishti-split', 'drishti-tabs', 'drishti-nav-list', 'drishti-column-map'].forEach((n) => assert.equal(typeof I.INPUT_ELEMENTS[n], 'function', n));
+});

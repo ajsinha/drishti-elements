@@ -28,3 +28,6 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: var
 .hx-grid-small { height: 240px; }
 .hx-col { flex: 1; min-width: 320px; }
 .hx-pill { border: 1px solid var(--d-border); border-radius: 10px; padding: 0 8px; font-size: 12px; }
+
+.hx-split-box { height: 160px; border: 1px solid var(--d-border); }
+.hx-nav-box { height: 240px; width: 320px; }

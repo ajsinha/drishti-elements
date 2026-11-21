@@ -22,6 +22,7 @@
 import { h, manifest, staticUrl, loadStyle, load, loaded, loadPart } from '../../drishti-core/src/drishti_index.js';
 import { CONTRACT } from './drishti_views-schema.js';
 import { validate, formatIssue } from './drishti_views-validate.js';
+import { complete } from './drishti_views-build.js';
 import { MESSAGES, say, safeHref } from './drishti_views-cells.js';
 import { PanelFrame } from './drishti_views-panels.js';
 import { arrange, Layout } from './drishti_views-layout.js';
@@ -46,6 +47,9 @@ let counter = 0;
  * @property {('full'|'strip'|'none')} [header='full'] how much of the header is drawn
  * @property {string[]} [panels] draw only these panel ids
  * @property {('off'|'warn'|'refuse')} [validate='warn'] warn: paint and report the issues; refuse: do not paint an invalid view
+ * @property {boolean} [complete=false] fill the fields contract 1 requires and the producer left out (ref, provenance, timings, a title's pill ...)
+ *   with null or the type's empty value before checking, on a copy: a view made by hand, or by a producer that sends the minimum, then draws without
+ *   the console warning "has no ref" (the contract still requires them of a producer that claims to follow it)
  * @property {boolean} [keys=false] the view's function keys answer the keyboard (inside the view)
  * @property {{href: function(Object): ?string, resolveView: function(Object): *}} [links] href: an address for a Link (else a link is a
  *   button that raises the link event); resolveView: a ViewModel, an address or a promise of either for a Link, painted in place with a back step
@@ -220,6 +224,7 @@ export class ViewHandle {
       this.emit('error', { code: 'view.version', contract: vm.contract });
       return this.settle();
     }
+    if (this.options.complete) { vm = complete(JSON.parse(JSON.stringify(vm)), 'ViewModel'); }
     if (this.options.validate !== 'off') {
       const r = validate(vm);
       if (r.issues.length) {

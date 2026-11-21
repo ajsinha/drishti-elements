@@ -68,7 +68,7 @@ component are in [API.md](API.md) and live in the gallery.
 |---|---|
 | tables, a pivot, export | `grid` |
 | charts and maps | `chart` |
-| date pickers, multi-select, forms, the code editor | `inputs` |
+| date pickers, multi-select, forms, the code editor, split panes, tabs, a searchable grouped list, a column-mapping table | `inputs` |
 | paged, server-side or live rows, Arrow | `data` (with `grid`) |
 | hierarchies, networks | `tree`, `graph` |
 | the layout canvas, inspector and YAML pane of an editor | `designer` |

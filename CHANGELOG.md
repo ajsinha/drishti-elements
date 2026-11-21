@@ -17,6 +17,22 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
+## Unreleased
+
+- **Studio widgets** (drishti-inputs, for Rachana Studio's screens; no bespoke UI): `SplitPane` (horizontal or vertical, minimum and maximum sizes,
+  sizes kept as shares, the separator by pointer and by keyboard: arrows, Shift, Home, End, Enter; remembered with `persistKey`; `<drishti-split>`);
+  `Tabs` (tablist, roving arrows, disabled tabs skipped, badge, closable, a panel made when first opened; `<drishti-tabs>`); `NavList` (a searchable
+  list under headings that nests into a tree; search by label, detail and group keeps a match's parents; keyboard on `aria-activedescendant`;
+  `<drishti-nav-list>`); `ColumnMap` and the form field type `columnmap` (a table of local columns, each a select of the caller's columns, the
+  same names mapped at the start, required, type and uniqueness problems in words; `identityMap`, `mapProblems`, `typesFit`; `<drishti-column-map>`).
+  drishti-inputs' bundle budget raised to 310,000 bytes for them (295,747 measured).
+- **Fixed** `searchOptions` threw on options that were plain strings, numbers or `{value}` alone (so a list of strings never filtered); it now reads
+  them as labels (and returns the items as given).
+- **Fixed** drishti-views: `complete()` filled `ref` and `provenance` with `null` (a record behind a reference), so a minimal view still failed
+  validation with "ref is null; it should be an object"; it now fills the record's own required fields. New painter option `complete` (and the
+  `complete` attribute of `<elements-view>`) completes a view on a copy before checking, so a producer that sends the minimum draws without the console warning.
+- **Documented**: an enum is radios up to three values and a select above; `widget: 'select'` (or `'radio'`) forces either whatever the count.
+
 ## 3.1.0
 
 Released 2026-11-21. drishti-views, the tenth library: whole screens from a ViewModel of contract 1 (drishti-rachana's

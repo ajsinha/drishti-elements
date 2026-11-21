@@ -183,3 +183,12 @@ test('sse(): the read-only events protocol (welcome, subd, msg with a rising seq
   assert.deepEqual(raw.map((t) => /event: (\w+)/.exec(t)[1]), ['view', 'frame']);
   assert.equal(JSON.parse(/data: (.*)/.exec(raw[1])[1]).patches[0].op, 'restored');
 });
+
+test('complete fills a record behind a reference (ref, provenance) with its own required fields, not null, so a minimal view validates', () => {
+  const vm = V.complete({ contract: '1.0', title: { id: 'x' }, strip: [], panels: [], keys: [] }, 'ViewModel');
+  assert.deepEqual(vm.ref, { kind: null, id: null });
+  assert.equal(vm.provenance.live, false);
+  assert.equal(vm.title.pill, null);
+  assert.deepEqual(V.validate(vm).issues, []);
+  assert.deepEqual(V.complete({ contract: '1.0', ref: { kind: 'region', id: 'EMEA' }, title: { id: 'x' }, strip: [], panels: [], keys: [] }, 'ViewModel').ref, { kind: 'region', id: 'EMEA' });   // what the producer sent stays
+});

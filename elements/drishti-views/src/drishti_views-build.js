@@ -77,6 +77,8 @@ function nullable(node) { return !!(node && node.anyOf && node.anyOf.some((x) =>
 
 function emptyOf(node) {
   if (nullable(node)) { return null; }
+  const d = node && (node.$ref || (node.allOf && node.allOf.length === 1)) ? defOf(node, {}) : null;   // a record behind a $ref or an allOf (ref, provenance): its own required fields filled in
+  if (d && d.properties) { return fill({}, d); }
   const t = node && node.type;
   return t === 'array' ? [] : t === 'boolean' ? false : t === 'integer' || t === 'number' ? 0 : t === 'string' ? '' : t === 'object' ? {} : null;
 }
