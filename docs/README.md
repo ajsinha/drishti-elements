@@ -20,6 +20,7 @@
 | [USING.md](USING.md) | installing the release tree, a first page, picking libraries, connecting to a server, drishti-events, drishti-views |
 | [DESIGN.md](DESIGN.md) | the ten libraries and the rules each keeps; how drishti-events keeps its promises |
 | [API.md](API.md) | every library's functions, classes, options and events, generated from the typed JSDoc |
+| [MIGRATING_TO_3.md](MIGRATING_TO_3.md) | moving a host from 2.4 to 3.0: every removal and its replacement |
 | [CONTRACTS.md](CONTRACTS.md) | the shapes a host's server answers in: errors, live sets, data capabilities, Explain, pivots, the ViewModel and its live stream, and the events protocol |
 | [THEMING.md](THEMING.md) | the design tokens, the themes and your own |
 | [MOVING_FROM_AG_GRID.md](MOVING_FROM_AG_GRID.md) | moving an AG Grid Enterprise pivot application |
