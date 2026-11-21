@@ -359,11 +359,16 @@ def test_a_line_of_several_series_draws_marks_on_two_axes_and_a_click_hands_back
             return { types: o.series.map((s) => s.type), axes: o.yAxis.length, legend: [...R.querySelectorAll('[data-panel=pv] .dv-legend li')].map((li) => li.textContent) }; })()""")
         assert got == {"types": ["bar", "line", "scatter"], "axes": 2, "legend": ["P&L", "VaR (right)", "Limit (right)"]}
         await shot(pg, "views-line-series.png")
-        xy = await ev(pg, """(() => { const el = R.querySelector('[data-panel=cc] .dv-chart'), c = window.echarts.getInstanceByDom(el);
-            c.setOption({ tooltip: { show: false } });   // the engine's tooltip writes inline styles (a known limit under the strict CSP)
-            const p = c.convertToPixel({ seriesIndex: 1 }, [0, 0.0409]), b = el.getBoundingClientRect(); return [b.left + p[0], b.top + p[1]]; })()""")
-        await pg.mouse.click(xy[0], xy[1])
-        await frame(pg)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const c = window.echarts.getInstanceByDom(R.querySelector('[data-panel=cc] .dv-chart')); return c && c.getHeight() > 60 && c.getWidth() > 60; }", timeout=30000)
+        for _ in range(5):                                            # a chart that follows its box may draw again: aim at the mark as drawn now
+            xy = await ev(pg, """(() => { const el = R.querySelector('[data-panel=cc] .dv-chart'), c = window.echarts.getInstanceByDom(el);
+                c.setOption({ animation: false, tooltip: { show: false }, series: [{}, { symbolSize: 16 }] });   // a still chart, a mark large enough to hit
+                const p = c.convertToPixel({ seriesIndex: 1 }, [0, 0.0409]), b = el.getBoundingClientRect(); return [b.left + p[0], b.top + p[1]]; })()""")
+            await frame(pg)
+            await pg.mouse.click(xy[0], xy[1])
+            await frame(pg)
+            if await pg.evaluate("window.__harness.events.some((e) => e.type === 'point')"):
+                break
         pts = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
         assert pts and pts[-1]["panel"] == "cc" and pts[-1]["ev"] == "3" and pts[-1]["series"] == "Yesterday", pts
     run_with(browsers, body)
