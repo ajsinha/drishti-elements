@@ -13,7 +13,11 @@
  *
  * See the LICENSE file in the root of this repository.
  */
-/* The event bus: named events, listeners in the order they were added, "*" hears everything. A listener that throws does not stop the
+import { hasWildcard, topicMatches } from './drishti_topics.js';
+
+/* The event bus: named events, listeners in the order they were added, "*" hears everything, and a listener may name a pattern over
+   a dotted topic ('prices.*.USDCAD': one segment; 'prices.>': one or more trailing segments; see drishti_topics.js). A listener of the
+   exact name is told first, then the patterns that match (in the order they were added), then "*". A listener that throws does not stop the
    others (the error is reported once through onError, default console.error). Each component makes its own bus; `bus` is the one a
    page shares (a library and the page talking without knowing each other). */
 
@@ -34,18 +38,19 @@ export class EventBus {
    */
   constructor(o) {
     /** @private */ this._on = new Map();
+    /** @private the names that are patterns */ this._pat = new Set();
     /** @private */ this._onError = (o && o.onError) || ((e, type) => { if (typeof console !== 'undefined') { console.error('drishti bus: a listener of ' + type + ' failed', e); } });
   }
 
   /**
-   * Listens to an event ("*": every event).
+   * Listens to an event ("*": every event; a dotted name with "*" for one segment or a last ">" for the rest: a pattern).
    * @param {string} type
    * @param {Listener} fn
    * @returns {function(): void} stops listening
    */
   on(type, fn) {
     if (typeof fn !== 'function') { throw new TypeError('EventBus.on: a listener is a function'); }
-    if (!this._on.has(type)) { this._on.set(type, []); }
+    if (!this._on.has(type)) { this._on.set(type, []); if (hasWildcard(type)) { this._pat.add(type); } }
     this._on.get(type).push(fn);
     return () => this.off(type, fn);
   }
@@ -68,12 +73,12 @@ export class EventBus {
    * @returns {void}
    */
   off(type, fn) {
-    if (!fn) { this._on.delete(type); return; }
+    if (!fn) { this._on.delete(type); this._pat.delete(type); return; }
     const l = this._on.get(type);
     if (!l) { return; }
     const i = l.indexOf(fn);
     if (i >= 0) { l.splice(i, 1); }
-    if (!l.length) { this._on.delete(type); }
+    if (!l.length) { this._on.delete(type); this._pat.delete(type); }
   }
 
   /**
@@ -83,7 +88,11 @@ export class EventBus {
    * @returns {number} how many listeners heard it
    */
   emit(type, payload) {
-    const l = (this._on.get(type) || []).slice().concat(type === '*' ? [] : (this._on.get('*') || []).slice());
+    let l = (this._on.get(type) || []).slice();
+    if (this._pat.size && type !== '*' && !hasWildcard(type)) {
+      this._pat.forEach((pat) => { if (pat !== type && topicMatches(pat, type)) { l = l.concat(this._on.get(pat)); } });
+    }
+    if (type !== '*') { l = l.concat(this._on.get('*') || []); }
     l.forEach((fn) => { try { fn(payload, type); } catch (e) { this._onError(e, type); } });
     return l.length;
   }
@@ -99,7 +108,7 @@ export class EventBus {
    * Forgets every listener.
    * @returns {void}
    */
-  clear() { this._on.clear(); }
+  clear() { this._on.clear(); this._pat.clear(); }
 }
 
 /**

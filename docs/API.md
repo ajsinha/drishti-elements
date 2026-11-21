@@ -14,7 +14,7 @@
   See the LICENSE file in the root of this repository.
 -->
 
-# Drishti Elements 2.4.0: the API reference
+# Drishti Elements 3.0.0: the API reference
 
 Generated from the libraries' typed JSDoc by `python3 tools/docs/elements_api.py` (do not edit; `--check` refuses a stale copy or a
 public symbol without a typed comment). Every library is ES modules under `elements/<library>/src/` and
@@ -28,9 +28,10 @@ version above (not Drishti's own).
 | [drishti-grid](#drishti-grid) | The grid: its engine (columns, row models, virtual scrolling, pivot, selection, export, keyboard) and its look (Grid and &lt;drishti-grid&gt; in three layouts and three densities), cell editing with undo, paste, write-back and four eyes, and the AG Grid-style adapter (createGridFromAgOptions) |
 | [drishti-tree](#drishti-tree) | The tree: hierarchies as an org chart, an indented tree with measures (on drishti-grid's tree data), a sunburst and an icicle; expand and collapse, search with breadcrumbs, measures on nodes with non-additive ones (◆) asked of the server and never summed, Explain, re-parenting in an edit mode that proposes the move for four eyes, the outline of an authoring screen (marks, a hiding filter, a designer's selection followed both ways, moves by drag or Alt+arrows), export, keyboard and ARIA |
 | [drishti-designer](#drishti-designer) | The designer kit: the layout canvas over a layout model (grid or flow: place, move, resize with snap, multi-select, align, distribute, z-order, groups, copy and paste, a phone's order, the keys, undo and redo on one command stack), the palette, the inspector (a form from a schema), the outline (drishti-tree's, drag to re-order or re-parent), the YAML pane kept in step with the model both ways (completion and lint from a JSON Schema) and the designer shell (three panes, Visual / YAML / Both, versions, Validate, Preview, History, Impact, Propose for review) |
-| [drishti-data](#drishti-data) | Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live), the live client over SSE and WebSocket with reconnect, heartbeat, resume and backpressure, and the Arrow client |
+| [drishti-data](#drishti-data) | Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live: any feed, a drishti-events subscription among them), backpressure into a grid, and the Arrow client |
 | [drishti-chart](#drishti-chart) | The chart: one engine-neutral spec over the vendored ECharts (the general kinds, the maps from world to every country's first-level regions, the card and studio modes, the map's ranking and table modes), Explain on any mark, the data table, export, linked selection and live updates; Vega-Lite translated into the spec |
 | [drishti-graph](#drishti-graph) | The graph: networks cyclic or acyclic on a canvas for thousands of nodes; force (seeded), layered (DAG), radial, circular and grouped layouts; zoom, pan, minimap and fit; neighbours expanded on demand; the shortest path; groups collapsed by an attribute and filters by type; size and colour by a measure with a legend; pin, multi-select and lasso; a selection panel with Explain; linked selection; export (PNG, SVG, data); keyboard and an adjacency table; live updates; the lineage preset; the view's graph panel |
+| [drishti-events](#drishti-events) | Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests) |
 | [drishti-views](#drishti-views) | Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states (error, denied, waiting, computing, stale, failed, empty), the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order), the frames of the live stream applied by identity in one animation frame, navigation in place; the registry of panel kinds |
 
 ## drishti-core
@@ -745,7 +746,7 @@ An event bus.
 
 ##### `EventBus.on(type, fn)`
 
-Listens to an event ("*": every event).
+Listens to an event ("*": every event; a dotted name with "*" for one segment or a last "&gt;" for the rest: a pattern).
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -817,11 +818,102 @@ Returns `EventBus`.
 
 The bus a page shares.
 
+### drishti_topics.js
+
+#### `MAX_TOPIC_SEGMENTS`
+
+The most segments a topic has.
+
+#### `MAX_TOPIC_LENGTH`
+
+The most characters a topic has.
+
+#### `isTopic(topic)`
+
+Says whether text is a topic (concrete: no wildcards).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `*` |  |
+
+Returns `boolean`.
+
+#### `isPattern(pattern)`
+
+Says whether text is a pattern: a topic whose segments may be "*", and whose last segment may be "&gt;".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `*` |  |
+
+Returns `boolean`.
+
+#### `hasWildcard(name)`
+
+Says whether a name carries a wildcard segment ("*" or "&gt;") and has more than one segment, or is "&gt;": a lone "*" is not a pattern here, it is the bus's "every event".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `boolean`.
+
+#### `topicMatches(pattern, topic)`
+
+Says whether a topic matches a pattern.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` | 'prices.*.USDCAD', 'prices.&gt;', 'prices.fx.USDCAD' |
+| `topic` | `string` | a concrete topic |
+
+Returns `boolean`.
+
+#### `segment(text)`
+
+Encodes any text as one topic segment: letters, digits, "_", "-" and ":" stay; every other byte of its UTF-8 becomes "~" and two capital hexadecimal digits (so "~" itself is "~7E"); the empty text is "~".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+#### `unsegment(seg)`
+
+The text a segment encodes (the inverse of segment).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `seg` | `string` |  |
+
+Returns `string`.
+
+#### `DEFAULT_FILTER_CHANNEL`
+
+The channel a filter bar and the grids on it share when none is named.
+
+#### `selectionTopic(channel)`
+
+The topic of a linked selection channel: 'ui.selection.&lt;channel&gt;'. Its payload is {channel, ids, source}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `channel` | `string` |  |
+
+Returns `string`.
+
+#### `filterTopic(channel)`
+
+The topic of a filter channel: 'ui.filter.&lt;channel&gt;' (default channel 'default'). Its payload is {source, model, quickFilter}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[channel]` | `string` |  |
+
+Returns `string`.
+
 ### drishti_link.js
-
-#### `SELECTION_EVENT`
-
-The selection's event on the shared bus: {channel, ids, source}.
 
 #### `linkGrid(grid, o)`
 
@@ -1661,6 +1753,17 @@ Returns `Promise&lt;(Object\|Object[])&gt;`.
 Drishti.elements.core.load('drishti-grid').then((grid) => grid.createGridModel({...}))
 ```
 
+#### `loadPart(name, part)`
+
+Loads a part of a library (a file beside its bundle: drishti-events' inspector), after the library itself; resolves with the part's API.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` | the library ("drishti-events") |
+| `part` | `string` | the part ("inspector") |
+
+Returns `Promise&lt;Object&gt;`.
+
 #### `refused(name)`
 
 Why a library may not be loaded on this page (its module is not on for the person), or null when it may.
@@ -1782,10 +1885,6 @@ A filter model in words, for the line above a grid ("Desk in RATES, FX; Notional
 | `[header]` | `function(string): string` | a column's heading |
 
 Returns `string`.
-
-#### `FILTER_CHANNEL`
-
-The bus event a filter bar emits and grids and charts listen to; its payload is {model, quickFilter, source}.
 
 #### `filterRows(rows, model, o)`
 
@@ -5177,7 +5276,7 @@ A field the bar may filter.
 | `fields` | `FilterField[]` |  |
 | `[model]` | `Object` | the filters at the start |
 | `[bus]` | `Object` | the drishti-core EventBus it emits on (default: the page's shared bus) |
-| `[channel]` | `string` | the event name (default FILTER_CHANNEL) |
+| `[channel]` | `string` | the filter channel's name (default 'default'); the topic is 'ui.filter.&lt;channel&gt;' (filterTopic) |
 | `[quick=true]` | `boolean` | the quick-search field |
 | `[asOf]` | `string` | the business date date presets count from |
 | `[calendar]` | `string` | the business calendar of date fields |
@@ -7146,12 +7245,12 @@ Returns `void`.
 
 ##### `GridModel.followFilters(bus, o)`
 
-Follows a filter bar (drishti-inputs) or any page part that emits the filter model on a bus under FILTER_CHANNEL: each payload's filters on this grid's columns (by id or field) become its filter model, and its quick filter the grid's; filters on fields this grid has not are left out.
+Follows a filter bar (drishti-inputs) or any page part that emits the filter model on a bus under the topic 'ui.filter.&lt;channel&gt;': each payload's filters on this grid's columns (by id or field) become its filter model, and its quick filter the grid's; filters on fields this grid has not are left out.
 
 | Parameter | Type | Meaning |
 |---|---|---|
 | `bus` | `EventBus` | drishti-core's bus (the page's shared bus, or the filter bar's) |
-| `[o]` | `{channel: string, source: string}` | channel default FILTER_CHANNEL; source: follow only the bar of this id |
+| `[o]` | `{channel: string, source: string}` | channel default 'default' (the filter channel's name, not the topic); source: follow only the bar of this id |
 
 Returns `function(): void`: stops following.
 
@@ -14741,164 +14840,6 @@ One of the header's actions.
 
 Bundle `elements/drishti-data/drishti_data.js`, global `Drishti.elements.data`; requires drishti-core.
 
-### drishti_backoff.js
-
-#### class `Backoff`
-
-Exponential back-off with full jitter: attempt n waits a random time up to min(max, base * factor^n).
-
-##### `new Backoff(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `[o]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean, random: function(): number}` | baseMs default 500; maxMs default 30,000; factor default 2; jitter default true; random: for tests |
-
-##### `Backoff.next()`
-
-The wait before the next attempt (and the attempt counted).
-
-Returns `number`: ms.
-
-##### `Backoff.reset()`
-
-A connection held: the next wait starts small again.
-
-Returns `void`.
-
-#### class `Heartbeat`
-
-A watchdog: beat() on every message; when none comes for timeoutMs, onTimeout runs (once until the next beat).
-
-##### `new Heartbeat(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `o` | `{timeoutMs: number, onTimeout: function(): void, setTimeout: Function, clearTimeout: Function}` | the timer functions: for tests |
-
-##### `Heartbeat.beat()`
-
-A sign of life: the watch starts again.
-
-Returns `void`.
-
-##### `Heartbeat.stop()`
-
-Stops watching.
-
-Returns `void`.
-
-### drishti_backpressure.js
-
-#### class `TransactionSink`
-
-Feeds a grid from a live feed with backpressure.
-
-##### `new TransactionSink(target, o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `target` | `{applyTransactionAsync: function(Object): Promise, setRows: function(Object[]): void, dataChanged: function(Object): void}` | a drishti-grid Grid or GridModel (or anything with those methods) |
-| `[o]` | `{getRowId: function(Object): string, maxInFlight: number, highWater: number, onStats: function(Object): void}` | getRowId default row.id; maxInFlight default 1; highWater: pending rows past which the sink says it is behind (default 10,000) |
-
-##### `TransactionSink.push(msg)`
-
-One message of the feed: {type: transaction, add, update, remove} \| {type: rows, rows} \| {type: dataChanged, ...}.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `msg` | `Object` |  |
-
-Returns `void`.
-
-##### `TransactionSink.drained()`
-
-Resolves when everything received has reached the grid.
-
-Returns `Promise&lt;void&gt;`.
-
-#### `pipeToGrid(feed, grid, o)`
-
-Wires a feed (a LiveClient, or any {subscribe}) into a grid through a TransactionSink.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `feed` | `{subscribe: function(function(Object): void): function(): void}` |  |
-| `grid` | `Object` | a drishti-grid Grid or GridModel |
-| `[o]` | `{getRowId: function(Object): string, maxInFlight: number, highWater: number, onStats: function(Object): void}` |  |
-
-Returns `{sink: TransactionSink, stop: function(): void}`.
-
-### drishti_live-client.js
-
-#### `LIVE_STATES`
-
-The client's states.
-
-#### class `LiveClient`
-
-A live connection with reconnect, heartbeat and resume.
-
-##### `new LiveClient(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `o` | `LiveClientOptions` |  |
-
-##### `LiveClient.on(name, fn)`
-
-Listens to the client's own events: state, error, message.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `name` | `string` |  |
-| `fn` | `function(Object, string): void` |  |
-
-Returns `function(): void`.
-
-##### `LiveClient.subscribe(fn)`
-
-Receives every message (the connection opens with the first subscriber and closes with the last).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `fn` | `function(Object): void` |  |
-
-Returns `function(): void`: unsubscribes.
-
-##### `LiveClient.open()`
-
-Opens the connection (subscribe does it).
-
-Returns `void`.
-
-##### `LiveClient.reconnect()`
-
-Opens again now (a person pressed Reconnect).
-
-Returns `void`.
-
-##### `LiveClient.close()`
-
-Closes the connection and stops trying.
-
-Returns `void`.
-
-##### `LiveClient.destroy()`
-
-Closes and forgets the page's online listener.
-
-Returns `void`.
-
-#### `parseSse(text)`
-
-Reads Server-Sent Events from text (the fetch transport, and anything else that has the raw stream): the whole events and what is left for the next chunk. An event: its name (default message), its data lines joined by new lines, its id; a comment line alone is a sign of life.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `text` | `string` |  |
-
-Returns `{events: Array&lt;{event: string, data: string, id: ?string, comment: boolean}&gt;, rest: string}`.
-
 ### drishti_arrow.js
 
 #### `ARROW_MEDIA`
@@ -15144,72 +15085,6 @@ Ends the worker.
 
 Returns `void`.
 
-### drishti_feed-monitor.js
-
-#### class `FeedMonitor`
-
-Counts what a feed delivered and what it missed. Events through on(): gap {from, to, missed}, stale {since}, fresh, order, repeat.
-
-##### `new FeedMonitor(o)`
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `[o]` | `FeedMonitorOptions` |  |
-
-##### `FeedMonitor.on(fn)`
-
-Listens to the monitor's events.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `fn` | `function(string, Object): void` |  |
-
-Returns `function(): void`: stops listening.
-
-##### `FeedMonitor.receive(message)`
-
-Takes one message (call it for every message of the feed).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `message` | `Object` |  |
-
-Returns `void`.
-
-##### `FeedMonitor.check()`
-
-Checks the clock: call it on a timer (the badge does); says stale once when the quiet is too long.
-
-Returns `boolean`: whether the feed is stale now.
-
-##### `FeedMonitor.reset()`
-
-Starts again (a new connection with a new numbering).
-
-Returns `void`.
-
-##### `FeedMonitor.attach(client)`
-
-Feeds the monitor from a live client (drishti-data's LiveClient).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `client` | `{subscribe: function(function(Object): void): function(): void}` |  |
-
-Returns `function(): void`: stops.
-
-#### `feedBadge(el, monitor, o)`
-
-A small badge for a monitor: "Live", "Stale: nothing for 20 s" with a Refresh, or "Missed 3 updates" (until acknowledged). The badge is a live region.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `el` | `HTMLElement` |  |
-| `monitor` | `FeedMonitor` |  |
-| `[o]` | `{refresh: function(): void, tickMs: number}` | refresh: what Refresh does (resync); tickMs: how often the clock is checked (default 2000) |
-
-Returns `function(): void`: stops.
-
 ### drishti_sources.js
 
 #### `rowRequest(r)`
@@ -15268,7 +15143,7 @@ Returns `DataSource & {frame: function(): Promise&lt;Object&gt;}`.
 
 #### `liveSource(source, feed)`
 
-A source with a live feed: getRows from the source, subscribe from the feed (a LiveClient), so a grid connects both.
+A source with a live feed: getRows from the source, subscribe from the feed (a drishti-events subscription, or any {subscribe}), so a grid connects both.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -15289,50 +15164,7 @@ Every row a request matches, a page at a time up to a limit (what a chart reads 
 
 Returns `Promise&lt;{rows: Object[], rowCount: number, truncated: boolean}&gt;`.
 
-### drishti_index.js
-
-#### `live(o)`
-
-A live client (new LiveClient(o)).
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `o` | `import('./drishti_live-client.js').LiveClientOptions` |  |
-
-Returns `import('./drishti_live-client.js').LiveClient`.
-
 ### Types of drishti-data
-
-#### `FeedMonitorOptions` : `Object`
-
-| Name | Type | Meaning |
-|---|---|---|
-| `[seqOf]` | `function(Object): ?number` | the sequence number of a message (default: message.seq) |
-| `[staleMs=15000]` | `number` | quiet for this long is stale (0: never) |
-| `[now]` | `function(): number` | the clock (default Date.now) |
-
-#### `LiveClientOptions` : `Object`
-
-| Name | Type | Meaning |
-|---|---|---|
-| `url` | `(string\|function(): string)` | the feed's address (http(s) for SSE, ws(s) for a WebSocket), or a function asked at every connect |
-| `[transport]` | `('sse'\|'websocket'\|'fetch')` | default: websocket for ws:// and wss://, else sse; fetch: SSE read with fetch |
-| `[headers]` | `(Object&lt;string, string&gt;\|function({status: number}): (Object&lt;string, string&gt;\|Promise&lt;Object&lt;string, string&gt;&gt;))` | fetch: the request's headers, or a function of the last failure (status 401 after a refused token) that answers them |
-| `[credentials='same-origin']` | `string` | fetch: the request's credentials |
-| `[eventField]` | `string` | each message gets its SSE event name under this field (when it has none of its own) |
-| `[fetch]` | `Function` | fetch: for tests |
-| `[heartbeatMs=45000]` | `number` | no message for this long: reconnect (0: no watchdog) |
-| `[pingMs]` | `number` | WebSocket: send {"type":"ping"} this often (default heartbeatMs / 3) |
-| `[backoff]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean}` |  |
-| `[resumeParam='lastEventId']` | `string` | SSE: the parameter that carries the last event id |
-| `[events]` | `string[]` | SSE event names that carry messages (default ['message']) |
-| `[withCredentials=false]` | `boolean` |  |
-| `[protocols]` | `string[]` | WebSocket sub-protocols |
-| `[EventSource]` | `Function` | for tests or a polyfill |
-| `[WebSocket]` | `Function` | for tests |
-| `[window]` | `Object` | the window (online and offline events; default the page's) |
-| `[setTimeout]` | `Function` | the clock's timer functions (a fake clock in tests; default the page's or the worker's) |
-| `[clearTimeout]` | `Function` |  |
 
 #### `RowRequest` : `Object`
 
@@ -17137,11 +16969,29 @@ One chart per member of a field (small multiples): the spec's rows split by the 
 
 Returns `{charts: Chart[], members: string[], ready: Promise&lt;void&gt;, destroy: function(): void}`.
 
+### drishti_topics.js
+
+#### `selectionTopic(channel)`
+
+The topic of a linked selection channel: 'ui.selection.&lt;channel&gt;'. Its payload is {channel, ids, source}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `channel` | `string` |  |
+
+Returns `string`.
+
+#### `filterTopic(channel)`
+
+The topic of a filter channel: 'ui.filter.&lt;channel&gt;' (default channel 'default'). Its payload is {source, model, quickFilter}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[channel]` | `string` |  |
+
+Returns `string`.
+
 ### drishti_link.js
-
-#### `SELECTION_EVENT`
-
-The selection's event on the shared bus: {channel, ids, source}.
 
 #### `linkGrid(grid, o)`
 
@@ -18946,6 +18796,2363 @@ One line of a command's answer.
 | `text` | `string` |  |
 | `[tone]` | `('ok'\|'error'\|'dim'\|'echo'\|'')` |  |
 | `[node]` | `string` | a node the line names (the line is a link that selects it) |
+
+## drishti-events
+
+Bundle `elements/drishti-events/drishti_events.js`, global `Drishti.elements.events`; requires drishti-core.
+
+### drishti_events-hub.js
+
+#### `SCOPES`
+
+The scopes a message travels in.
+
+#### `OWN_TOPICS`
+
+The library's own topics.
+
+#### `DEFAULT_LIMITS`
+
+The ceilings of every store, and their defaults (section 3.8 of the design); `limits` changes any of them.
+
+#### class `Events`
+
+Events in the page, across tabs and with a server: publish and subscribe, request and reply, streams.
+
+##### `new Events(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `EventsOptions` |  |
+
+##### `Events.routeOf(topic)`
+
+The scopes a topic is published to (the most specific route that matches it).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+
+Returns `string[]`.
+
+##### `Events.scopesOf(pattern)`
+
+The scopes a pattern is heard from: every scope a route that some topic of the pattern can take names.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+
+Returns `string[]`.
+
+##### `Events.share(pattern, o)`
+
+Routes a pattern to a scope as well ('ui.selection.&gt;' to 'tabs': selections reach the other tabs and still the page).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `o` | `{to: (string\|string[])}` |  |
+
+Returns `function(): void`: takes the route away.
+
+##### `Events.on(pattern, fn, options)`
+
+Hears every message matching the pattern (as EventBus.on).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` | 'prices.*.USDCAD', 'prices.&gt;', '$events.state' |
+| `fn` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `function(): void`: stops it.
+
+##### `Events.subscribe(pattern, fn, options)`
+
+The same as on, as an object with state, statistics and helpers (a feed for a grid, an async iterator, latest values).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[fn]` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `Subscription`.
+
+##### `Events.once(pattern, options)`
+
+The next message matching the pattern.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `{timeoutMs: number, signal: AbortSignal, where: function(Message&lt;*&gt;): boolean, scope: string}` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `Events.off(pattern, fn)`
+
+Stops one listener, every listener of a pattern, or (with nothing) every listener.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[pattern]` | `string` |  |
+| `[fn]` | `function(Message&lt;*&gt;): void` |  |
+
+Returns `void`.
+
+##### `Events.stream(pattern, options)`
+
+Messages as an async iterator: for await (const m of events.stream('prices.&gt;', { signal })).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `AsyncIterable&lt;Message&lt;*&gt;&gt;`.
+
+##### `Events.publish(topic, data, options)`
+
+Publishes; resolves when delivered (the page: at once; a server: when it acknowledges).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` | any JSON value |
+| `[options]` | `PublishOptions` |  |
+
+Returns `Promise&lt;Receipt&gt;`.
+
+##### `Events.request(topic, data, options)`
+
+Sends and waits for the one answer; rejects with a TimeoutError after timeoutMs (default 10 s).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[options]` | `RequestOptions` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `Events.reply(topic, fn)`
+
+Answers requests on a topic or pattern in the page and the tabs (what the function answers is the reply; what it throws is the requester's rejection).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `fn` | `function(Message&lt;*&gt;): (*\|Promise&lt;*&gt;)` |  |
+
+Returns `function(): void`: stops answering.
+
+##### `Events.topic(name, o)`
+
+A typed handle on a topic or pattern: ticks.on(fn), ticks.publish(data), ticks.request(data).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `[o]` | `{kind: string, validate: function(*, Message&lt;*&gt;): (boolean\|string), scope: string}` |  |
+
+Returns `Topic`.
+
+##### `Events.define(kind, validate)`
+
+Registers the check of a kind: a message of that kind whose data fails it is dropped on the way in (recorded as invalid) and refused on the way out.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` |  |
+| `validate` | `function(*, Message&lt;*&gt;): (boolean\|string)` | true, or words |
+
+Returns `void`.
+
+##### `Events.reconnect()`
+
+Opens the connection again now (a person pressed Reconnect).
+
+Returns `void`.
+
+##### `Events.close()`
+
+Closes the connection and stops trying (subscriptions stay, and are sent again by reconnect()).
+
+Returns `void`.
+
+##### `Events.flush()`
+
+Sends what the queue holds now (it is sent on its own when the connection opens).
+
+Returns `Promise&lt;number&gt;`: how many were sent.
+
+##### `Events.clearOutbox()`
+
+Empties the queue: what waits is not sent.
+
+Returns `Promise&lt;number&gt;`: how many were dropped.
+
+##### `Events.signOut()`
+
+The person signs out: the queue is emptied, the positions in streams are forgotten and the other tabs are told to do the same.
+
+Returns `Promise&lt;void&gt;`.
+
+##### `Events.metrics()`
+
+The figures so far (one plain object).
+
+Returns `Object`.
+
+##### `Events.inspect(el, o)`
+
+Opens the events inspector (its own file, loaded now with drishti-grid): into an element (a dock's panel, a page's place), or a drawer at the page's side. A page of ES modules imports src/drishti_inspector.js and calls openInspector(events, el) itself.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[el]` | `HTMLElement` |  |
+| `[o]` | `{refreshMs: number}` |  |
+
+Returns `Promise&lt;Object&gt;`: the Inspector.
+
+##### `Events.explain(query)`
+
+Why a message did or did not reach this page's listeners, in words: the steps (a listener matched, the route, the subscription, the connection, arrival, validity, kept, the listener ran), the first that failed marked. Draw it with drishti-core's renderExplain.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `query` | `{topic: string, key: string, id: string, since: number}` |  |
+
+Returns `Object`: an ExplainResult (title, value, steps with ok, failed).
+
+##### `Events.destroy()`
+
+Closes the connection, ends every subscription and request, stops answering: the Events is done.
+
+Returns `void`.
+
+#### class `ScopedEvents`
+
+The same calls pinned to one scope, whatever the routes say (events.page, events.tabs, events.server).
+
+##### `new ScopedEvents(events, scope)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Events` |  |
+| `scope` | `string` |  |
+
+##### `ScopedEvents.on(pattern, fn, options)`
+
+As Events.on, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `fn` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `function(): void`.
+
+##### `ScopedEvents.subscribe(pattern, fn, options)`
+
+As Events.subscribe, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[fn]` | `function(Message&lt;*&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `Subscription`.
+
+##### `ScopedEvents.once(pattern, options)`
+
+As Events.once, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `Object` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `ScopedEvents.off(pattern, fn)`
+
+As Events.off.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[pattern]` | `string` |  |
+| `[fn]` | `Function` |  |
+
+Returns `void`.
+
+##### `ScopedEvents.publish(topic, data, options)`
+
+As Events.publish, to this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[options]` | `PublishOptions` |  |
+
+Returns `Promise&lt;Receipt&gt;`.
+
+##### `ScopedEvents.request(topic, data, options)`
+
+As Events.request, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[options]` | `RequestOptions` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `ScopedEvents.reply(topic, fn)`
+
+As Events.reply.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `fn` | `function(Message&lt;*&gt;): *` |  |
+
+Returns `function(): void`.
+
+##### `ScopedEvents.stream(pattern, options)`
+
+As Events.stream, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `AsyncIterable&lt;Message&lt;*&gt;&gt;`.
+
+##### `ScopedEvents.topic(name, o)`
+
+As Events.topic, in this scope.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `[o]` | `Object` |  |
+
+Returns `Topic`.
+
+#### class `Topic`
+
+A typed handle on a topic (or a pattern: publishing then names the topic in options.topic).
+
+##### `new Topic(events, name, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Events` |  |
+| `name` | `string` |  |
+| `o` | `{kind: string, validate: Function, scope: string}` |  |
+
+##### `Topic.on(fn, options)`
+
+Hears this topic's messages.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `fn` | `function(Message&lt;T&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `function(): void`.
+
+##### `Topic.subscribe(fn, options)`
+
+A subscription to this topic.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[fn]` | `function(Message&lt;T&gt;): void` |  |
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `Subscription`.
+
+##### `Topic.once(options)`
+
+The next message.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[options]` | `Object` |  |
+
+Returns `Promise&lt;Message&lt;T&gt;&gt;`.
+
+##### `Topic.publish(data, options)`
+
+Publishes data of this topic's kind (options.topic names the topic when the handle is a pattern).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `data` | `T` |  |
+| `[options]` | `PublishOptions` |  |
+
+Returns `Promise&lt;Receipt&gt;`.
+
+##### `Topic.request(data, options)`
+
+Asks on this topic.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `data` | `T` |  |
+| `[options]` | `RequestOptions` |  |
+
+Returns `Promise&lt;Message&lt;*&gt;&gt;`.
+
+##### `Topic.stream(options)`
+
+This topic's messages as an async iterator.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[options]` | `SubscribeOptions` |  |
+
+Returns `AsyncIterable&lt;Message&lt;T&gt;&gt;`.
+
+#### `createEvents(options)`
+
+A new Events with no server: the page and (when given) the tabs.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[options]` | `EventsOptions` |  |
+
+Returns `Events`.
+
+#### `covers(general, specific)`
+
+Says whether every topic of the specific pattern is a topic of the general one.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `general` | `string` |  |
+| `specific` | `string` |  |
+
+Returns `boolean`.
+
+### drishti_subscription.js
+
+#### `SUBSCRIPTION_STATES`
+
+A subscription's states.
+
+#### class `Subscription`
+
+A subscription to a pattern.
+
+##### `new Subscription(events, pattern, fn, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events it belongs to |
+| `pattern` | `string` |  |
+| `fn` | `?function(Object): void` |  |
+| `o` | `Object` | its options (SubscribeOptions) |
+
+##### `Subscription.latest(key)`
+
+The latest message (of a key, when given; a message's key is what a later one replaces).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[key]` | `string` |  |
+
+Returns `?Object`.
+
+##### `Subscription.latestAll()`
+
+Every latest message by key, oldest first.
+
+Returns `Object[]`.
+
+##### `Subscription.subscribe(fn)`
+
+A feed: fn hears each message's data (and the message), so drishti-grid's connectLive and drishti-data's liveSource take a subscription as they take any feed.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `fn` | `function(*, Object): void` |  |
+
+Returns `function(): void`: stops it.
+
+##### `Subscription.byKind(handlers)`
+
+Handlers by the message's kind ({ rows: fn, resync: fn, ... }; '*' hears the kinds no handler names): each hears the data and the message. With it a subscription is a live-set channel: { subscribe: (h) =&gt; subscription.byKind(h) }.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `handlers` | `Object&lt;string, function(*, Object): void&gt;` |  |
+
+Returns `function(): void`: stops them.
+
+##### `Subscription.toGrid(grid, o)`
+
+Feeds a grid with backpressure: the flow ends in the grid's applyTransactionAsync with at most one batch in flight, everything that arrives meanwhile folded by row id (each message's data: a transaction, every row, or a data-changed notice).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `grid` | `Object` | a drishti-grid Grid or GridModel (anything with applyTransactionAsync) |
+| `[o]` | `import('./drishti_flow.js').GridSinkOptions` | getRowId, maxInFlight, highWater, onStats |
+
+Returns `{sink: GridSink, stop: function(): void}`: stop: the grid hears no more.
+
+##### `Subscription.off()`
+
+Ends it: the listeners are stopped, a server is told, iterators end.
+
+Returns `void`.
+
+### drishti_envelope.js
+
+#### class `EventError`
+
+A failure of drishti-events, in words: a code and the detail.
+
+##### `new EventError(code, detail, extra)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `code` | `string` | 'topic.invalid', 'timeout', 'no.responder', 'forbidden', ... (a server may send codes of its own) |
+| `detail` | `string` | what happened, in words |
+| `[extra]` | `Object` | more fields kept on the error (retry, status) |
+
+#### class `TimeoutError`
+
+A wait that ran out of time.
+
+##### `new TimeoutError(detail)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `detail` | `string` |  |
+
+#### class `AbortError`
+
+A wait that was given up (its AbortSignal fired, or the Events was closed).
+
+##### `new AbortError(detail)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[detail]` | `string` |  |
+
+#### `MAX_ID_LENGTH`
+
+The longest id the protocol allows.
+
+#### `isMessage(x)`
+
+Says whether a value is a message made by drishti-events (and not a plain payload some other code put on the page's bus).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `x` | `*` |  |
+
+Returns `boolean`.
+
+#### `checkTopic(topic, own)`
+
+Throws when a topic is not one a message may be published on (or, with own, a library's own '$' topic).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `*` |  |
+| `[own]` | `boolean` | '$' topics allowed |
+
+Returns `string`: the topic.
+
+#### `checkPattern(pattern)`
+
+Throws when a pattern is not one a listener may name ('$events.*' allowed: the library's own topics).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `*` |  |
+
+Returns `string`: the pattern.
+
+#### `matches(pattern, topic)`
+
+Says whether a topic matches a pattern (drishti-core's matcher; a library's own '$' topics too).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `topic` | `string` |  |
+
+Returns `boolean`.
+
+#### `patternsOverlap(a, b)`
+
+Says whether some topic matches both patterns.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `a` | `string` |  |
+| `b` | `string` |  |
+
+Returns `boolean`.
+
+#### `shape(spec)`
+
+A small shape checker: shape({ symbol: 'string', bid: 'number', note: 'string?', legs: [{ side: 'string' }], at: { x: 'number' } }). Types: string, number, boolean, object, array, any, null; a final "?" makes a field optional; an array of one shape is a list of that shape; an object is a nested shape. Fields not named are allowed.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `Object` |  |
+
+Returns `Validator`.
+
+### drishti_timing.js
+
+#### `systemClock(o)`
+
+The page's own clock (or Node's): Date.now, setTimeout, requestAnimationFrame, Math.random and the document's visibility.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{document: Object}` | the document whose visibility counts (default the page's) |
+
+Returns `Clock`.
+
+#### `testClock(o)`
+
+A clock for tests: time moves only when the test says.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{seed: number, start: number}` | seed default 1; start: the clock's first time (default 1,794,000,000,000) |
+
+Returns `TestClock`.
+
+#### `seededRandom(seed)`
+
+A seeded random function (mulberry32): the same seed, the same numbers.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `seed` | `number` |  |
+
+Returns `function(): number`.
+
+#### class `Backoff`
+
+Exponential back-off with full jitter: attempt n waits a random time up to min(max, base * factor^n), never under half the base, and never under a floor a server advised (bye's afterMs, SSE's retry:).
+
+##### `new Backoff(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean, random: function(): number}` | baseMs default 500; maxMs default 30,000; factor default 2; jitter default true; random: the clock's |
+
+##### `Backoff.next(floorMs)`
+
+The wait before the next attempt (and the attempt counted).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[floorMs]` | `number` | a server's advice: wait at least this |
+
+Returns `number`: ms.
+
+##### `Backoff.reset()`
+
+A connection held: the next wait starts small again.
+
+Returns `void`.
+
+#### class `Heartbeat`
+
+A watchdog on the clock: beat() on every sign of life; when none comes for timeoutMs, onTimeout runs (once until the next beat).
+
+##### `new Heartbeat(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{timeoutMs: number, onTimeout: function(): void, clock: Clock}` | timeoutMs 0: no watch |
+
+##### `Heartbeat.beat()`
+
+A sign of life: the watch starts again.
+
+Returns `void`.
+
+##### `Heartbeat.setTimeoutMs(ms)`
+
+Watches with a new timeout (a server's figure from its welcome).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `Heartbeat.stop()`
+
+Stops watching.
+
+Returns `void`.
+
+### drishti_connection.js
+
+#### `CONNECTION_STATES`
+
+The connection's states.
+
+#### `SECRET_PARAMS`
+
+Query parameters an address may not carry: a secret travels in auth or headers, never in an address.
+
+#### class `Connection`
+
+The connection to a server: the 'server' scope of an Events.
+
+##### `new Connection(events, address, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events it serves |
+| `address` | `(string\|function(): string\|Object)` | the server's address, a function asked at every connect, or a provider with transport(context) (the mock server) |
+| `[o]` | `ConnectOptions` |  |
+
+##### `Connection.subscribe(sub)`
+
+Holds a subscription at the server ('sub' now when open, and after every reconnect).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` | a Subscription |
+
+Returns `boolean`: true: it waits for the server's answer.
+
+##### `Connection.unsubscribe(sub)`
+
+Gives a subscription back.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `void`.
+
+##### `Connection.pending(sub)`
+
+Whether a subscription still waits for the server.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `boolean`.
+
+##### `Connection.publish(m, o)`
+
+Publishes a message to the server: sent now, or held (in order) until the connection opens; resolves when acknowledged.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` | the message |
+| `o` | `Object` | the publish's options |
+
+Returns `Promise&lt;{acked: boolean}&gt;`.
+
+##### `Connection.request(m, o)`
+
+Sends a request and waits for its answer (res); the Events times it out. Aborting tells the server (cancel).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` | the message |
+| `o` | `{timeoutMs: number, signal: AbortSignal}` |  |
+
+Returns `Promise&lt;Object&gt;`: the answer, a message.
+
+##### `Connection.flush()`
+
+Sends what waits now (it is sent on its own when the connection opens).
+
+Returns `Promise&lt;number&gt;`: how many were sent.
+
+##### `Connection.clearOutbox()`
+
+Empties the queue: what waits is not sent (each publish rejects).
+
+Returns `Promise&lt;number&gt;`: how many were dropped.
+
+##### `Connection.signOut()`
+
+The person signs out: the queue emptied, the stream positions forgotten.
+
+Returns `Promise&lt;void&gt;`.
+
+##### `Connection.reconnect()`
+
+Opens again now (a person pressed Reconnect; also after close or refused).
+
+Returns `void`.
+
+##### `Connection.close()`
+
+Closes and stops trying (a WebSocket says bye first).
+
+Returns `void`.
+
+##### `Connection.destroy()`
+
+Closes, rejects what waits and forgets the page's listeners.
+
+Returns `void`.
+
+##### `Connection.metrics()`
+
+The connection's figures.
+
+Returns `Object`.
+
+#### `checkAddress(url)`
+
+Throws when an address names a secret in its query (a token, a key, a password...), and says how to send it instead.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `url` | `string` |  |
+
+Returns `string`: the address.
+
+#### `base64url(text)`
+
+A token as base64url (a WebSocket sub-protocol's characters).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+### drishti_protocol.js
+
+#### `PROTOCOL_VERSION`
+
+The protocol's version.
+
+#### `SUBPROTOCOL`
+
+The WebSocket sub-protocol of version 1 (a host that needs its own name gives the option subprotocol).
+
+#### `CLIENT_FRAMES`
+
+The frames a client sends.
+
+#### `SERVER_FRAMES`
+
+The frames a server sends.
+
+#### `ERROR_CODES`
+
+The protocol's own error codes (a server may send any other code of its own).
+
+#### `CLOSE_CODES`
+
+WebSocket close codes: 4400 a bad frame, 4401 not authenticated, 4403 forbidden, 4408 no hello in time, 4429 too fast, 4500 the server's fault.
+
+#### `encodeFrames(frames)`
+
+One frame or a batch, as the text a transport sends.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `frames` | `Object[]` |  |
+
+Returns `string`.
+
+#### `decodeFrames(text, o)`
+
+Reads a transport message: its frames, or why it was dropped (too-large, not-json, not-a-frame). A frame of an unknown type is kept with unknown: true (to be counted and ignored).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+| `[o]` | `{maxBytes: number}` | maxBytes default 1 MB |
+
+Returns `{frames: Object[], bytes: number, error: ?string}`.
+
+#### `checkFrame(f)`
+
+Checks a server's frame before use: true, or what is wrong in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `f` | `Object` |  |
+
+Returns `(true\|string)`.
+
+### drishti_sequence.js
+
+#### `SEQUENCE_LIMITS`
+
+The bounds of section 3.8.
+
+#### class `Sequencer`
+
+Orders, deduplicates and repairs the messages of numbered streams.
+
+##### `new Sequencer(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `SequencerOptions` |  |
+
+##### `Sequencer.accept(m)`
+
+Takes one message from the server and says what may be delivered now, in order. A message held for a gap is delivered later through onRelease. A message with no seq is delivered unless its id was seen lately.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` | the message (id, stream, seq ...) |
+
+Returns `Object[]`: the messages to deliver now (possibly none).
+
+##### `Sequencer.serverGap(g)`
+
+A `gap` frame of the server: it did not send this range (a slow client, a trimmed log). A recoverable one is asked for again; one that is not is declared lost, and what follows is delivered.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `g` | `{stream: string, from: number, to: number, recoverable: boolean}` |  |
+
+Returns `Object[]`: messages to deliver now.
+
+##### `Sequencer.positions()`
+
+Where each stream was: the `after` of a `sub` after a reconnect.
+
+Returns `Object&lt;string, {epoch: ?string, seq: number}&gt;`.
+
+##### `Sequencer.resumed(streams, recovered)`
+
+The server's answer to a `sub` (`subd`): the streams as they stand now, and whether everything after `after` will follow. A new epoch, or recovered false, starts the stream again from the server's position and asks for a resync.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `streams` | `Object&lt;string, {epoch: string, seq: number}&gt;` |  |
+| `recovered` | `boolean` |  |
+
+Returns `string[]`: the streams that must resync.
+
+##### `Sequencer.seed(positions)`
+
+Takes positions heard elsewhere (the tabs of a shared hub that took over): a stream not yet known here resumes after them.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `positions` | `Object&lt;string, {epoch: ?string, seq: number}&gt;` |  |
+
+Returns `number`: how many streams were taken.
+
+##### `Sequencer.forgetStream(name)`
+
+Forgets one stream (the server no longer knows it: a restart that lost the log); its next message starts it again.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `void`.
+
+##### `Sequencer.reset()`
+
+Forgets the numbering (a new session with no resume): positions are empty, held messages are dropped.
+
+Returns `void`.
+
+##### `Sequencer.watch(stream, staleMs)`
+
+Says (onStale, once) when a stream is quiet for longer than it should be, and (onFresh) when it speaks again.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `stream` | `string` |  |
+| `staleMs` | `number` | 0 or less: not watched |
+
+Returns `function(): void`: stops watching.
+
+##### `Sequencer.isStale(stream)`
+
+Whether a watched stream is stale now.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `stream` | `string` |  |
+
+Returns `boolean`.
+
+##### `Sequencer.held()`
+
+How many messages wait for a gap, over every stream.
+
+Returns `number`.
+
+### drishti_transport-sse.js
+
+#### `parseSse(text)`
+
+Reads Server-Sent Events from text: the whole events and what is left for the next chunk.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `{events: SseEvent[], rest: string}`.
+
+#### `readSse(response, o)`
+
+The events of a fetch answer that streams Server-Sent Events, as an async iterator (ends with the answer, or when the signal fires).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `response` | `Response` |  |
+| `[o]` | `{signal: AbortSignal}` |  |
+
+Returns `AsyncIterable&lt;SseEvent&gt;`.
+
+### drishti_flow.js
+
+#### `OVERFLOW_RULES`
+
+The overflow rules of a buffer.
+
+#### `HIDDEN_DELIVERY_MS`
+
+How long a hidden page waits between deliveries (it has no animation frames).
+
+#### class `Conflater`
+
+The latest value by key: push messages, take what is held in arrival order (a later message with a held key takes the earlier one's place, or is merged into it). Bounded: past max the overflow rule applies.
+
+##### `new Conflater(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{key: (string\|function(Object): ?string), merge: function(Object, Object): Object, max: number, overflow: string, onDrop: function(Object, string): void}` | key: a field of the message ('key', 'topic'), else of its data, or a function (null: not conflated); default the message's key. max default 10,000; overflow default 'conflate' (a message whose key is held replaces it, else the oldest goes); onDrop hears each dropped message and its reason (conflated, overflow) |
+
+##### `Conflater.push(m)`
+
+Adds a message (it may replace a held one with its key, or be dropped by the overflow rule).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+
+Returns `boolean`: false: the message was refused (overflow 'error' or 'drop-newest').
+
+##### `Conflater.take()`
+
+Takes everything held, in arrival order.
+
+Returns `Object[]`.
+
+##### `Conflater.clear()`
+
+Forgets everything held.
+
+Returns `void`.
+
+#### class `GridSink`
+
+A grid fed with backpressure: at most maxInFlight batches in the grid, everything arriving meanwhile folded by row id. A message's data is {type: 'transaction', add, update, remove}, {type: 'rows', rows} or {type: 'dataChanged', ...}.
+
+##### `new GridSink(target, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `target` | `{applyTransactionAsync: function(Object): Promise, setRows: function(Object[]): void, dataChanged: function(Object): void}` | a drishti-grid Grid or GridModel (or anything with those methods) |
+| `[o]` | `GridSinkOptions` |  |
+
+##### `GridSink.push(msg)`
+
+One message's data: a transaction, every row, or a data-changed notice.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `msg` | `Object` |  |
+
+Returns `void`.
+
+##### `GridSink.drained()`
+
+Resolves when everything received has reached the grid.
+
+Returns `Promise&lt;void&gt;`.
+
+### drishti_outbox.js
+
+#### `OUTBOX_DEFAULTS`
+
+The queue's bounds by default.
+
+#### class `Outbox`
+
+The publishes not yet acknowledged, in the order they were made.
+
+##### `new Outbox(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{clock: Object, options: OutboxOptions, namespace: string, env: Object, onDrop: function(Object, string, string): void}` |  |
+
+##### `Outbox.has(id)`
+
+Whether a message waits.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `boolean`.
+
+##### `Outbox.add(frame, o)`
+
+Holds a publish (refused in words past a bound, unless the oldest may go).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `frame` | `Object` | the pub frame |
+| `o` | `{persist: boolean, ttlMs: number, ack: boolean, resolve: Function, reject: Function}` |  |
+
+Returns `Object`: the entry.
+
+##### `Outbox.takeUnsent()`
+
+What waits to be sent, in order (expired messages dropped first); each is marked sent.
+
+Returns `Object[]`: the entries.
+
+##### `Outbox.resend()`
+
+After a reconnect every message not acknowledged is to be sent again.
+
+Returns `number`: how many were sent before.
+
+##### `Outbox.done(id, acked)`
+
+A message was sent and wants no acknowledgement, or it was acknowledged: it leaves the queue (and the disk).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `acked` | `boolean` |  |
+
+Returns `boolean`: whether it was waiting.
+
+##### `Outbox.remove(id, err, reason)`
+
+A message is given up (refused, dropped, aborted, expired): it leaves the queue and its publish is rejected.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `err` | `Error` |  |
+| `[reason]` | `string` | counted as a drop with this reason |
+
+Returns `boolean`.
+
+##### `Outbox.sweep()`
+
+Drops what is older than its age or ttl.
+
+Returns `number`: how many.
+
+##### `Outbox.wantsRestore()`
+
+Whether the connection's first opening takes back what an earlier page left (once).
+
+Returns `boolean`.
+
+##### `Outbox.restore(send, holdMs)`
+
+What an earlier page left on disk, taken back (under a Web Lock, so one tab at a time): those messages are sent with the rest. The lock is held until they are acknowledged (or for at most holdMs).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `send` | `function(): void` | called when the restored messages are in the queue |
+| `[holdMs=10000]` | `number` |  |
+
+Returns `Promise&lt;number&gt;`: how many were restored.
+
+##### `Outbox.clear()`
+
+Empties the queue (and the disk): every waiting publish is rejected.
+
+Returns `Promise&lt;number&gt;`: how many were dropped.
+
+##### `Outbox.metrics()`
+
+The queue's figures.
+
+Returns `{count: number, bytes: number, unsent: number, persisted: boolean, oldestMs: ?number}`.
+
+##### `Outbox.destroy(err)`
+
+Stops the expiry timer and rejects what waits (the connection is destroyed); the disk keeps persisted messages for the next page.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `err` | `Error` |  |
+
+Returns `void`.
+
+#### `memoryStore()`
+
+A store in memory, with the calls of the IndexedDB one (tests; a page that wants none on disk). Kept across connections it stands for a reload.
+
+Returns `OutboxStore`.
+
+#### `indexedDbStore(o)`
+
+The IndexedDB store of an application (and a signed-in person: the namespace), or null where there is no IndexedDB.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{namespace: string, indexedDB: Object}` | namespace: part of the database's name; indexedDB: a stand-in |
+
+Returns `?OutboxStore`.
+
+### drishti_tabs.js
+
+#### `TABS_VERSION`
+
+The version of the tab frames.
+
+#### class `TabsScope`
+
+The 'tabs' scope of an Events: an adapter over one BroadcastChannel, opened when first used.
+
+##### `new TabsScope(events, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events it serves |
+| `[o]` | `{namespace: string, env: Object}` |  |
+
+##### `TabsScope.publish(m)`
+
+Sends a message to the other tabs.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+
+Returns `Promise&lt;{acked: boolean}&gt;`.
+
+##### `TabsScope.request(m, o)`
+
+Asks the other tabs; the first answer wins (the Events times it out). Aborting tells the tab that works on it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `o` | `{signal: AbortSignal}` |  |
+
+Returns `Promise&lt;Object&gt;`.
+
+##### `TabsScope.subscribe()`
+
+Listening needs the channel open; nothing is asked of anyone.
+
+Returns `boolean`: false: active at once.
+
+##### `TabsScope.unsubscribe()`
+
+Nothing to give back.
+
+Returns `void`.
+
+##### `TabsScope.reply(pattern, fn)`
+
+Answers requests from the other tabs.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `fn` | `function(Object): *` |  |
+
+Returns `function(): void`.
+
+##### `TabsScope.signOut()`
+
+Tells the other tabs the person signed out (each empties its queue and forgets its stream positions).
+
+Returns `Promise&lt;void&gt;`.
+
+##### `TabsScope.metrics()`
+
+The scope's figures.
+
+Returns `Object`.
+
+##### `TabsScope.destroy()`
+
+Closes the channel.
+
+Returns `void`.
+
+#### class `Leader`
+
+The leader among the tabs of one namespace: the tab holding a Web Lock. When it closes, the next tab waiting takes over.
+
+##### `new Leader(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{name: string, env: Object, onLead: function(): void}` |  |
+
+##### `Leader.start()`
+
+Waits for the lock; onLead runs when this tab leads (held until stop()).
+
+Returns `void`.
+
+##### `Leader.stop()`
+
+Gives the lock back (the next tab leads).
+
+Returns `void`.
+
+### drishti_shared-hub.js
+
+#### `HUB_TIMING`
+
+How often a tab tells the hub it is alive, and how long the hub waits before it forgets a silent tab.
+
+#### class `HubHost`
+
+The hub: one Connection serving many tabs (in a SharedWorker or the leader tab).
+
+##### `new HubHost(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `{address: *, options: Object, clock: Object, env: Object, id: string, post: function(string, Object): void, auth: function(Object): Promise&lt;Object&gt;}` | post(clientId, frame) sends to a tab; auth (optional) answers auth in place |
+
+##### `HubHost.frame(cid, f)`
+
+A frame from a tab.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `cid` | `string` | the tab |
+| `f` | `Object` |  |
+
+Returns `void`.
+
+##### `HubHost.destroy()`
+
+Closes the connection; the tabs are told.
+
+Returns `void`.
+
+#### class `HubClient`
+
+A tab's side of the shared hub: the 'server' scope of its Events.
+
+##### `new HubClient(events, link, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the tab's Events |
+| `link` | `{post: function(Object): void, listen: function(function(Object): void): void, close: function(): void}` |  |
+| `o` | `{mode: string, auth: Function, headers: *, clock: Object}` |  |
+
+##### `HubClient.subscribe(sub)`
+
+Holds a subscription at the hub.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `boolean`: true: it waits for the hub's answer.
+
+##### `HubClient.unsubscribe(sub)`
+
+Gives a subscription back.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `void`.
+
+##### `HubClient.pending(sub)`
+
+Whether a subscription still waits for the hub.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `sub` | `Object` |  |
+
+Returns `boolean`.
+
+##### `HubClient.publish(m, o)`
+
+Publishes through the hub; resolves when the server acknowledges. Kept until then, and sent again (same id) if the hub changes.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `o` | `Object` |  |
+
+Returns `Promise&lt;{acked: boolean}&gt;`.
+
+##### `HubClient.request(m, o)`
+
+Asks the server through the hub. Aborting tells the hub (which tells the server).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `o` | `{timeoutMs: number, signal: AbortSignal}` |  |
+
+Returns `Promise&lt;Object&gt;`.
+
+##### `HubClient.flush()`
+
+Sends what waits at the hub now.
+
+Returns `Promise&lt;number&gt;`.
+
+##### `HubClient.clearOutbox()`
+
+Empties the hub's queue.
+
+Returns `Promise&lt;number&gt;`.
+
+##### `HubClient.signOut()`
+
+The person signs out: the hub's queue and positions are forgotten, and so are this tab's.
+
+Returns `Promise&lt;void&gt;`.
+
+##### `HubClient.reconnect()`
+
+Opens the shared connection again now.
+
+Returns `void`.
+
+##### `HubClient.close()`
+
+Closes the shared connection (for every tab).
+
+Returns `void`.
+
+##### `HubClient.metrics()`
+
+The figures: the hub's (as last heard) and this tab's.
+
+Returns `Object`.
+
+##### `HubClient.destroy()`
+
+Leaves the hub.
+
+Returns `void`.
+
+#### `serveSharedWorker(scope, o)`
+
+Serves the shared hub inside a SharedWorker: every tab's port joins the one HubHost of this worker (the worker's name carries the namespace and the address).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `scope` | `Object` | the worker's global (self) |
+| `[o]` | `{clock: Object, env: Object}` |  |
+
+Returns `{host: function(): ?HubHost}`.
+
+#### `workerAddress(o)`
+
+The address of the hub's worker file: the option, else beside the loaded bundle.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `o` | `Object` |  |
+
+Returns `?string`.
+
+### drishti_metrics.js
+
+#### `BUCKETS`
+
+The upper bounds of the histogram's buckets, in milliseconds: 0.01 ms doubling to about 84 s, then one for the rest.
+
+#### class `Histogram`
+
+A histogram of durations in fixed log-scale buckets.
+
+##### `new Histogram()`
+
+An empty histogram.
+
+##### `Histogram.add(ms)`
+
+Counts one duration.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `Histogram.quantile(p)`
+
+The duration under which this share of the counts falls (a bucket's upper bound; the largest seen for the last bucket).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `p` | `number` | 0.5, 0.99 |
+
+Returns `?number`: null when nothing was counted.
+
+##### `Histogram.summary()`
+
+The figures a metrics object shows.
+
+Returns `{count: number, p50: ?number, p99: ?number, max: ?number}`.
+
+#### class `Rate`
+
+Counts per second over the last one and ten seconds (ten one-second slots).
+
+##### `new Rate(clock)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `clock` | `{now: function(): number}` |  |
+
+##### `Rate.add(n)`
+
+Counts n now.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[n=1]` | `number` |  |
+
+Returns `void`.
+
+##### `Rate.summary()`
+
+Per second over the last second (the one before this one) and the last ten.
+
+Returns `{total: number, perSecond1s: number, perSecond10s: number}`.
+
+### drishti_trace.js
+
+#### class `Recorder`
+
+A ring of message headers and what became of each, with the connection's and the subscriptions' changes beside them.
+
+##### `new Recorder(clock, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `clock` | `{now: function(): number}` |  |
+| `[o]` | `RecorderOptions` |  |
+
+##### `Recorder.record(m, dir, scope)`
+
+Records a message coming in or going out.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `dir` | `('in'\|'out')` |  |
+| `[scope]` | `string` |  |
+
+Returns `?Object`: the entry.
+
+##### `Recorder.delivered(m, pattern, listeners)`
+
+A message was delivered to a subscription's listeners.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `Object` |  |
+| `pattern` | `string` |  |
+| `listeners` | `number` |  |
+
+Returns `void`.
+
+##### `Recorder.dropped(m, reason, words, pattern)`
+
+A message stopped: the reason in a word and in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `?Object` |  |
+| `reason` | `string` |  |
+| `words` | `string` |  |
+| `pattern` | `?string` |  |
+
+Returns `void`.
+
+##### `Recorder.state(d)`
+
+The connection changed state.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `d` | `Object` | $events.state's data |
+
+Returns `void`.
+
+##### `Recorder.note(n)`
+
+Something beside the messages: a subscription's change, a gap, a listener's error.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `Object` | with type |
+
+Returns `void`.
+
+##### `Recorder.find(q)`
+
+The entries matching a filter, newest last.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[q]` | `{topic: string, key: string, id: string, since: number, dir: string}` | topic may be a pattern |
+
+Returns `Object[]`.
+
+##### `Recorder.clear()`
+
+Forgets everything recorded.
+
+Returns `void`.
+
+##### `Recorder.metrics()`
+
+The recorder's figures.
+
+Returns `{headers: number, max: number, payloads: boolean}`.
+
+#### `explainWhy(events, q)`
+
+Why a message did or did not reach the page's listeners: the steps in words, the first that failed marked.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` | the Events |
+| `q` | `{topic: string, key: string, id: string, since: number}` |  |
+
+Returns `import('../../drishti-core/src/drishti_explain.js').ExplainResult`: with failed: the first step that failed (or null) and steps' ok.
+
+### drishti_status.js
+
+#### `ANNOUNCE_EVERY_MS`
+
+How often the badge may speak, in milliseconds.
+
+#### `badgeView(st, f)`
+
+What the badge shows for a connection and its feeds: the state kit's kind, the words, and the button (pure: the tests read it).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `st` | `{state: string, waitMs: ?number, at: number, reason: ?string, suspended: boolean}` | the last $events.state (at: when) |
+| `f` | `{missed: number, waiting: number, now: number, server: boolean}` | missed: updates lost since the last Refresh; waiting: unsent publishes |
+
+Returns `{kind: string, text: string, detail: ?string, fix: ?string, tone: string}`: fix: 'reconnect', 'refresh' or null.
+
+#### `statusBadge(el, events, o)`
+
+Draws the connection's and the feeds' state into an element, and keeps it current.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` |  |
+| `events` | `Object` | an Events |
+| `[o]` | `{refresh: function(): void, tickMs: number}` | refresh: what Refresh does after missed updates (default: forget the count) |
+
+Returns `function(): void`: stops it.
+
+### drishti_index.js
+
+#### `registerMock(address, server, only)`
+
+Registers (or, with null, forgets) the mock server answering an address such as 'mock:' (the mock part calls this).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `address` | `string` |  |
+| `server` | `?Object` | a MockServer, or null |
+| `[only]` | `Object` | with null: forget the address only while it still names this server |
+
+Returns `void`.
+
+#### `segment(text)`
+
+Encodes any text as one topic segment (drishti-core's segment): 'Bank of Canada' becomes one segment a topic can carry.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `string`.
+
+#### `connect(url, options)`
+
+An Events connected to a server (WebSocket for ws: and wss: addresses, Server-Sent Events otherwise), or, with no address and no configured events endpoint, the page and its tabs only. With share: true (and a namespace) the application's tabs share one connection: a SharedWorker holds it, else the leader tab, else each tab connects for itself. Nothing has to be awaited: subscriptions are sent when the connection opens, publishes wait for it, and every reconnect restores both.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[url]` | `(string\|function(): string\|Object)` | the server's address, a function asked at every connect, or a provider with transport(context) (the mock server); default the endpoint configure({ endpoints: { events } }) names |
+| `[options]` | `(import('./drishti_events-hub.js').EventsOptions\|import('./drishti_connection.js').ConnectOptions)` |  |
+
+Returns `import('./drishti_events-hub.js').Events`.
+
+### drishti_events-worker.js
+
+#### `IN_SHARED_WORKER`
+
+Whether this script runs as a SharedWorker (it has onconnect and no document).
+
+### drishti_mock.js
+
+#### class `MockTabs`
+
+Tabs in one page.
+
+##### `new MockTabs(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `{clock: Object, worker: boolean}` | clock: delivery on its timers; worker: false leaves the SharedWorker out (the leader tab is then the hub) |
+
+##### `MockTabs.tab(extra)`
+
+The environment of one more tab: give it to createEvents or connect as env.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[extra]` | `Object` | more of the environment (a WebSocket stand-in, ...) |
+
+Returns `Object`: env, with close() to close the tab.
+
+##### `MockTabs.workerHost(name)`
+
+The hub a mock SharedWorker holds (tests look inside), or null.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[name]` | `string` | default the first worker |
+
+Returns `?Object`.
+
+##### `MockTabs.close(env)`
+
+Closes a tab: its channels and ports close, its locks are released (the next tab waiting takes them).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `env` | `Object` | a tab's environment |
+
+Returns `void`.
+
+#### `MOCK_CAN`
+
+What a MockServer offers in its welcome.
+
+#### class `MockServer`
+
+An in-page server that speaks the events protocol, version 1, for tests and demos.
+
+##### `new MockServer(o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[o]` | `MockServerOptions` |  |
+
+##### `MockServer.transport(ctx)`
+
+The transport the client's connection uses (connect(server) calls it for every attempt).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ctx` | `Object` | the connection's transport context (onOpen, onText, onClose) |
+
+Returns `{kind: string, send: function(Object[]): Promise&lt;void&gt;, close: function(number): void, bufferedAmount: function(): number}`.
+
+##### `MockServer.publish(topic, data, o)`
+
+Publishes a message to every connection subscribed to a matching pattern (numbered in its stream, retained, logged).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `topic` | `string` |  |
+| `data` | `*` |  |
+| `[o]` | `{key: string, kind: string, stream: string, meta: Object, id: string, source: string, retain: boolean}` |  |
+
+Returns `Object`: the msg frame.
+
+##### `MockServer.reply(pattern, fn)`
+
+Answers requests on a topic or pattern.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pattern` | `string` |  |
+| `fn` | `function({topic: string, data: *, id: string, signal: AbortSignal}): *` | what it returns is the answer; what it throws, the error |
+
+Returns `function(): void`: stops answering.
+
+##### `MockServer.every(ms, fn)`
+
+Runs fn every ms on the server's clock (a ticker).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+| `fn` | `function(): void` |  |
+
+Returns `function(): void`: stops it.
+
+##### `MockServer.drop()`
+
+Drops every connection (as a network would: close 1006).
+
+Returns `void`.
+
+##### `MockServer.partition(ms)`
+
+Drops every connection and refuses new ones for ms.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.lose(n)`
+
+The next n messages published are not sent (their numbers are used: the clients see a gap).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.duplicate(n)`
+
+The next n messages are sent twice.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.delay(ms)`
+
+Every frame, both ways, takes ms (0 to stop).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ms` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.reorder(n)`
+
+The next n messages are held and sent in reverse order.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `n` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.refuse(what, pattern)`
+
+Refuses connections: 'auth' (close 4401: the client asks auth once more), 'forbidden' (4403: it stops), or null to accept again; a pattern for 'subscribe' refuses subscriptions it covers; 'publish' makes the server read only.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `what` | `(?string)` | 'auth', 'forbidden', 'publish', null |
+| `[pattern]` | `string` | with 'subscribe': which patterns |
+
+Returns `void`.
+
+##### `MockServer.restart()`
+
+Restarts: a new epoch (the numbering starts again), the log, the retained values and the sessions forgotten, every connection dropped.
+
+Returns `void`.
+
+##### `MockServer.slow(n)`
+
+The next n messages are dropped for every client as a slow client's would be; then a gap frame says so.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[n=5]` | `number` |  |
+
+Returns `void`.
+
+##### `MockServer.close()`
+
+Stops every timer and connection; the address is free again.
+
+Returns `void`.
+
+### drishti_inspector.js
+
+#### `INSPECTOR_TABS`
+
+The inspector's tabs.
+
+#### `outcomeOf(e)`
+
+What became of a recorded message, in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `e` | `Object` | a recorder entry |
+
+Returns `string`.
+
+#### `messageRows(events, f)`
+
+The Messages tab's rows: the recorder's entries, newest first, filtered by a topic pattern ('prices.&gt;') or words in the topic, kind or outcome; and by direction and outcome.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+| `[f]` | `{text: string, dir: string, outcome: string, max: number}` | outcome: 'delivered', 'dropped' or 'none' |
+
+Returns `Object[]`.
+
+#### `subscriptionRows(events)`
+
+The Subscriptions tab's rows.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `Object[]`.
+
+#### `queueRows(events)`
+
+The Queue tab's rows: what waits for a server, oldest first.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `Object[]`.
+
+#### `connectionView(events)`
+
+The Connection tab: the states, newest last, and the figures in words.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `{states: Array&lt;{time: string, state: string, reason: string}&gt;, figures: Array&lt;{label: string, value: string}&gt;}`.
+
+#### class `Inspector`
+
+The inspector drawn into an element.
+
+##### `new Inspector(el, events, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` | where it is drawn |
+| `events` | `Object` | the Events inspected |
+| `[o]` | `{refreshMs: number, onClose: function(): void, gridLib: Object}` | gridLib: drishti-grid's API (default: loaded) |
+
+##### `Inspector.show(t)`
+
+Shows a tab.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `t` | `string` | one of INSPECTOR_TABS |
+
+Returns `void`.
+
+##### `Inspector.refresh()`
+
+Draws the shown tab from the events' state now.
+
+Returns `void`.
+
+##### `Inspector.open(row)`
+
+Opens one message: its header and, when the recorder keeps payloads, its data (as text).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `row` | `(Object\|number)` | a Messages row, or its index |
+
+Returns `void`.
+
+##### `Inspector.close()`
+
+Closes the inspector (its element is emptied).
+
+Returns `void`.
+
+#### `openInspector(events, el, o)`
+
+Opens the inspector: into an element (a dock's panel, a page's own place), or else a drawer at the page's side. drishti-grid is loaded first.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+| `[el]` | `HTMLElement` | where to draw it |
+| `[o]` | `{refreshMs: number}` |  |
+
+Returns `Promise&lt;Inspector&gt;`.
+
+#### `inspectorCommand(events)`
+
+A command for drishti-core's command palette: "Open the events inspector".
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `events` | `Object` |  |
+
+Returns `{id: string, title: string, run: function(): Promise&lt;Inspector&gt;}`.
+
+### Types of drishti-events
+
+#### `ConnectOptions` : `Object`
+
+The options of connect (with those of an Events: routes, clock, limits, signal, ...).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[transport]` | `('websocket'\|'sse'\|'fetch'\|function(Object): Object)` | default by the address: ws: and wss: a WebSocket, else fetch when auth or headers are given, else sse (EventSource); or a function making a transport (a stand-in, the mock server) |
+| `[protocol=1]` | `(1\|'raw')` | raw: a server that only sends its own JSON (each value a message by topicOf, seqOf, idOf, keyOf, kindOf) |
+| `[auth]` | `function({reason: string, status: number}): Promise&lt;{token: string, expiresAt: number}&gt;` | asked before every connect ('connect'), a minute before the token runs out ('expiring') and once after a refusal ('refused') |
+| `[wsAuth='hello']` | `('hello'\|'subprotocol'\|'cookie')` | how a WebSocket carries the token: in the first frame, as a second sub-protocol (bearer.&lt;token, base64url&gt;), or not at all (the site's cookie) |
+| `[headers]` | `(Object&lt;string, string&gt;\|function(): Object&lt;string, string&gt;)` | fetch: more headers |
+| `[credentials='same-origin']` | `string` | fetch and EventSource ('include': cross-site cookies) |
+| `[heartbeatMs]` | `number` | silence allowed before the connection is taken as dead (1.5 times this); default the server's figure from welcome, else 45,000; EventSource cannot see comment lines, so its watch is on only when this is given |
+| `[backoff]` | `{baseMs: number, maxMs: number, factor: number, jitter: boolean}` |  |
+| `[subprotocol='events.v1']` | `string` | the WebSocket sub-protocol's name |
+| `[outbox]` | `import('./drishti_outbox.js').OutboxOptions` | the offline queue (persist, bounds, overflow, store) |
+| `[namespace]` | `string` | differs per application and signed-in person: the queue's database and the tabs' channel carry it |
+| `[share=false]` | `boolean` | the application's tabs share one connection (a SharedWorker, else the leader tab); needs a namespace |
+| `[worker]` | `(string\|boolean)` | the shared hub's worker file (default drishti_events-worker.js beside the bundle; false: no worker) |
+| `[idleCloseMs]` | `number` | a page hidden for longer than this gives its connection back and takes it again when shown (off by default); a page put away (pagehide, freeze) always closes cleanly and opens again when shown (pageshow, resume) |
+| `[events]` | `string[]` | raw SSE: the event names that carry values (default every name for fetch, message for EventSource) |
+| `[topicOf]` | `function(*, Object): string` | raw: the topic of a value (default 'feed') |
+| `[seqOf]` | `function(*, Object): number` | raw |
+| `[idOf]` | `function(*, Object): string` | raw |
+| `[keyOf]` | `function(*, Object): string` | raw |
+| `[kindOf]` | `function(*, Object): string` | raw (default the SSE event's name) |
+| `[env]` | `{WebSocket: Function, EventSource: Function, fetch: Function, window: Object}` | the browser's classes and window (stand-ins in tests; default the page's) |
+
+#### `Message` : `Object`
+
+A message.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `id` | `string` | unique per publisher; made by the publisher |
+| `topic` | `string` | 'prices.fx.USDCAD' |
+| `data` | `T` | any JSON value |
+| `time` | `number` | the publisher's clock, ms since 1970 |
+| `source` | `string` | who published: a server's name, 'page', or 'tab:&lt;id&gt;' |
+| `[seq]` | `number` | the position in its stream (a server's messages) |
+| `[stream]` | `string` | the stream the seq counts in (default: the topic) |
+| `[key]` | `string` | what a later message replaces (conflation) |
+| `[kind]` | `string` | the name of the data's shape ('tick', 'rows') |
+| `[re]` | `string` | the id of the request this answers |
+| `[meta]` | `Object&lt;string, string&gt;` | headers (a trace id) |
+| `scope` | `('page'\|'tabs'\|'server')` | where it came from (added on receipt) |
+| `receivedAt` | `number` | this page's clock (added on receipt) |
+| `[retained]` | `boolean` | a last value sent on subscribing |
+| `[replayed]` | `boolean` | a message sent again after a gap |
+| `[invalid]` | `boolean` | it failed its kind's check and was delivered anyway (onInvalid: 'deliver') |
+
+#### `Validator`
+
+A check of a message's data: true, or what is wrong in words.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `data` | `*` |  |
+| `[message]` | `Message&lt;*&gt;` |  |
+
+#### `Receipt` : `Object`
+
+What a publish answers once it is delivered.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `id` | `string` | the message's id |
+| `topic` | `string` |  |
+| `time` | `number` | when it was published |
+| `to` | `string[]` | the scopes it went to |
+| `acked` | `boolean` | a server acknowledged it (always true for the page and the tabs once sent) |
+| `[unrouted]` | `string[]` | scopes routed to that this Events does not have (counted as dropped: unrouted) |
+
+#### `SubscribeOptions` : `Object`
+
+The options of a subscription (section 2.3 of the design).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[scope]` | `('page'\|'tabs'\|'server')` | hear only this scope (default: every scope the routes give) |
+| `[signal]` | `AbortSignal` | ends it |
+| `[where]` | `function(Message&lt;*&gt;): boolean` | false drops the message (recorded as filtered) |
+| `[validate]` | `function(*, Message&lt;*&gt;): (boolean\|string)` | one more check of the data (true, or words) |
+| `[onInvalid='drop']` | `('drop'\|'deliver')` | a message that fails its check: dropped, or delivered marked invalid |
+| `[conflate]` | `({key: (string\|function(Message&lt;*&gt;): string), merge: function(Message&lt;*&gt;, Message&lt;*&gt;): Message&lt;*&gt;}\|boolean)` | keep only the latest message per key until delivery (key: a field of the message, or of its data, or a function; default the message's key); merge combines an older and a newer one |
+| `[deliver='now']` | `('now'\|'frame'\|{everyMs: number})` | when to deliver: at once, once per animation frame, at most this often |
+| `[batch=false]` | `boolean` | the listener receives an array per delivery |
+| `[buffer]` | `{max: number, overflow: ('conflate'\|'drop-oldest'\|'drop-newest'\|'error')}` | the most messages held undelivered (default 10,000, overflow conflate) |
+| `[retained=false]` | `boolean` | ask the server for the last value of each matching topic first |
+| `[from='resume']` | `('now'\|'resume')` | after a reconnect: nothing missed, or what was missed |
+| `[onGap='replay']` | `('replay'\|'resync'\|'ignore')` | what a gap in a stream does |
+| `[staleMs]` | `number` | how long silence is normal |
+
+#### `PublishOptions` : `Object`
+
+The options of a publish.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[to]` | `(string\|string[])` | the scope or scopes (default: the routes) |
+| `[key]` | `string` | what a later message replaces |
+| `[kind]` | `string` | the name of the data's shape |
+| `[meta]` | `Object&lt;string, string&gt;` | headers |
+| `[ack]` | `boolean` | wait for a server's acknowledgement (default true to a server) |
+| `[queue='memory']` | `('memory'\|'persist'\|boolean)` | while not connected: held in memory, kept on disk, or false: fail at once |
+| `[ttlMs]` | `number` | dropped from the queue when older |
+| `[signal]` | `AbortSignal` |  |
+
+#### `RequestOptions` : `Object`
+
+The options of a request.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[timeoutMs=10000]` | `number` |  |
+| `[signal]` | `AbortSignal` | aborting tells the server (cancel) |
+| `[to]` | `(string\|string[])` | the scope (default: the routes) |
+| `[kind]` | `string` |  |
+| `[meta]` | `Object&lt;string, string&gt;` |  |
+
+#### `EventsOptions` : `Object`
+
+The options of an Events.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[routes]` | `Object&lt;string, (string\|string[])&gt;` | pattern to scope or scopes ('ui.&gt;': 'page', '&gt;': 'server'); the most specific pattern wins; a topic no route matches takes the default (with a server: 'ui.&gt;' the page, everything else the server; without one: the page) |
+| `[clock]` | `Clock` | every timer, time and random number (testClock() in tests) |
+| `[bus]` | `EventBus` | the page's bus (default drishti-core's shared bus) |
+| `[source='page']` | `string` | the source named on this page's messages |
+| `[limits]` | `Object&lt;string, number&gt;` | the ceilings (DEFAULT_LIMITS) |
+| `[signal]` | `AbortSignal` | ends the whole Events (a component's life) |
+| `[namespace]` | `string` | differs per application and signed-in person: the tabs' channel, the shared hub and the queue's database carry it, so a second person on the same origin shares nothing |
+| `[tabs=true]` | `boolean` | false: no 'tabs' scope (it is there wherever the browser has a BroadcastChannel) |
+| `[env]` | `Object` | stand-ins for the browser's classes (BroadcastChannel, SharedWorker, locks, WebSocket, ...) in tests |
+| `[onError]` | `function(Error, Object): void` | also told of every error published on $events.error |
+| `[recorder]` | `(import('./drishti_trace.js').RecorderOptions\|boolean)` | the recorder behind explain and the inspector (false: off) |
+| `[onMetrics]` | `function(Object): void` | given events.metrics() once a second (a host's own telemetry) |
+
+#### `GridSinkOptions` : `Object`
+
+The options of a grid sink.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[getRowId]` | `function(Object): string` | default row.id |
+| `[maxInFlight=1]` | `number` | batches in the grid's applyTransactionAsync at once |
+| `[highWater=10000]` | `number` | pending rows past which the sink says it is behind |
+| `[onStats]` | `function(Object): void` | the counts after each batch (received, applied, coalesced, batches, maxQueue, behind, pending) |
+
+#### `MockServerOptions` : `Object`
+
+The options of a MockServer.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[clock]` | `Object` | its timers (testClock in tests; default the system's) |
+| `[address='mock:']` | `string` | connect(address) finds it; null: not registered |
+| `[heartbeatMs=15000]` | `number` | said in welcome |
+| `[logSize=10000]` | `number` | the messages kept per stream for replay |
+| `[dedupeMs=120000]` | `number` | how long a publish's id is remembered |
+| `[auth]` | `function(?string): (boolean\|string)` | checks hello's token: true, or why not (closed with 4401) |
+| `[can]` | `string[]` | what welcome offers (default MOCK_CAN) |
+| `[name='mock']` | `string` | the source named on its messages |
+
+#### `OutboxStore` : `Object`
+
+Where persisted publishes rest: IndexedDB, or a stand-in with the same calls.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `kind` | `string` | 'indexeddb' or 'memory' |
+| `put` | `function(Object): Promise&lt;void&gt;` |  |
+| `delete` | `function(string): Promise&lt;void&gt;` |  |
+| `all` | `function(): Promise&lt;Object[]&gt;` |  |
+| `clear` | `function(): Promise&lt;void&gt;` |  |
+
+#### `OutboxOptions` : `Object`
+
+The options of the queue (connect's outbox option).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[persist=false]` | `boolean` | every publish kept in IndexedDB until acknowledged |
+| `[max=1000]` | `number` | messages |
+| `[maxBytes=1048576]` | `number` | bytes |
+| `[maxAgeMs=86400000]` | `number` | a message older than this is dropped (expired) |
+| `[overflow='reject']` | `('reject'\|'drop-oldest')` | past a bound: the publish is refused, or the oldest message goes |
+| `[store]` | `OutboxStore` | where persisted messages rest (default IndexedDB; memoryStore() in tests) |
+| `[restore]` | `boolean` | take back, when the connection first opens, what an earlier page left on disk (before this page's own publishes); default true when persist is on or a store is given (a page that never persists opens no database) |
+
+#### `RawMapping` : `Object`
+
+How raw mode turns a server's own JSON into messages.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[topicOf]` | `function(*, {event: string, id: ?string}): string` | default: one topic, 'feed' |
+| `[seqOf]` | `function(*, {event: string, id: ?string}): (number\|undefined)` | default: the value's seq, when a number |
+| `[idOf]` | `function(*, {event: string, id: ?string}): (string\|undefined)` | default: the SSE event id, else the value's id |
+| `[keyOf]` | `function(*, {event: string, id: ?string}): (string\|undefined)` | default: none |
+| `[kindOf]` | `function(*, {event: string, id: ?string}): (string\|undefined)` | default: the SSE event name (other than message) |
+
+#### `SequencerOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `clock` | `import('./drishti_timing.js').Clock` | the one clock (timers and the time of the last message) |
+| `[gapWaitMs=2000]` | `number` | how long held messages wait for a replay |
+| `[maxHeld=5000]` | `number` | held messages per stream |
+| `[maxStreams=5000]` | `number` | streams remembered |
+| `[idWindow=2048]` | `number` | ids remembered for messages with no seq |
+| `[canReplay=true]` | `boolean` | whether the server offers replay (welcome.can); without it a gap resyncs at once |
+| `[onReplay]` | `function({stream: string, epoch: ?string, from: number, to: number}): void` | asks the server to send a range again |
+| `[onGap]` | `function({stream: string, from: number, to: number, recoverable: boolean}): void` | a range that will not arrive |
+| `[onResync]` | `function({stream: string, reason: string}): void` | the stream's state must be asked for again |
+| `[onRelease]` | `function(Object[]): void` | messages released later than the call that held them (a replay arrived, or the wait ended) |
+| `[onStale]` | `function({stream: string, quietMs: number}): void` | a watched stream was quiet for too long |
+| `[onFresh]` | `function(): void` | a stale stream spoke again |
+
+#### `Clock` : `Object`
+
+The clock every part of the library reads.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `now` | `function(): number` | ms since 1970 |
+| `setTimeout` | `function(Function, number): *` |  |
+| `clearTimeout` | `function(*): void` |  |
+| `requestFrame` | `function(Function): *` | the next animation frame (a timer of 16 ms where the page has none) |
+| `cancelFrame` | `function(*): void` |  |
+| `random` | `function(): number` | a number in [0, 1) |
+| `hidden` | `function(): boolean` | whether the page is hidden (no animation frames come then) |
+
+#### `TestClock` : `Object`
+
+A clock a test moves by hand.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `now` | `function(): number` |  |
+| `setTimeout` | `function(Function, number): number` |  |
+| `clearTimeout` | `function(*): void` |  |
+| `requestFrame` | `function(Function): number` |  |
+| `cancelFrame` | `function(*): void` |  |
+| `random` | `function(): number` | seeded |
+| `hidden` | `function(): boolean` |  |
+| `tick` | `function(number): number` | moves time on by ms, running every timer that falls due (in time order, timers set on the way included); answers how many ran |
+| `frame` | `function(): number` | runs the animation frames asked for so far (time does not move); answers how many ran |
+| `runAll` | `function(number): number` | runs timers until none is left (at most `limit`, default 100,000, so a timer that sets itself again cannot hang a test); answers how many ran |
+| `setHidden` | `function(boolean): void` | hides or shows the page (a hidden page gets no frames) |
+| `pending` | `function(): number` | how many timers wait |
+
+#### `RecorderOptions` : `Object`
+
+The options of the recorder.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[max=5000]` | `number` | the headers kept |
+| `[payloads=false]` | `boolean` | keep each message's data too (for the inspector; a developer's choice) |
+
+#### `SseEvent` : `Object`
+
+An SSE event.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `event` | `string` | its name (default message) |
+| `data` | `string` | its data lines joined by new lines |
+| `id` | `?string` | its id (the cursor) |
+| `comment` | `boolean` | a comment line alone (a sign of life) |
+| `retry` | `(number\|undefined)` | the server's advice on how long to wait before reconnecting, ms |
+
+#### `TransportContext` : `Object`
+
+What a transport is given (the connection makes it for each attempt).
+
+| Name | Type | Meaning |
+|---|---|---|
+| `url` | `string` | the address (for SSE in protocol 1, the events address: /stream and /send are under it) |
+| `protocol` | `(1\|'raw')` |  |
+| `env` | `{WebSocket: Function, EventSource: Function, fetch: Function}` | the browser's classes (stand-ins in tests) |
+| `headers` | `Object&lt;string, string&gt;` | fetch: the request's headers (the token's included) |
+| `credentials` | `string` | fetch: 'same-origin' by default |
+| `protocols` | `string[]` | WebSocket: the sub-protocols |
+| `lastEventId` | `?string` | SSE: the last cursor heard |
+| `hello` | `Object` | SSE (protocol 1): the hello frame |
+| `subs` | `Object[]` | SSE (protocol 1): the sub frames of the subscriptions held |
+| `events` | `string[]` | raw SSE: the event names that carry messages |
+| `session` | `function(): ?string` | the session the server named (for /send) |
+| `onOpen` | `function(): void` |  |
+| `onText` | `function(string, {event: string, id: ?string}): void` | a transport message |
+| `onComment` | `function(): void` | an SSE comment line (a heartbeat) |
+| `onRetry` | `function(number): void` | SSE's retry: field |
+| `onBinary` | `function(): void` | a binary frame (dropped) |
+| `onClose` | `function({code: number, status: number, reason: string}): void` | the transport ended (once) |
+
+#### `Transport` : `Object`
+
+A transport: sends frames, closes.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `kind` | `string` | 'websocket', 'sse' or 'fetch' |
+| `send` | `function(Object[]): Promise&lt;void&gt;` |  |
+| `close` | `function(number): void` |  |
+| `bufferedAmount` | `function(): number` | bytes the transport has not sent yet |
 
 ## drishti-views
 

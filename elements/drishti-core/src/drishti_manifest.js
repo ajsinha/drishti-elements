@@ -18,9 +18,10 @@
 /** The libraries of Drishti Elements by name (all at the one Elements version, `elements`): bundle and entry (relative to the elements folder), global name, the
  *  libraries each requires, the style sheets and the vendored engine's scripts (both relative to the static root) it needs, and the
  *  module it ships with (core: every installation; a domain module's library is loaded only where that module is on for the person).
- *  @type {{elements: string, libraries: Object<string, {title: string, bundle: string, entry: string, global: string, requires: string[], css: string[], scripts: string[], module: string}>}} */
+ *  A library's parts (files beside its bundle, loaded by loadPart) are named with their file and style sheets.
+ *  @type {{elements: string, libraries: Object<string, {title: string, bundle: string, entry: string, global: string, requires: string[], css: string[], scripts: string[], module: string, parts: Object<string, {file: string, css: string[]}>}>}} */
 export const MANIFEST = Object.freeze({
-  "elements": "2.4.0",
+  "elements": "3.0.0",
   "libraries": {
     "drishti-core": {
       "title": "Formats, theme, API client, events, accessibility, resize, keys, dialogs, drawers and toasts, the filter model every library shares, the element maker and placements, Explain's drawing, chips for list attributes, the CSV writer, reading typed numbers, loading vendored engines",
@@ -104,7 +105,7 @@ export const MANIFEST = Object.freeze({
       "module": "core"
     },
     "drishti-data": {
-      "title": "Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live), the live client over SSE and WebSocket with reconnect, heartbeat, resume and backpressure, and the Arrow client",
+      "title": "Data: one data-source contract (in memory, REST pages, server-side rows, Arrow, live: any feed, a drishti-events subscription among them), backpressure into a grid, and the Arrow client",
       "bundle": "drishti-data/drishti_data.js",
       "entry": "drishti-data/src/drishti_index.js",
       "global": "data",
@@ -148,6 +149,36 @@ export const MANIFEST = Object.freeze({
       ],
       "scripts": [],
       "module": "core"
+    },
+    "drishti-events": {
+      "title": "Events in the page, across tabs and with a server: topics with wildcards, publish and subscribe, request and reply, streams as async iterators, typed topics and checked kinds, routes between the page, the tabs and a server, the library's own events as $events topics, and one clock for every timer (a test clock in tests)",
+      "bundle": "drishti-events/drishti_events.js",
+      "entry": "drishti-events/src/drishti_index.js",
+      "global": "events",
+      "requires": [
+        "drishti-core"
+      ],
+      "css": [
+        "elements/drishti-events/drishti_events.css"
+      ],
+      "scripts": [],
+      "module": "core",
+      "parts": {
+        "worker": {
+          "file": "drishti-events/drishti_events-worker.js",
+          "css": []
+        },
+        "mock": {
+          "file": "drishti-events/drishti_events-mock.js",
+          "css": []
+        },
+        "inspector": {
+          "file": "drishti-events/drishti_events-inspector.js",
+          "css": [
+            "elements/drishti-events/drishti_events-inspector.css"
+          ]
+        }
+      }
     },
     "drishti-views": {
       "title": "Views: whole screens from a ViewModel. The open specification (contract 1.x: a pinned copy of drishti-rachana's spec/1/viewmodel.schema.json) and its validator (normal and strict, the bounds, the refused keys); the painter (paint and its handle): the title line, the strip, the freshness line and the function keys, the panels' frames and their states (error, denied, waiting, computing, stale, failed, empty), the layout (two columns, named areas, tabs, folds, sections, a sticky area, the divider, the container's narrow and medium forms in the phone order), the frames of the live stream applied by identity in one animation frame, navigation in place; the registry of panel kinds",

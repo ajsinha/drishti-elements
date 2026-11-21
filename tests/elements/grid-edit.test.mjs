@@ -155,15 +155,15 @@ test('write-back: the server hears each transaction; a refusal puts the old valu
 test('a grid follows a filter bar\'s model on a bus: its own columns only, the quick filter too, a source picked', async () => {
   const bus = C.createBus(), g = grid();
   const off = g.followFilters(bus, { source: 'bar1' });
-  bus.emit(C.FILTER_CHANNEL, { source: 'bar1', model: { desk: { type: 'set', values: ['FX'] }, REGION: { type: 'set', values: ['EMEA'] } }, quickFilter: '' });
+  bus.emit(C.filterTopic(), { source: 'bar1', model: { desk: { type: 'set', values: ['FX'] }, REGION: { type: 'set', values: ['EMEA'] } }, quickFilter: '' });
   assert.equal(g.rowCount(), 2);
   assert.deepEqual(Object.keys(g.filterModel), ['desk']);
-  bus.emit(C.FILTER_CHANNEL, { source: 'other', model: {}, quickFilter: '' });
+  bus.emit(C.filterTopic(), { source: 'other', model: {}, quickFilter: '' });
   assert.equal(g.rowCount(), 2);                                               // another bar: not followed
-  bus.emit(C.FILTER_CHANNEL, { source: 'bar1', model: {}, quickFilter: 'rates' });
+  bus.emit(C.filterTopic(), { source: 'bar1', model: {}, quickFilter: 'rates' });
   assert.equal(g.rowCount(), 1);
   off();
-  bus.emit(C.FILTER_CHANNEL, { source: 'bar1', model: {}, quickFilter: '' });
+  bus.emit(C.filterTopic(), { source: 'bar1', model: {}, quickFilter: '' });
   assert.equal(g.rowCount(), 1);
   await tick(1);
 });

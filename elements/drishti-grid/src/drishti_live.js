@@ -14,8 +14,8 @@
  * See the LICENSE file in the root of this repository.
  */
 /* The live-data hook: the shape of a feed a server pushes and the messages the grid applies. The connection itself (Server-Sent Events
-   or a WebSocket, with reconnect, back-off, heartbeat, resume and backpressure) is drishti-data's LiveClient, the one home of it; any
-   object with subscribe is a feed. A message is JSON:
+   or a WebSocket, with reconnect, back-off, heartbeat and resume) is drishti-events', the one home of it; any object with subscribe is a
+   feed (a drishti-events subscription is one). A message is JSON:
 
      {"type": "transaction", "add": [...], "update": [...], "remove": ["id", ...]}   rows in the page, applied by id, batched
      {"type": "dataChanged", "purge": true} | {"keys": [...], "blocks": [...]} | {"rows": ["id"]}   server-side rows asked again

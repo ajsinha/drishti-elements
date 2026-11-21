@@ -28,7 +28,7 @@ import { resultColumns, cellValue } from './drishti_pivot-answer.js';
 import { GridLive } from './drishti_grid-live.js';
 import { GridEditing } from './drishti_grid-edit.js';
 import { GridModelBase, LAYOUTS, DENSITIES, rowModelFor } from './drishti_grid-model-base.js';
-import { cycleSort, FILTER_CHANNEL } from '../../drishti-core/src/drishti_index.js';
+import { cycleSort, filterTopic } from '../../drishti-core/src/drishti_index.js';
 
 /**
  * @typedef {Object} GridOptions
@@ -269,16 +269,16 @@ export class GridModel extends GridModelBase {
   setQuickFilter(q) { this.rowModel.setQuickFilter(q); this.live.emit('filterChanged', { quickFilter: q || '' }); }
 
   /**
-   * Follows a filter bar (drishti-inputs) or any page part that emits the filter model on a bus under FILTER_CHANNEL: each payload's
+   * Follows a filter bar (drishti-inputs) or any page part that emits the filter model on a bus under the topic 'ui.filter.<channel>': each payload's
    * filters on this grid's columns (by id or field) become its filter model, and its quick filter the grid's; filters on fields this
    * grid has not are left out.
    * @param {EventBus} bus drishti-core's bus (the page's shared bus, or the filter bar's)
-   * @param {{channel: string, source: string}} [o] channel default FILTER_CHANNEL; source: follow only the bar of this id
+   * @param {{channel: string, source: string}} [o] channel default 'default' (the filter channel's name, not the topic); source: follow only the bar of this id
    * @returns {function(): void} stops following
    */
   followFilters(bus, o) {
     o = o || {};
-    return bus.on(o.channel || FILTER_CHANNEL, (p) => {
+    return bus.on(filterTopic(o.channel), (p) => {
       if (!p || (o.source && p.source !== o.source)) { return; }
       const known = {};
       Object.keys(p.model || {}).forEach((k) => { const c = this.columns.get(k) || this.columns.all().find((x) => x.field === k); if (c) { known[c.id] = p.model[k]; } });

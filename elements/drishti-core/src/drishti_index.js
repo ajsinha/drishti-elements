@@ -32,7 +32,9 @@ export { DEFAULT_THEME, THEME_STORAGE_KEY, TEXT_TOKENS, GROUND_TOKENS, themes, s
 export { basePath, setBase, url, routePath, installBase } from './drishti_base.js';
 export { AS_OF_HEADER, ApiError, errorWords, ApiClient, createClient, api, call } from './drishti_api.js';
 export { EventBus, createBus, bus } from './drishti_events.js';
-export { SELECTION_EVENT, linkGrid, publishSelection } from './drishti_link.js';
+export { MAX_TOPIC_SEGMENTS, MAX_TOPIC_LENGTH, isTopic, isPattern, hasWildcard, topicMatches, segment, unsegment, DEFAULT_FILTER_CHANNEL,
+  selectionTopic, filterTopic } from './drishti_topics.js';
+export { linkGrid, publishSelection } from './drishti_link.js';
 export { FOCUSABLE, focusable, trapFocus, announce, rovingIndex, rovingTabindex } from './drishti_a11y.js';
 export { installResize, scanResize, resizeHandle, resetResize } from './drishti_resize.js';
 export { trackPointer } from './drishti_pointer.js';
@@ -43,8 +45,8 @@ export { fuzzyScore, rankCommands, keymapCommands, CommandPalette, bindPaletteKe
 export { DockModel, Dock, workspaceStore } from './drishti_dock.js';
 export { SelectionHistory, SelectionChip } from './drishti_selection-chip.js';
 export { openDialog, closeDialog, openDrawer, ToastTray, toast } from './drishti_overlay.js';
-export { configure, endpoint, register, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
-export { isBlank, compareValues, compareRows, cycleSort, passes, rowFilter, filterWords, FILTER_CHANNEL, filterRows, textSortKey,
+export { configure, endpoint, register, manifest, ELEMENTS_VERSION, libraryVersion, requirements, loaded, load, loadPart, refused, staticUrl, loadScript, loadStyle } from './drishti_loader.js';
+export { isBlank, compareValues, compareRows, cycleSort, passes, rowFilter, filterWords, filterRows, textSortKey,
   compareTextKeys } from './drishti_filters.js';
 export { h, placeAt, placeUnder, attrAllowed, safeUrl } from './drishti_dom.js';
 export { parseNumberText, numberEditText } from './drishti_parse.js';

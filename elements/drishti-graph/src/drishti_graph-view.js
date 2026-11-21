@@ -19,7 +19,7 @@
    types drawn or not, the encodings, the layout, the mode and the density, Explain (the host's hook, drawn by drishti-core's
    renderExplain), export (PNG, SVG, CSV, JSON), the adjacency table, live changes drawn at most once a throttle window, the terminal's
    command line, and the state for a host to keep. */
-import { h, renderExplain, announce, download as saveFile, SELECTION_EVENT, bus as sharedBus, DENSITIES } from '../../drishti-core/src/drishti_index.js';
+import { h, renderExplain, announce, download as saveFile, selectionTopic, bus as sharedBus, DENSITIES } from '../../drishti-core/src/drishti_index.js';
 import { GraphBase } from './drishti_graph-base.js';
 import { GRAPH_MODES, answerLine, inspectorContent } from './drishti_graph-chrome.js';
 import { shortestPath } from './drishti_graph-algo.js';
@@ -41,7 +41,7 @@ export class Graph extends GraphBase {
     this.queue = []; this.flushTimer = 0;
     this.bus = this.o.bus || sharedBus;
     if (this.o.link && this.o.link.channel) {
-      this.offLink = this.bus.on(SELECTION_EVENT, (p) => { if (p && p.source !== this && p.channel === this.o.link.channel) { this.select((p.ids || []).filter((id) => this.byId.has(id)), { silent: true }); } });
+      this.offLink = this.bus.on(selectionTopic(this.o.link.channel), (p) => { if (p && p.source !== this) { this.select((p.ids || []).filter((id) => this.byId.has(id)), { silent: true }); } });
     }
   }
 
@@ -75,7 +75,7 @@ export class Graph extends GraphBase {
     this.draw();
     const ids = this.selection();
     this.emit('selectionChanged', { ids, source: o.from || (o.silent ? 'bus' : 'graph') });
-    if (this.o.link && this.o.link.channel && !o.silent) { this.bus.emit(SELECTION_EVENT, { channel: this.o.link.channel, ids, source: this }); }
+    if (this.o.link && this.o.link.channel && !o.silent) { this.bus.emit(selectionTopic(this.o.link.channel), { channel: this.o.link.channel, ids, source: this }); }
   }
 
   /** @private the inspector's content (chrome) */

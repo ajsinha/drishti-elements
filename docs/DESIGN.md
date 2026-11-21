@@ -21,10 +21,10 @@ How Drishti Elements is built and the rules it keeps. How to use it is [USING.md
 ## 1. One implementation of each thing
 
 An application that grows screen by screen collects a grid per screen, a chart wrapper per chart, a number formatter per file, each with its own
-keyboard, accessibility, bugs and look. Drishti Elements is one implementation of each: nine libraries, each with one job, and a guard that stops
-a second copy from growing beside them (section 9).
+keyboard, accessibility, bugs and look. Drishti Elements is one implementation of each: ten libraries, each with one job, and a guard that stops
+a second copy from growing beside them (section 10).
 
-## 2. The nine libraries
+## 2. The ten libraries
 
 | Library | What it is | Requires |
 |---|---|---|
@@ -32,7 +32,8 @@ a second copy from growing beside them (section 9).
 | **drishti-inputs** | date and range pickers with holiday calendars, the switch, the tree picker, the multi-select, the combobox, forms from a schema with four eyes, the filter bar, the code editor, the formula input | core |
 | **drishti-chart** | one engine-neutral spec over the vendored ECharts, the general kinds, the maps, the card and studio modes, Explain on any mark, the data table, export, linked selection, live updates, Vega-Lite translated into the spec | core, inputs |
 | **drishti-grid** | the grid and its pivot in three layouts, tree data, ranges, cell editing, the live-set mode, export, the AG Grid-style adapter | core, inputs, chart |
-| **drishti-data** | one data-source contract (memory, REST pages, server-side rows, Arrow, live), the live client, the Arrow client | core |
+| **drishti-data** | one data-source contract (memory, REST pages, server-side rows, Arrow, live), the Arrow client | core |
+| **drishti-events** | events in the page, across tabs and with a server (WebSocket, Server-Sent Events): topics with wildcards, publish and subscribe, request and reply, streams, routes, reconnect and resume; the one home of every connection to a server | core |
 | **drishti-tree** | hierarchies in four modes of one component: the tree grid, the org chart, the sunburst, the icicle; measures with non-additive ones asked of the host; an edit mode that proposes moves; the outline of an authoring screen | core, inputs, grid |
 | **drishti-graph** | networks on a canvas for thousands of nodes: force, layered, radial, circular and grouped layouts, paths, groups, selection, an adjacency table | core, inputs, grid |
 | **drishti-designer** | the designer kit: the layout canvas over a layout model, palette, inspector, outline, YAML pane, undo and redo on one command stack, the designer shell | core, inputs, tree |
@@ -159,14 +160,263 @@ insets) and Canada, a conic fitted to the country otherwise. The grouping of cou
 | `trace3d` kind | `x`, `y`, `z`, `order`, `colour`, `selected`, `turn` (none with reduced motion), `fallback: 'flat'\|'table'`: points joined in order on the vendored ECharts GL, loaded on first use; where WebGL is off, drawn flat or its table shown | a path or a trajectory |
 | drishti-core **`Tour`** | marks `data-tour-say`, `data-tour-steps`, controls `data-tour="back\|at\|next"`; `go`, `next`, `back`, `destroy` | a guided first visit of any board |
 
-## 8. Packaging and versions
+## 8. drishti-events
+
+One event model for the page, its tabs and a server; the one home of every connection to a server: outside drishti-events no library
+constructs a `WebSocket`, an `EventSource`, a `BroadcastChannel` or a `SharedWorker`, and what it replaced (drishti-data's live client, the grid
+sink, the feed monitor, the core's selection constant) is gone with no alias (guards in `tests/test_elements_guards.py`). It names no host:
+its files, the gallery's Eventing pages and the conformance vectors carry no host's routes, settings keys, header names, error codes or
+vocabulary (a guard too). The wire protocol is [CONTRACTS.md](CONTRACTS.md#the-events-contract-drishti-events-protocol-version-1); how to use it
+is [USING.md](USING.md#drishti-events). It is plain ES modules under `elements/drishti-events/src/`; three **parts** are files of their own beside
+the bundle, loaded only when needed by drishti-core's `loadPart(library, part)`: the shared hub's worker, the mock server (demos and tests;
+never needed in production) and the inspector.
+
+### Reconnect and back-off
+
+A dropped connection is opened again after an exponential back-off with full jitter (500 ms growing to 30 s; a server's advice in `bye` or
+SSE's `retry:` is a floor), at once when the browser comes back online or the tab becomes visible, and never in a hot loop: a refusal that
+trying again cannot cure (bad address, version, forbidden) stops in the state `refused` with the reason in words.
+
+### Heartbeats
+
+Any frame is a sign of life. With none for `heartbeatMs` (the server's figure from `welcome`, else 45 s; the watchdog allows 1.5 times) the
+connection is taken as dead and opened again. On a WebSocket the client pings every third of that and the pong carries the server's time, which
+gives the round-trip time and the clock offset used for latency (Metrics, below). On SSE the server sends a comment line;
+an `EventSource` cannot see comment lines, so over it the watch is on only when `heartbeatMs` is given. Raw mode's watch is `heartbeatMs` itself.
+
+### Resume and replay
+
+A server numbers the messages of each **stream** with `seq` and names the stream's incarnation with an `epoch`. The client keeps the last
+`seq` of each stream it hears (bounded: 5,000 streams, least recently heard forgotten) and, when it subscribes again after a reconnect, says
+where it was. The server answers `recovered: true` and sends what was missed, or `recovered: false` (too long ago, or a new epoch): the
+subscription then enters `recovering`, a `resync` notice is delivered (`byKind({ resync })`, or `m.kind === 'resync'`), retained values are
+asked for when the subscription wants them, and the page shows the state again from the truth.
+
+### Once only, and in order
+
+- **Inbound.** Within a stream a message whose `seq` is not above the last one delivered is a repeat and is dropped; messages with no `seq` are
+  deduplicated by `id` in a window of the last 2,048 ids. Order within a stream is the server's; nothing is promised across streams.
+- **Outbound.** Every publish carries an id made in the page (sortable by time, random per tab). The client sends it again until acknowledged;
+  the server ignores an id it has seen ([CONTRACTS.md](CONTRACTS.md)). Together: at-least-once delivery with idempotent receipt, which is exactly-once in
+  effect for as long as the server remembers ids.
+- A page's own publishes to one topic leave in the order they were made, including across a reconnect and a flush of the queue.
+
+### Gaps
+
+A `seq` that jumps is a gap. The messages after it are held (at most 5,000 per stream, at most `gapWaitMs`, default 2 s) while the client asks
+the server to `replay` the missing range; when they arrive everything is delivered in order. If they cannot be had the held messages are
+delivered, the gap is published on `$events.gap` with the range, and the subscription resyncs. The **feed monitor** is this same sequencer
+seen from outside: `subscription.stats` (received, gaps, missed, repeats, stale) and the status badge's "Missed 3 updates" come from it.
+`staleMs` on a subscription says how long silence is normal.
+
+### Backpressure, conflation and frames
+
+Messages can arrive faster than a page can draw. Between arrival and the listener each subscription has a small pipeline:
+
+1. **Conflate** by key: a later message replaces an earlier undelivered one with the same key (a price tick per symbol). For grid transactions
+   the rule is the grid's (an add then an update is an add of the new row, an add then a remove is nothing).
+2. **Hold** in a bounded buffer; the overflow rule is the subscription's, and every message dropped is counted and recorded with its reason.
+3. **Deliver** now, once per animation frame, or at most every `everyMs`, optionally as one array. A hidden tab has no animation frames: the
+   pipeline then delivers on a one-second timer and keeps conflating, so memory stays bounded and the page is right when shown again.
+
+`subscription.toGrid(grid)` is this pipeline ending in `applyTransactionAsync`, with at most one batch in flight.
+
+Toward the server: a subscription may ask the server to conflate before the wire (`conflate` in `sub`, where the server can), publishing
+pauses while the socket's `bufferedAmount` is above 1 MB, and a server that had to drop for a slow client says so with `gap`.
+
+### The offline queue
+
+Every publish to a server waits in the queue until the server acknowledges it, so one made while the connection is down is held and sent,
+in order, when it is back. A page takes back a reload's leftovers when it persists (`outbox: { persist: true }`, a `store`, or
+`outbox: { restore: true }`); they go before the page's own.
+
+| | Default | |
+|---|---|---|
+| where | memory | `queue: 'persist'` on a publish, or `outbox: { persist: true }`, keeps it in IndexedDB so it survives a reload |
+| bounds | 1,000 messages, 1 MB, 24 hours | past them a publish rejects in words (`outbox: { overflow: 'drop-oldest' }` to drop instead) |
+| flush | after `welcome`, in order, each acknowledged before it is removed | one tab flushes at a time (a Web Lock), so tabs never send a queued message twice |
+| requests | never queued across a reload | a request fails on its timeout; the asker is gone after a reload |
+
+Persistence is off by default because the payloads rest on the person's disk (What is kept, below). Where IndexedDB is not to be had (some private
+windows) the queue is memory and `events.metrics().outbox.persisted` says `false`.
+
+### Memory bounds
+
+Every store has a ceiling and a counter: undelivered messages per subscription (10,000), held messages per gap (5,000), streams remembered
+(5,000), ids for duplicates (2,048), the queue (1,000 and 1 MB), the recorder (5,000 headers), pending requests (1,000), frame size (1 MB;
+larger frames are dropped as `too-large`). `limits` changes any of them; memory is bounded by them, whatever the server sends.
+
+### One connection for all tabs (the shared hub)
+
+`connect(url, { share: true })`: the application's tabs share one server connection, which matters most for Server-Sent Events over HTTP/1.1,
+where a browser opens six connections to a site and no more.
+
+1. A `SharedWorker` holds the connection, parses and deduplicates off the page's thread, and posts each tab what its subscriptions want;
+   each tab keeps its own pipeline (conflation, frames, buffers) and its own unacknowledged publishes (sent again, same ids, when the hub
+   changes). A subscription held by several tabs is one subscription to the server; a tab that joins late is given the retained values.
+2. Where there is no `SharedWorker`, the tab holding a Web Lock is the leader and relays over a `BroadcastChannel`; when it closes the next
+   tab takes over and resumes by sequence from the positions the tabs report (raw mode: from the server's event id they last heard).
+3. Otherwise each tab connects for itself.
+
+The worker is its own file (`drishti_events-worker.js`), same origin, no blob and no `eval`. The tabs must belong to one signed-in person:
+the `namespace` (Tabs, frames and origins, below) keeps two people's tabs apart.
+
+### The page's life
+
+On `pagehide` and `freeze` the connection is closed cleanly (the page stays eligible for the browser's back-forward cache) and on `pageshow`
+and `resume` it is opened and resumed. A tab hidden for longer than `idleCloseMs` (off by default) gives its subscriptions back and takes
+them again when shown.
+
+### Who is connecting
+
+`auth` is one function, asked before every connect and before a token runs out:
+
+```js
+connect(url, { auth: async ({ reason, status }) => ({ token, expiresAt }) });   // reason: 'connect' | 'expiring' | 'refused'
+```
+
+| Transport | How the token travels |
+|---|---|
+| `fetch` (SSE) | the `Authorization: Bearer` header; any `headers` (an object or a function) |
+| WebSocket, `wsAuth: 'hello'` (default) | in the first frame; the server closes a socket that has not said hello within a few seconds |
+| WebSocket, `wsAuth: 'subprotocol'` | as a second sub-protocol, `bearer.<token, base64url>`, for a gateway that must decide at the handshake |
+| WebSocket or `EventSource`, `wsAuth: 'cookie'` | the site's cookie; the server must check `Origin` |
+
+**Refresh.** A minute before `expiresAt` the client asks `auth` again and hands the new token to the open connection (an `auth` frame on a
+WebSocket; on `fetch` a new stream is opened and resumed before the old one is closed, with duplicates dropped by sequence), so a session
+outlives its tokens without a gap. A refusal asks `auth` once with `reason: 'refused'`; a second refusal is the state `refused`, never a loop.
+
+### No secrets in addresses
+
+`connect` refuses an address whose query names a secret (`token`, `access_token`, `jwt`, `key`, `apikey`, `secret`, `password`, `auth`,
+`signature`) and says how to send it instead. The resume position travels in a header (`fetch`) or the `lastEventId` parameter
+(`EventSource`); it is a position, not a secret. Tokens are never logged, recorded, shown in the inspector or written to the queue.
+
+### Tabs, frames and origins
+
+- `BroadcastChannel`, `SharedWorker` and Web Locks are same-origin by the browser's rule. On top of that the channel's name carries the
+  `namespace` the host gives (an opaque string that differs per application and per signed-in person), so a second person signed in on the
+  same origin shares nothing. With `share` on and no namespace, `connect` refuses, in words.
+- Every message from another tab is checked before use: protocol version, envelope shape, topic grammar, size. It is data, never code or HTML.
+- Only topics routed to `tabs` leave the page; `$` topics never do.
+
+### Content-Security-Policy
+
+No `eval`, no `new Function`, no inline script or style, no blob or data workers, nothing from another origin. A page needs `connect-src`
+for its server and `worker-src 'self'` for the shared hub. The library's browser tests run under a strict policy.
+
+### What is kept, and for how long
+
+The queue's persisted messages are the page's own publishes; persistence is opt-in, bounded and aged (24 hours), and `events.signOut()`
+clears the queue, forgets the stream positions and tells the person's other tabs to do the same. The recorder keeps headers only unless a
+developer turns payloads on, and lives in memory.
+
+### Hostile input
+
+Topics, kinds and sizes are validated on the way in; maps are `Map`s (no prototype tricks); a frame that is not JSON, is too large, or names
+an unknown type is dropped and counted; nothing received is ever put into the page as HTML by the library (the inspector draws text).
+
+### States
+
+```
+idle ──► connecting ──► open ──► closed
+              ▲           │
+              │           ▼
+           reconnecting ◄─┘        offline (the browser says so; waits for "online")
+                                   refused (trying again cannot help; says why)
+```
+
+Each change is a message on `$events.state`: `{ state, was, attempt, waitMs, reason, transport, shared, resumed }`. Subscriptions have their
+own (`pending`, `active`, `recovering`, `refused`, `closed`) on `$events.subscription`.
+
+`statusBadge(el, events)` draws the state with drishti-core's state kit: "Live", "Reconnecting in 4 s" with a **Reconnect now** button,
+"Offline: 3 changes waiting", "Missed 12 updates" with **Refresh**. It is a `role="status"` region that announces changes of state, never
+each message.
+
+### Metrics
+
+`events.metrics()` answers one plain object, also published on `$events.metrics`:
+
+| Group | Figures |
+|---|---|
+| connection | state, transport, connects, reconnects, time connected, round trip (last, p50, p99), clock offset |
+| in | messages and bytes (total, per second over 1 s and 10 s), per topic pattern; delivery latency (publisher's time to listener, p50, p99); listener time (p99, the slowest pattern) |
+| out | publishes, acknowledged, retried, failed; acknowledgement time; requests (sent, answered, timed out) |
+| drops | by reason: `duplicate`, `conflated`, `overflow`, `invalid`, `filtered`, `too-large`, `expired`, `unrouted`, `gap` |
+| stores | undelivered, held for gaps, the queue (count, bytes, persisted), pending requests, recorder |
+
+Histograms are fixed log-scale buckets (no dependency, constant memory). `onMetrics` hands the object to a host's own telemetry.
+
+### The inspector
+
+`events.inspect()` opens the inspector in a drawer at the page's side (or `events.inspect(el)` in a page's own element, a dock's panel for one); the command palette has
+"Open the events inspector". It is assembled from the libraries (the message list is a drishti-grid, the filter a drishti-inputs field, the
+answer of "why" is drishti-core's Explain drawing) and loads only when opened.
+
+- **Messages**: time, direction, scope, topic, kind, seq, size, latency, and what happened (delivered to 2, conflated, dropped: why); a
+  filter: a topic pattern when it has `*` or `>`, otherwise words in the topic, kind or outcome; pause and resume; the message opened as JSON (its payload when the recorder keeps payloads).
+- **Subscriptions**: pattern, scopes, state and counts.
+- **Connection**: the figures and the state timeline, with the reasons.
+- **Queue**: what waits, and since when.
+- **Why**: "Why didn't I get it?", below.
+
+Keyboard: the grid's own keys in the list, `/` to filter, `Space` to pause, `Enter` to open a message, `Esc` to close; every colour has a
+word or an icon beside it; light and dark from the tokens; `prefers-reduced-motion` stops the scrolling tail.
+
+### "Why didn't I get it?"
+
+Every place a message can stop records a reason against its id, topic and seq in the **recorder** (a ring of the last 5,000 headers).
+`events.explain({ topic, key?, id?, since? })` reads it and answers an `ExplainResult` (drishti-core's shape, drawn by `renderExplain`), a
+list of steps in words, the first that failed marked:
+
+| Step | A failing answer reads |
+|---|---|
+| a listener matched | "No subscription matches `prices.fx.USDCAD`. The nearest is `prices.eq.*`." |
+| the route reached that scope | "`prices.>` is routed to the page only; nothing asked the server." |
+| the subscription was active | "`prices.fx.*` was refused by the server at 10:42:07: forbidden." |
+| the connection was open | "The connection was reconnecting from 10:41:58 to 10:42:03." |
+| the message arrived | "Stream `prices.fx` jumped from 48,213 to 48,220; a replay was asked and answered `unavailable`." |
+| it was valid | "Dropped as invalid: `bid` should be a number." |
+| it was kept | "Conflated: replaced by seq 48,231 with the same key 8 ms later." / "Dropped: the buffer was full (10,000), rule drop-oldest." |
+| the listener ran | "The listener threw: TypeError ... (see `$events.error`)." |
+
+and when nothing failed: "Delivered at 10:42:07.118 to 2 listeners, 14 ms after it was published."
+
+### Browsers
+
+The current and previous major versions of Chrome, Edge, Firefox and Safari, desktop and mobile.
+
+| Needs | Without it |
+|---|---|
+| WebSocket, `EventSource`, streaming `fetch`, `AbortController` | (all supported browsers have them) |
+| `BroadcastChannel` | the `tabs` scope is off and says so |
+| `SharedWorker` | the leader tab (Web Locks), else a connection per tab |
+| IndexedDB | the queue is memory only |
+| `file://` | page scope, mock server, queue and every gallery page work; real cross-tab and the shared worker depend on the browser and say so |
+
+Under Node 22 or later the page scope, the mock and the WebSocket and `fetch` transports run as they are, which is how the tests run.
+
+### Accessibility
+
+- The status badge is a `role="status"` live region: it speaks changes of state and counts ("Reconnecting", "Live again, 3 updates missed"),
+  rate-limited to one announcement in five seconds, and never individual messages. Its button is a real button with a name.
+- The inspector meets the libraries' rule (WCAG 2.2 AA): the grid's roles and keyboard, a focus trap only when it is a dialog, names on every
+  control, outcomes as words and icons beside colour, tokens for light and dark and the three densities, reduced motion honoured.
+- Nothing the library does steals focus or announces by itself in a host's page; flashing cells are the grid's and follow its reduced-motion rule.
+
+### Bytes
+
+The bundle and the parts have byte budgets like every library (`tests/test_elements_budget.py`): each is its size when 3.0.0 was made ready
+plus about 5%, so growth is a decision, not a drift.
+
+## 9. Packaging and versions
 
 One distribution: the release tree `drishti-elements-<version>/` and its zip, built from a tag by `python3 tools/elements/cli.py dist` (offline, Python
 only, reproducible). `cli.py pack` writes one JavaScript file and one style sheet for a page that wants two files. **One version for every library**:
 `elements` in `elements/drishti_elements.json`; the bundles' headers, the loader's `ELEMENTS_VERSION`, the release tree's manifest, the catalogue and the
 reference are generated from it. A released version never changes; a fault is fixed by the next patch version.
 
-## 9. Documentation, the gallery and the checks
+## 10. Documentation, the gallery and the checks
 
 - **The reference** [API.md](API.md) is generated from the typed JSDoc by `python3 tools/docs/elements_api.py`; a public symbol without a typed comment
   fails the check, and so does a stale file. The same parse writes the gallery's catalogue and the migration guide's option table.

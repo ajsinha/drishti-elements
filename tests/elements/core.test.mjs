@@ -143,6 +143,68 @@ test('the bus: order, once, wildcard, a failing listener does not stop the other
   assert.equal(errs.length, 2);
 });
 
+test('the bus: segment wildcards (* one segment, > the rest), exact first, then patterns, then the lone *', () => {
+  const b = C.createBus();
+  const seen = [];
+  b.on('*', (p, t) => seen.push('all:' + t));
+  b.on('prices.>', (p, t) => seen.push('rest:' + t));
+  b.on('prices.*.USDCAD', (p, t) => seen.push('one:' + t));
+  b.on('prices.fx.USDCAD', () => seen.push('exact'));
+  b.on('>', (p, t) => seen.push('any:' + t));
+  b.emit('prices.fx.USDCAD', 1);
+  assert.deepEqual(seen, ['exact', 'rest:prices.fx.USDCAD', 'one:prices.fx.USDCAD', 'any:prices.fx.USDCAD', 'all:prices.fx.USDCAD']);
+  seen.length = 0;
+  b.emit('prices', 1);                                  // '>' needs at least one more segment; 'any' needs one segment: a lone name matches '>'
+  b.emit('prices.fx', 1);
+  b.emit('rates.fx.USDCAD', 1);
+  assert.deepEqual(seen, ['any:prices', 'all:prices', 'rest:prices.fx', 'any:prices.fx', 'all:prices.fx', 'any:rates.fx.USDCAD', 'all:rates.fx.USDCAD']);
+  assert.equal(b.count('prices.>'), 1);
+  b.off('prices.>');
+  seen.length = 0;
+  b.emit('prices.fx', 1);
+  assert.deepEqual(seen, ['any:prices.fx', 'all:prices.fx']);
+  const stop = b.once('a.*', () => seen.push('once'));
+  b.emit('a.b'); b.emit('a.c');
+  assert.equal(seen.filter((x) => x === 'once').length, 1);
+  stop();
+  b.clear();
+  assert.equal(b.emit('prices.fx', 1), 0);
+});
+
+test('topics: the grammar, the matcher and segment()', () => {
+  assert.ok(C.isTopic('prices.fx.USDCAD') && C.isTopic('a-b_c:d~e'));
+  assert.ok(!C.isTopic('') && !C.isTopic('a..b') && !C.isTopic('a b') && !C.isTopic('a.*') && !C.isTopic('x'.repeat(256)));
+  assert.ok(!C.isTopic(Array(17).fill('a').join('.')) && C.isTopic(Array(16).fill('a').join('.')));
+  assert.ok(C.isPattern('a.*.c') && C.isPattern('a.>') && C.isPattern('>') && !C.isPattern('a.>.c') && !C.isPattern('a.b*'));
+  assert.ok(C.topicMatches('a.*.c', 'a.b.c') && !C.topicMatches('a.*.c', 'a.b.c.d') && !C.topicMatches('a.*.c', 'a.c'));
+  assert.ok(C.topicMatches('a.>', 'a.b') && C.topicMatches('a.>', 'a.b.c') && !C.topicMatches('a.>', 'a'));
+  assert.ok(C.topicMatches('a.b', 'a.b') && !C.topicMatches('a.b', 'a.b.c'));
+  for (const t of ['trades', 'My Desk / FX', 'a.b', '~', '', 'é€😀', 'x*>']) {
+    const s = C.segment(t);
+    assert.ok(C.isTopic(s) && !s.includes('.'), s);
+    assert.equal(C.unsegment(s), t);
+  }
+  assert.equal(C.segment('gallery-trades'), 'gallery-trades');
+  assert.equal(C.segment('a.b'), 'a~2Eb');
+  assert.equal(C.selectionTopic('My Desk'), 'ui.selection.My~20Desk');
+  assert.equal(C.filterTopic('trades'), 'ui.filter.trades');
+});
+
+test('linked selection and filters are topics on the shared bus', () => {
+  const b = C.createBus();
+  const seen = [];
+  b.on('ui.selection.>', (p, t) => seen.push(t + ':' + p.ids.join(',')));
+  C.publishSelection('trades', ['T1', 'T2'], { bus: b });
+  C.publishSelection('other desk', ['X'], { bus: b });
+  assert.deepEqual(seen, ['ui.selection.trades:T1,T2', 'ui.selection.other~20desk:X']);
+  const heard = [];
+  b.on(C.selectionTopic('trades'), (p) => heard.push(p.channel));
+  C.publishSelection('other desk', [], { bus: b });
+  assert.deepEqual(heard, []);
+  C.publishSelection('trades', [], { bus: b });
+  assert.deepEqual(heard, ['trades']);
+});
+
 test('keys: names, maps, and the panel keys kept for layout mode and the workbench', () => {
   assert.equal(C.keyName({ key: 'ArrowLeft', ctrlKey: true, shiftKey: true }), 'Ctrl+Shift+ArrowLeft');
   assert.equal(C.normalizeKey('shift+left'), 'Shift+ArrowLeft');

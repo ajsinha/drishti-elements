@@ -16,9 +16,9 @@
 /* The filter bar: the filters of a page as chips ("Desk in Rates, FX", "MTM > 1m", "Trade date 1–6 Nov 2026"), a + Filter menu of the
    fields, a quick-search field and Clear all. A chip opens its editor (members with search and select-all; a condition and a value for a
    number or text; presets and two ends for a date), × takes it away. What it emits is drishti-core's filter model (the grid's own:
-   {column: {type: set|number|text|date, ...}}) with the quick filter, on a bus under FILTER_CHANNEL: every grid and chart on that bus
+   {column: {type: set|number|text|date, ...}}) with the quick filter, on a bus under the topic 'ui.filter.<channel>': every grid and chart on that bus
    follows it (drishti-grid: grid.followFilters(bus); a chart: filterRows(rows, model)). FilterModelBar is the model, tested in Node. */
-import { bus as sharedBus, FILTER_CHANNEL, filterWords, formatDateRange, announce, parseNumberText } from '../../drishti-core/src/drishti_index.js';
+import { bus as sharedBus, filterTopic, filterWords, formatDateRange, announce, parseNumberText } from '../../drishti-core/src/drishti_index.js';
 import { DATE_PRESETS, resolvePreset, parseDateInput, calendar } from './drishti_calendar.js';
 import { InputBase, Popover, Listbox, normalizeOptions, searchOptions, uid } from './drishti_inputs-dom.js';
 import { Select } from './drishti_select.js';
@@ -150,7 +150,7 @@ export class FilterModelBar {
  * @property {FilterField[]} fields
  * @property {Object} [model] the filters at the start
  * @property {Object} [bus] the drishti-core EventBus it emits on (default: the page's shared bus)
- * @property {string} [channel] the event name (default FILTER_CHANNEL)
+ * @property {string} [channel] the filter channel's name (default 'default'); the topic is 'ui.filter.<channel>' (filterTopic)
  * @property {boolean} [quick=true] the quick-search field
  * @property {string} [asOf] the business date date presets count from
  * @property {string} [calendar] the business calendar of date fields
@@ -167,7 +167,7 @@ export class FilterBar extends InputBase {
    */
   constructor(host, options) {
     super(host, options, 'di-filter-bar');
-    const o = this.o = Object.assign({ quick: true, label: 'Filters', channel: FILTER_CHANNEL }, this.o);
+    const o = this.o = Object.assign({ quick: true, label: 'Filters', channel: 'default' }, this.o);
     this.bus = o.bus || sharedBus;
     this.id = uid('fb');
     this.state = new FilterModelBar({ fields: o.fields, model: o.model });
@@ -204,7 +204,7 @@ export class FilterBar extends InputBase {
     this.render();
     const p = this.state.payload();
     this.emit('change', p);
-    this.bus.emit(this.o.channel, Object.assign({ source: this.id }, p));
+    this.bus.emit(filterTopic(this.o.channel), Object.assign({ source: this.id }, p));
     if (words) { announce(words); }
   }
 

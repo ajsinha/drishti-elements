@@ -206,7 +206,7 @@ export function arrowSource(src, o) {
 }
 
 /**
- * A source with a live feed: getRows from the source, subscribe from the feed (a LiveClient), so a grid connects both.
+ * A source with a live feed: getRows from the source, subscribe from the feed (a drishti-events subscription, or any {subscribe}), so a grid connects both.
  * @param {DataSource} source
  * @param {{subscribe: function(function(Object): void): function(): void}} feed
  * @returns {DataSource}

@@ -30,7 +30,8 @@ COMMENT = re.compile(r"/\*.*?\*/|(?<![:\\'\"])//[^\n]*|\{#.*?#\}|<!--.*?-->", re
 # figure, a kind a domain library registers), never a domain's words in their code: a risk measure's name, a risk kind, a regulatory
 # rule. Comments and JSDoc are documentation and may use a domain's examples; so are the harness pages (the gallery's sample data). A
 # threshold (`limit`, a row cap or a line a caller draws) is a generic hook and is not listed.
-GENERIC = ("drishti-core", "drishti-grid", "drishti-chart", "drishti-inputs", "drishti-data", "drishti-graph", "drishti-tree", "drishti-views")
+GENERIC = ("drishti-core", "drishti-grid", "drishti-chart", "drishti-inputs", "drishti-data", "drishti-graph", "drishti-tree", "drishti-events",
+           "drishti-views")
 DOMAIN_WORDS = re.compile(r"\b(?:VaR|VAR|var\d\d|ES|EEPE|EPE|PFE|MTM|DV01|FRTB|SIMM|P&L|[Ee]xposures?|[Bb]acktest\w*|Basel|[Tt]raffic light"
                           r"|[Nn]etting|[Cc]ounterpart(?:y|ies)|risk\.[a-z-]+)\b")
 # Documentation only: the generated manifest names every library with its title .
@@ -79,7 +80,7 @@ def test_no_source_loads_anything_from_a_cdn():
 # ---- one implementation of each thing, in the libraries --------------------------------------------------------------------------------
 ONE = {
     "echarts": (re.compile(r"\becharts\s*\.\s*(?:init|getInstanceByDom|registerMap|connect|dispose|use)\b"), ("drishti-chart",)),
-    "live": (re.compile(r"\bnew\s+(?:[\w$.]*\.)?(?:EventSource|WebSocket)\b"), ("drishti-data", "drishti-core")),
+    "live": (re.compile(r"\bnew\s+(?:[\w$.]*\.)?(?:EventSource|WebSocket|BroadcastChannel|SharedWorker)\b"), ("drishti-events",)),
 }
 
 
@@ -110,3 +111,48 @@ def test_a_library_styles_the_class_names_it_draws_with(library):
     used = set(re.findall(r"cls: '(%s(?:-[a-z0-9-]+)?)['\s]" % PREFIXES[library], src))
     missing = sorted(used - defined)
     assert used and len(missing) <= 0.2 * len(used), f"{library}: {len(missing)} of {len(used)} class names have no rule: {missing[:20]}"
+
+
+# ---- drishti-events: one home per capability, and no host's words -------------------------------------------------------------------
+# The names drishti-events replaced are gone everywhere, with no alias left behind (DESIGN.md, drishti-events); the reconnect timing and
+# the stream parser are defined in drishti-events alone. The constructors of a live connection are the "live" rule above.
+GONE = re.compile(r"\b(?:LiveClient|TransactionSink|pipeToGrid|FeedMonitor|feedBadge|SELECTION_EVENT)\b")
+EVENTS_ONLY = re.compile(r"\b(?:class|function)\s+(?:Backoff|Heartbeat|parseSse|readSse)\b")
+
+
+def test_what_drishti_events_replaced_is_gone_and_its_parts_have_one_home():
+    bad = []
+    for p in sorted((ROOT / "elements").glob("*/src/*.js")) + sorted((ROOT / "gallery").glob("drishti_gallery*.js")) + sorted((ROOT / "tests" / "elements").glob("*.mjs")):
+        text = p.read_text(encoding="utf-8")
+        bad += [f"{p.relative_to(ROOT)}: {m.group()}" for m in GONE.finditer(text)]
+        if p.parent.parent.name != "drishti-events":
+            bad += [f"{p.relative_to(ROOT)}: {m.group()}" for m in EVENTS_ONLY.finditer(text)]
+    assert not bad, "\n".join(bad)
+
+
+# drishti-events is for anyone's page and anyone's server: its files, the gallery's Eventing pages and the conformance vectors name no host's
+# routes, settings keys, header names, error codes or vocabulary. Allowed: the library's own names (Drishti.elements, drishti_, drishti-events)
+# and the copyright header.
+HOST_WORDS = re.compile(r"/api/|/v\d+/|\bdrishti\.[a-z][a-z-]*\.[a-z]|X-Drishti-|\bDRS-\d|\b(?:Sutras?|mnemonics?|lakes?|packs?|blotters?|VaR|trades?|trading)\b")
+
+
+def _events_files():
+    lib = ROOT / "elements" / "drishti-events"
+    return ([p for p in sorted(lib.rglob("*")) if p.is_file() and p.suffix in (".js", ".css", ".html")]
+            + [ROOT / "gallery" / "drishti_gallery-demos-events.js", ROOT / "tests" / "events" / "protocol-v1.json"])
+
+
+def test_drishti_events_names_no_host():
+    bad = []
+    for p in _events_files():
+        for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            bad += [f"{p.relative_to(ROOT)}:{n}: {m.group()}" for m in HOST_WORDS.finditer(line)]
+    assert not bad, "a host's word in drishti-events: make it an option or move it to the host's own code\n" + "\n".join(bad)
+
+
+def test_the_host_words_check_finds_them():
+    for s in ("fetch('/api/live')", "headers['X-Drishti-As-Of']", "'drishti.events.url'", "code: 'DRS-6011'", "the trade blotter", "a Sutra"):
+        assert HOST_WORDS.search(s), s
+    for s in ("Drishti.elements.events", "drishti_events.js", "drishti-events", "prices.fx.USDCAD", "wss://example.org/events"):
+        assert not HOST_WORDS.search(s), s
+    assert all(p.is_file() for p in _events_files())

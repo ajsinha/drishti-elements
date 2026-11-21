@@ -15,7 +15,7 @@
 name: Docs site
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*", "!v*-rc.*"]        # a release candidate does not replace the published docs
 permissions:
   contents: read
   pages: write

@@ -14,12 +14,12 @@
  * See the LICENSE file in the root of this repository.
  */
 /* The inputs harness (drishti_harness.html): every drishti-inputs component with synthetic data and a stand-in server in the page, an
-   editable grid following the filter bar (write-back, four eyes with ?fourEyes=1), and drishti-data's live client fed by stand-in
+   editable grid following the filter bar (write-back, four eyes with ?fourEyes=1), and a drishti-events connection (raw mode) fed by stand-in
    EventSource and WebSocket classes the test drives, plus the Arrow client. The figures are invented. window.__harness is what the
    browser test drives. */
 (function () {
   'use strict';
-  const E = window.Drishti.elements, core = E.core, G = E.grid, I = E.inputs, D = E.data;
+  const E = window.Drishti.elements, core = E.core, G = E.grid, I = E.inputs, D = E.data, EV = E.events;
   const q = new URLSearchParams(location.search);
   const H = window.__harness = { events: [], asked: 0, treeAsked: 0, writes: [], proposals: [], submitted: [], live: {} };
   const log = document.getElementById('hx-log');
@@ -94,7 +94,7 @@
   H.fbar = new I.FilterBar(document.getElementById('hx-fbar'), { bus: bus, asOf: '2026-11-06', calendar: 'US', label: 'Filters',
     fields: [{ id: 'DESK', label: 'Desk', type: 'set', options: Object.keys(DESKS) }, { id: 'CCY', label: 'Currency', type: 'set', options: CCYS.slice(0, 6) },
       { id: 'NOTIONAL', label: 'Notional', type: 'number' }, { id: 'BOOK', label: 'Book', type: 'text' }, { id: 'TRADE_DATE', label: 'Trade date', type: 'date' }] });
-  bus.on(core.FILTER_CHANNEL, (p) => note('bus:filters', p));
+  bus.on(core.filterTopic(), (p) => note('bus:filters', p));
 
   /* ---- the form ------------------------------------------------------------------------------------------------------------------- */
   const schema = { type: 'object', title: 'Amend a trade', description: 'Fields marked * are required. Changes go to a second person.', required: ['book', 'side', 'notional', 'tradeDate', 'maturity', 'product'],
@@ -170,10 +170,11 @@
   liveEl.options = { columns: [{ field: 'ID', header: 'Trade', width: 80 }, { field: 'DESK', header: 'Desk' }, { field: 'CCY', header: 'Currency' }, { field: 'MTM', header: 'MTM', type: 'number', format: 'amount0' }],
     rows: liveRows, getRowId: (r) => r.ID, title: 'Live (stand-in feed)', checkboxes: false, live: { asyncWaitMs: 20, flashMs: 600 } };
   H.liveGrid = liveEl.grid;
-  H.client = new D.LiveClient({ url: '/hx/live/trades', EventSource: FakeES, heartbeatMs: Number(q.get('heartbeat') || 400), backoff: { baseMs: 40, maxMs: 200, jitter: false } });
+  H.client = EV.connect('/hx/live/trades', { protocol: 'raw', transport: 'sse', env: { EventSource: FakeES }, heartbeatMs: Number(q.get('heartbeat') || 400),
+    backoff: { baseMs: 40, maxMs: 200, jitter: false } });
   const state = document.getElementById('hx-live-state'), stats = document.getElementById('hx-live-stats');
-  H.client.on('state', (s) => { state.textContent = s.state + (s.waitMs ? ' (again in ' + s.waitMs + ' ms)' : ''); H.live.states = (H.live.states || []).concat([s.state]); });
-  H.pipe = D.pipeToGrid(H.client, H.liveGrid, { getRowId: (r) => r.ID, onStats: (s) => { H.live.stats = s; stats.textContent = s.received + ' received · ' + s.applied + ' applied · ' + s.coalesced + ' folded · ' + s.batches + ' batches'; } });
+  H.client.on('$events.state', (m) => { const s = m.data; state.textContent = s.state + (s.waitMs ? ' (again in ' + s.waitMs + ' ms)' : ''); H.live.states = (H.live.states || []).concat([s.state]); });
+  H.pipe = H.client.subscribe('feed').toGrid(H.liveGrid, { getRowId: (r) => r.ID, onStats: (s) => { H.live.stats = s; stats.textContent = s.received + ' received · ' + s.applied + ' applied · ' + s.coalesced + ' folded · ' + s.batches + ' batches'; } });
 
   /* ---- Arrow: the fixture the test serves (Flight over HTTP when the stand-in capabilities say so) -------------------------------- */
   H.readArrow = (flight) => {

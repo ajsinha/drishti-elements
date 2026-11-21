@@ -219,7 +219,7 @@ test('linked selection: a grid\'s selection goes out on the bus, a chart\'s come
   const b = new EventBus(), selected = [];
   const model = { events: new EventBus(), selection: { selectAll: (ids) => { selected.push(ids.slice()); model.events.emit('selectionChanged', { ids: ids }); } } };
   const heard = [];
-  b.on(C.SELECTION_EVENT, (p) => heard.push([p.channel, p.ids.join(), p.source === model ? 'grid' : 'other']));
+  b.on('ui.selection.>', (p) => heard.push([p.channel, p.ids.join(), p.source === model ? 'grid' : 'other']));
   const off = C.linkGrid({ model: model }, { channel: 'trades', bus: b });
   model.events.emit('selectionChanged', { ids: ['T1', 'T2'] });
   C.publishSelection('trades', ['T9'], { bus: b, source: 'chart' });

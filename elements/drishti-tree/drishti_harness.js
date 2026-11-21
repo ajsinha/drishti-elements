@@ -105,7 +105,7 @@
   if (q.get('edit') === '1') { t.setEditing(true); }
   H.publish = (ids) => core.publishSelection('harness-tree', ids);
   H.heard = [];
-  core.bus.on(core.SELECTION_EVENT, (p) => { if (p && p.source === t) { H.heard.push(p.ids); } });
+  core.bus.on(core.selectionTopic('harness-tree'), (p) => { if (p && p.source === t) { H.heard.push(p.ids); } });
 
   document.querySelectorAll('.hx-seg [data-view]').forEach((b) => {
     b.classList.toggle('on', b.dataset.view === view);

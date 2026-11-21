@@ -147,3 +147,10 @@ def test_the_declarations_name_every_export():
             assert name in declared, (lib, name)
         assert d.count("{") == d.count("}") and d.count("(") == d.count(")"), lib
         assert "undefined;" not in d and ": ;" not in d
+        for part, ps in (TRAIN.libs[lib].get("parts") or {}).items():           # a part's own declarations (a worker has none)
+            if ps.get("worker"):
+                continue
+            d = files[f"elements/{lib}/drishti-{dist.short(lib)}-{part}.d.ts"].decode()
+            declared = set(re.findall(r"^export (?:declare (?:function|class|const)|interface|type) ([\w$]+)", d, re.M))
+            for name, _ in elements_api.exports_of((dist.ELEMENTS / lib / ps["entry"]).resolve()):
+                assert name in declared, (lib, part, name)

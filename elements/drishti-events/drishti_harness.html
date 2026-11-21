@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+  Drishti Elements
+
+  Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+  All rights reserved.
+
+  PROPRIETARY.
+
+  This file is the proprietary property of Ashutosh Sinha.
+  Copying, use, modification or distribution of this file, via any medium,
+  is not permitted except with the express prior written permission of the
+  copyright holder.
+
+  See the LICENSE file in the root of this repository.
+
+  drishti-events' fixture harness: one Events in each of the browser test's set-ups, no server of its own (static files only; the shared hub
+  reads a Server-Sent Events address the test serves). By the address: ?mode=hub (the shared hub over &feed=<address>, raw JSON;
+  &worker=0 for the leader tab instead of the SharedWorker) | queue (the queue kept on disk across a reload, on the mock server) |
+  inspector (the inspector docked, the status badge, a ticking mock) | ticker (2,000 keys at &rate= messages a second, conflated per frame
+  into a grid; the frame times measured). window.__harness is what the browser test (tests/test_elements_events_browser.py) drives.
+  Nothing inline: it runs under a strict CSP.
+-->
+<html lang="en" data-theme="terminal">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>drishti-events · fixture harness</title>
+<link rel="stylesheet" href="../../css/drishti_tokens.css">
+<link rel="stylesheet" href="../../css/drishti_states.css">
+<link rel="stylesheet" href="../drishti-inputs/drishti_inputs.css">
+<link rel="stylesheet" href="../drishti-grid/drishti_grid.css">
+<link rel="stylesheet" href="drishti_events.css">
+<link rel="stylesheet" href="drishti_harness.css">
+</head>
+<body>
+<header class="hx-top"><b class="hx-brand">drishti-events</b><span id="hx-badge"></span><span id="hx-note" class="hx-note"></span></header>
+<main class="hx-stage" id="hx-stage"></main>
+<script src="../drishti-core/drishti_core.js"></script>
+<script src="../drishti-inputs/drishti_inputs.js"></script>
+<script src="../../vendor/echarts/echarts.min.js"></script>
+<script src="../drishti-chart/drishti_chart.js"></script>
+<script src="../drishti-grid/drishti_grid.js"></script>
+<script src="drishti_events.js"></script>
+<script src="drishti_events-mock.js"></script>
+<script src="drishti_harness.js"></script>
+</body>
+</html>

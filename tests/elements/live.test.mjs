@@ -19,7 +19,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as G from '../../elements/drishti-grid/src/drishti_index.js';
-import * as D from '../../elements/drishti-data/src/drishti_index.js';
+import * as EV from '../../elements/drishti-events/src/drishti_index.js';
+import { EventBus } from '../../elements/drishti-core/src/drishti_index.js';
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms));
 function trades(n) {
@@ -161,7 +162,7 @@ test('a local pivot follows updates by difference (the same figures as computing
   assert.notEqual(g.answer, a);                                           // a row changed member: computed again
 });
 
-test('the live feeds: a manual feed, and the live client of drishti-data over Server-Sent Events and a WebSocket, each message applied (batched), rows replaced', async () => {
+test('the live feeds: a manual feed, and a drishti-events subscription over Server-Sent Events and a WebSocket (raw mode), each message applied (batched), rows replaced', async () => {
   const g = G.createGridModel({ columns: COLS, rows: trades(4), live: { asyncWaitMs: 1 } });
   const feed = G.manualFeed();
   const off = g.connectLive(feed);
@@ -172,25 +173,28 @@ test('the live feeds: a manual feed, and the live client of drishti-data over Se
   assert.equal(g.rowCount(), 1);
   off();
   class FakeES extends EventTarget { constructor(url) { super(); FakeES.last = this; this.url = url; this.readyState = 1; } close() { this.closed = true; } }
-  const es = new D.LiveClient({ url: '/api/live/trades', EventSource: FakeES, heartbeatMs: 0, window: {} });
-  const off2 = g.connectLive(es);
+  const es = EV.connect('/live/rows', { protocol: 'raw', bus: new EventBus(), clock: EV.testClock(), env: { EventSource: FakeES, window: {} } });
+  const off2 = g.connectLive(es.subscribe('feed'));
+  await tick(0);
   FakeES.last.dispatchEvent(new Event('open'));
   FakeES.last.dispatchEvent(Object.assign(new Event('message'), { data: JSON.stringify({ type: 'transaction', add: [{ id: 'Y', PX: 2 }] }) }));
   await tick(10);
   assert.equal(g.rowCount(), 2);
   off2();
+  es.destroy();
   assert.equal(FakeES.last.closed, true);
   class FakeWS extends EventTarget { constructor(url) { super(); FakeWS.last = this; } send() {} close() { this.closed = true; } }
-  const errors = [];
-  const ws = new D.LiveClient({ url: 'ws://x/live', WebSocket: FakeWS, heartbeatMs: 0, window: {} });
-  ws.on('error', (e) => errors.push(e.error));
-  g.connectLive(ws);
+  const drops = [];
+  const ws = EV.connect('ws://x/live', { protocol: 'raw', bus: new EventBus(), clock: EV.testClock(), env: { WebSocket: FakeWS, window: {} } });
+  ws.on('$events.drop', (m) => drops.push(m.data.detail));
+  g.connectLive(ws.subscribe('feed'));
+  await tick(0);
   FakeWS.last.dispatchEvent(new Event('open'));
   FakeWS.last.dispatchEvent(Object.assign(new Event('message'), { data: '{"type": "transaction", "remove": ["Y"]}' }));
   FakeWS.last.dispatchEvent(Object.assign(new Event('message'), { data: 'not json' }));
   await tick(10);
   assert.equal(g.rowCount(), 1);
-  assert.match(errors[0].message, /not JSON/);
+  assert.match(drops[0], /not JSON/);
   ws.destroy();
 });
 
