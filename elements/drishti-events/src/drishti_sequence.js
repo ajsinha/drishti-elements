@@ -13,7 +13,7 @@
  *
  * See the LICENSE file in the root of this repository.
  */
-/* Order, duplicates, gaps, replay, resume and silence: the one sequencer of drishti-events (EVENTING_DESIGN 3.3 to 3.5). A server numbers the
+/* Order, duplicates, gaps, replay, resume and silence: the one sequencer of drishti-events (docs/DESIGN.md, drishti-events). A server numbers the
    messages of each stream with `seq` and names the stream's incarnation with an `epoch`. The sequencer keeps the last seq heard of every
    stream (bounded: 5,000 streams, the least recently heard forgotten) and says, for each message that arrives, what may be delivered now and
    in which order:

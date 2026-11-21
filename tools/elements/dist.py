@@ -248,6 +248,12 @@ def library_tree(train: Train, lib: str) -> dict[str, bytes]:
     d = dts.declarations(lib, (ELEMENTS / lib / spec["entry"]).resolve(), lambda other: f"../{other}/drishti-{short(other)}")
     out[f"elements/{lib}/drishti-{short(lib)}.d.ts"] = (HEADER_CSS + f"/* {lib} {train.version}: TypeScript declarations, generated from the typed JSDoc "
                                                         "by tools/elements/dts.py. */\n" + d).encode("utf-8")
+    for part, ps in sorted((spec.get("parts") or {}).items()):   # a part loaded when needed has declarations of its own
+        if ps.get("worker"):
+            continue                                              # a worker's file has nothing for a page to import
+        d = dts.declarations(lib, (ELEMENTS / lib / ps["entry"]).resolve(), lambda other: f"../{other}/drishti-{short(other)}")
+        out[f"elements/{lib}/drishti-{short(lib)}-{part}.d.ts"] = (HEADER_CSS + f"/* {lib} {train.version}, its part '{part}' ({ps['file']}): TypeScript "
+                                                                   "declarations, generated from the typed JSDoc by tools/elements/dts.py. */\n" + d).encode("utf-8")
     return out
 
 

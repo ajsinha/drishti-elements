@@ -127,23 +127,34 @@ Subscriptions made before the connection opens are sent when it does; a reconnec
 **3. One connection for all tabs**
 
 ```js
-const events = connect('/events', { share: true });          // a SharedWorker holds the one connection
+const events = connect('/events', { share: true, namespace: 'my-app.' + userId });   // a SharedWorker holds the one connection
 ```
 
 A subscription held by several tabs is one subscription to the server (it matters for SSE over HTTP/1.1, six connections per site). Where there
-is no `SharedWorker`, the tab holding a Web Lock relays to the others. Tabs of one signed-in person only: set `namespace` for different people.
+is no `SharedWorker`, the tab holding a Web Lock relays to the others, and when it closes the next tab takes over and resumes. `namespace` is
+required with `share`: one per application and signed-in person, so two people's tabs never share a connection.
 
 **4. The inspector**
 
 ```js
-events.inspect();                                            // in the dock; or events.inspect(element)
+events.inspect();                                            // a drawer at the page's side; or events.inspect(element), a dock's panel
 ```
 
-Messages (filter by topic, kind, direction and outcome; pause), subscriptions, the connection timeline, the queue, and "why didn't I get it?".
-Keys: `/` to filter, `Space` to pause, `Esc` to close.
+Messages (filter by a topic pattern such as `prices.>`, or by words in the topic, kind or outcome; pause), subscriptions, the connection
+timeline, the queue, and "why didn't I get it?" (`events.explain({ topic })`). Keys: `/` to filter, `Space` to pause, `Enter` to open the
+message under focus, `Esc` to close it, then the inspector. The inspector is a part of its own, loaded when opened.
 
-Reference: [API.md](API.md#drishti-events) (every call and option) and [CONTRACTS.md](CONTRACTS.md). The design is in
-[EVENTING_DESIGN.md](EVENTING_DESIGN.md).
+**5. A queue that survives a reload, and the status badge**
+
+```js
+const events = connect('/events', { namespace: 'my-app.' + userId, outbox: { persist: true } });
+events.publish('notes.edit', { text: 'edit 1' }, { queue: 'persist' });   // waits while offline, sent once and in order
+Drishti.elements.events.statusBadge(document.getElementById('badge'), events);   // "Live", "Reconnecting in 4 s", "Offline: 5 changes waiting"
+```
+
+Reference: [API.md](API.md#drishti-events) (every call and option), the wire protocol for a server in
+[CONTRACTS.md](CONTRACTS.md#the-events-contract-drishti-events-protocol-version-1), and how it is built in [DESIGN.md](DESIGN.md#8-drishti-events).
+The gallery's Eventing pages run every example on the mock server.
 
 ## Versions and integrity
 

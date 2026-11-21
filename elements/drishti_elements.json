@@ -1,5 +1,5 @@
 {
-  "elements": "3.0.0-rc.1",
+  "elements": "3.0.0",
   "about": "Drishti Elements: reusable JavaScript libraries. Each library: ES modules under src/ and one bundled file written by tools/elements/build.py. css and scripts (a vendored engine) paths are relative to the root of the release tree; module: the host's own grouping of libraries (a host may allow only some modules); assets: folders under that root a library reads at run time (map shapes, the code editor's engine), shipped with it by the distribution (tools/elements/dist.py).",
   "libraries": {
     "drishti-core": {

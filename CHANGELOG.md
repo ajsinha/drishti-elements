@@ -17,8 +17,21 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
-## Unreleased
+## 3.0.0
 
+Ready, not yet tagged. drishti-events, the ninth library, complete (steps E1 to E12): events in the page, across tabs and with a server, one
+connection shared by every tab, an offline queue that survives a reload, the mock server and its faults, metrics, "why didn't I get it?",
+the status badge and the inspector. Its wire protocol is in docs/CONTRACTS.md. Breaking since 2.4.0: see drishti-core and drishti-data under
+3.0.0-rc.1.
+
+- **drishti-events** (eventing step E12, documentation and guards): the wire protocol, version 1, is "The events contract" in
+  docs/CONTRACTS.md (with `epoch: null` in `after` and `replay`, retained values outside the numbering, and raw mode's resume); how it keeps
+  its promises (reliability, security, observability, browsers, accessibility) is in docs/DESIGN.md; docs/USING.md's drishti-events section
+  is current (`namespace` is required with `share`, the inspector's drawer and keys, the queue and the badge); the design document is
+  folded into them and removed. The release tree carries a `.d.ts` for each part a page imports (`drishti-events-mock.d.ts`,
+  `drishti-events-inspector.d.ts`). Byte budgets settled at the measured size plus about 5%. Two guards: what drishti-events replaced is
+  gone everywhere and its timing and stream parsing have one home; drishti-events names no host (routes, settings keys, header names,
+  error codes, vocabulary).
 - **drishti-events** (eventing step E11, the gallery and the browser tests): the gallery's Eventing pages on the mock server (Connection,
   Ticker, Chat, Across tabs, Offline, Unreliable network, Why, Inspector), each with the status badge and "Open the inspector"; the
   library's fixture harness (`drishti_harness.html`: the shared hub, the queue across a reload, the inspector, the ticker) and its browser
