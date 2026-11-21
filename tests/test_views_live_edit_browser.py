@@ -159,7 +159,7 @@ SETUP = """async (o) => {
   const client = new mod.DataClient({ bridge: { post, listen: (h) => { handlers.push(h); return () => undefined; } } });
   poll();
   const lt = mod.liveTables(client);
-  window.__tables = (ref) => Object.assign({ schema: async () => { const s = await client.schema(ref.table); return o.loosen && s.write ? loosen(s) : s; } }, lt(ref));
+  window.__tables = (ref) => Object.assign({}, lt(ref), { schema: async () => { const s = await client.schema(ref.table); return o.loosen && s.write ? loosen(s) : s; } });
   function loosen(s) { const c = JSON.parse(JSON.stringify(s)); Object.values(c.write.columns).forEach((r) => { delete r.min; delete r.max; }); return c; }
   window.__harness.paint(o.view, { tables: window.__tables, liveSchemaMs: o.every || 15000 });
 }"""
@@ -370,6 +370,7 @@ def test_a_held_change_is_marked_with_the_hosts_message_and_an_approver_decides_
     tray = trades_view("cells", columns=[{"field": f} for f in ("change", "state", "summary", "by", "message")], table="trades.changes", fields=TRAY_FIELDS, key=["change"])
 
     async def approver(pg):
+        await pg.wait_for_selector("[data-panel=t] .dg-row", timeout=30000)
         assert await pg.locator("[data-panel=t] .dg-row").count() == 1
         assert await pg.locator(CELL.format(r=1, c=2) + ".dg-editable").count() == 1         # the column state
         assert await pg.locator(CELL.format(r=1, c=1) + ".dg-editable").count() == 0

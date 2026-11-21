@@ -2150,11 +2150,28 @@
         this.emit('bound', { panels: drawn, full: false });
       }
       metrics() { return Object.assign({}, this.stats); }
+      packSheet(doc) {
+        const l = doc.querySelector('link[rel~="stylesheet"][href$="/drishti-elements.css"], link[rel~="stylesheet"][href="drishti-elements.css"]');
+        return l && l.href ? l : null;
+      }
       styles(name) {
         const libs = manifest().libraries, css = (libs[name] && libs[name].css) || [];
         if (this.host === this.el) { css.forEach((c) => loadStyle(staticUrl(c))); return Promise.resolve(); }
         this.styled = this.styled || new Set();
         const doc = this.el.ownerDocument;
+        const pack = this.packSheet(doc);
+        if (pack) {                                          // a pack's one stylesheet (the page links it): the shadow root takes it once, in place of one file per library
+          if (!this.styled.has(pack.href)) {
+            this.styled.add(pack.href);
+            const l = doc.createElement('link');
+            l.rel = 'stylesheet';
+            l.href = pack.href;
+            const p = new Promise((r) => { l.addEventListener('load', r, { once: true }); l.addEventListener('error', r, { once: true }); });
+            this.host.insertBefore(l, this.root);
+            return p;
+          }
+          return Promise.resolve();
+        }
         return Promise.all(css.filter((c) => !this.styled.has(c) && !/drishti_tokens\.css$/.test(c)).map((c) => {
           this.styled.add(c);
           const l = doc.createElement('link');
