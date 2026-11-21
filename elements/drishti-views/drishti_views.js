@@ -614,27 +614,27 @@
   })();
   /* ---- src/drishti_views-state.js ---- */
   __m["src/drishti_views-state.js"] = (function () {
+    var isObject = __lib("drishti-core").isObject;
     const list = (x) => (Array.isArray(x) ? x : []);
-    const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
     function triggerOf(kind) {
       return kind === 'table' || kind === 'ladder' ? 'row-click' : kind === 'hbar' ? 'bar-click' : null;
     }
     const POINT_KINDS = Object.freeze(['line', 'area', 'scatter', 'waterfall', 'timeline', 'candlestick', 'metric', 'gauge', 'kv', 'status', 'treemap', 'pivot', 'surface']);
     function triggerFor(kind) { return triggerOf(kind) || (POINT_KINDS.indexOf(kind) >= 0 ? 'point-click' : null); }
     function rowsDepthFirst(rows, out) {
-      list(rows).forEach((r) => { if (isObj(r)) { out.push(r); rowsDepthFirst(r.children, out); } });
+      list(rows).forEach((r) => { if (isObject(r)) { out.push(r); rowsDepthFirst(r.children, out); } });
       return out;
     }
     function marksOf(panel) {
-      const d = panel && isObj(panel.data) ? panel.data : {}, k = panel && panel.kind;
+      const d = panel && isObject(panel.data) ? panel.data : {}, k = panel && panel.kind;
       if (k === 'table' || k === 'ladder') { return rowsDepthFirst(d.rows, []); }
-      if (k === 'hbar') { return list(d.bars).filter(isObj); }
-      if (k === 'waterfall') { return list(d.steps).filter(isObj); }
-      if (k === 'scatter') { return list(d.points).filter(isObj); }
-      if (k === 'timeline') { return list(d.events).filter(isObj); }
-      if (k === 'candlestick') { return list(d.candles).filter(isObj); }
-      if (k === 'treemap') { return list(d.cells).filter(isObj); }
-      if (k === 'pivot') { const out = []; list(d.rows).forEach((r) => list(r && r.cells).forEach((c) => out.push(isObj(c) ? c : {}))); return out; }   // row by row
+      if (k === 'hbar') { return list(d.bars).filter(isObject); }
+      if (k === 'waterfall') { return list(d.steps).filter(isObject); }
+      if (k === 'scatter') { return list(d.points).filter(isObject); }
+      if (k === 'timeline') { return list(d.events).filter(isObject); }
+      if (k === 'candlestick') { return list(d.candles).filter(isObject); }
+      if (k === 'treemap') { return list(d.cells).filter(isObject); }
+      if (k === 'pivot') { const out = []; list(d.rows).forEach((r) => list(r && r.cells).forEach((c) => out.push(isObject(c) ? c : {}))); return out; }   // row by row
       if (k === 'surface') { return surfaceMarks(d); }
       if (k === 'line' || k === 'area') {
         return list(d.x).map((x, i) => ({ set: list(d.set)[i] || null, on: list(d.on)[i] || null, ev: list(d.ev)[i] }));
@@ -649,12 +649,12 @@
       return out;
     }
     function effectsOf(mark, trigger) {
-      if (!isObj(mark)) { return []; }
-      if (isObj(mark.on) && Array.isArray(mark.on[trigger])) { return mark.on[trigger].filter(isObj); }
-      if (isObj(mark.set)) { return Object.keys(mark.set).map((id) => ({ do: 'set', state: id, value: mark.set[id] })); }
+      if (!isObject(mark)) { return []; }
+      if (isObject(mark.on) && Array.isArray(mark.on[trigger])) { return mark.on[trigger].filter(isObject); }
+      if (isObject(mark.set)) { return Object.keys(mark.set).map((id) => ({ do: 'set', state: id, value: mark.set[id] })); }
       return [];
     }
-    function hasEffects(mark) { return isObj(mark) && (isObj(mark.set) || isObj(mark.on)); }
+    function hasEffects(mark) { return isObject(mark) && (isObject(mark.set) || isObject(mark.on)); }
     function requestText(v) {
       if (v === null || v === undefined) { return null; }
       return Array.isArray(v) ? v.map(String).join(',') : String(v);
@@ -662,14 +662,14 @@
     function pickEvent(event, path) {
       let v = event;
       if (path === '') { return v === undefined ? null : v; }
-      for (const k of String(path).split('.')) { v = isObj(v) && Object.prototype.hasOwnProperty.call(v, k) ? v[k] : null; }
+      for (const k of String(path).split('.')) { v = isObject(v) && Object.prototype.hasOwnProperty.call(v, k) ? v[k] : null; }
       return v === undefined ? null : v;
     }
     class StateStore {
       constructor() { this.entries = new Map(); }
       load(states) {
         this.entries.clear();
-        list(states).forEach((s) => { if (isObj(s) && typeof s.id === 'string') { this.entries.set(s.id, { value: s.value === undefined ? null : s.value, url: s.url === true, reads: Array.isArray(s.reads) ? s.reads.slice() : null }); } });
+        list(states).forEach((s) => { if (isObject(s) && typeof s.id === 'string') { this.entries.set(s.id, { value: s.value === undefined ? null : s.value, url: s.url === true, reads: Array.isArray(s.reads) ? s.reads.slice() : null }); } });
       }
       get(id) { const e = this.entries.get(id); return e ? e.value : null; }
       values() {
@@ -711,10 +711,10 @@
           } else if (e.do === 'notify') {
             ran.push(Object.assign({}, e));
           } else if (e.do === 'host') {
-            const out = Object.assign({}, e), wired = isObj(e.withEvent) ? e.withEvent : null;
+            const out = Object.assign({}, e), wired = isObject(e.withEvent) ? e.withEvent : null;
             delete out.withEvent;
             if (wired && given) {
-              out.with = Object.assign({}, isObj(e.with) ? e.with : {});
+              out.with = Object.assign({}, isObject(e.with) ? e.with : {});
               Object.keys(wired).forEach((k) => { out.with[k] = pickEvent(event, wired[k]); });
             }
             ran.push(out);
@@ -741,25 +741,25 @@
       const refuse = (message) => ({ problems: [{ code: 'RCH-5001', message: message }], effects: [] });
       if (trigger === 'change') {
         if (!o.control) { return refuse("no control '" + id + "' on the screen"); }
-        const on = isObj(o.control.on) && Array.isArray(o.control.on.change) ? o.control.on.change.filter(isObj) : [];
+        const on = isObject(o.control.on) && Array.isArray(o.control.on.change) ? o.control.on.change.filter(isObject) : [];
         return { problems: [], effects: on, event: o.value === undefined ? null : o.value };
       }
       if (!panel) { return refuse("no panel '" + id + "' on the screen"); }
       if (trigger === 'action') {
-        const acts = Array.isArray(panel.actions) ? panel.actions.filter(isObj) : [], ix = o.mark === undefined || o.mark === null ? 0 : o.mark;
+        const acts = Array.isArray(panel.actions) ? panel.actions.filter(isObject) : [], ix = o.mark === undefined || o.mark === null ? 0 : o.mark;
         if (!Number.isInteger(ix) || ix < 0 || ix >= acts.length) { return refuse("panel '" + id + "' has no action " + ix + ' (it has ' + acts.length + ')'); }
-        return { problems: [], effects: list(acts[ix].effects).filter(isObj), event: null };
+        return { problems: [], effects: list(acts[ix].effects).filter(isObject), event: null };
       }
       if (panel.kind !== 'form') { return refuse("panel '" + id + "' (" + panel.kind + ') does not fire ' + trigger); }
-      const values = isObj(o.values) ? o.values : {};
+      const values = isObject(o.values) ? o.values : {};
       if (trigger === 'submit') {
         const known = formFields(panel).map((f) => f.id), extra = Object.keys(values).filter((k) => known.indexOf(k) < 0);
         if (extra.length) { return refuse("the form of panel '" + id + "' has no field '" + extra[0] + "'"); }
       }
-      const on = panel.data && isObj(panel.data.on) && Array.isArray(panel.data.on[trigger]) ? panel.data.on[trigger].filter(isObj) : [];
+      const on = panel.data && isObject(panel.data.on) && Array.isArray(panel.data.on[trigger]) ? panel.data.on[trigger].filter(isObject) : [];
       return { problems: [], effects: on, event: values };
     }
-    function formFields(panel) { return panel && isObj(panel.form) ? list(panel.form.fields).filter((f) => isObj(f) && typeof f.id === 'string') : []; }
+    function formFields(panel) { return panel && isObject(panel.form) ? list(panel.form.fields).filter((f) => isObject(f) && typeof f.id === 'string') : []; }
     function clickable(ctx, el, panel, trigger, ix, mark) {
       if (!hasEffects(mark)) { return false; }
       el.classList.add('dv-pick');
@@ -775,17 +775,16 @@
   })();
   /* ---- src/drishti_views-forms.js ---- */
   __m["src/drishti_views-forms.js"] = (function () {
-    var h = __lib("drishti-core").h, openDialog = __lib("drishti-core").openDialog, closeDialog = __lib("drishti-core").closeDialog;
+    var h = __lib("drishti-core").h, openDialog = __lib("drishti-core").openDialog, closeDialog = __lib("drishti-core").closeDialog, isObject = __lib("drishti-core").isObject;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var say = __m["src/drishti_views-cells.js"].say;
     var formFields = __m["src/drishti_views-state.js"].formFields;
     const list = (x) => (Array.isArray(x) ? x : []);
-    const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
     const TYPES = Object.freeze({ number: 'number', integer: 'integer', money: 'money', boolean: 'boolean', date: 'date', time: 'time', datetime: 'datetime' });
     function formSchema(panel) {
       const properties = {}, required = [];
       formFields(panel).forEach((f) => {
-        const opts = list(f.options).filter(isObj), s = { type: TYPES[f.type] || 'string', title: typeof f.label === 'string' && f.label ? f.label : f.id };
+        const opts = list(f.options).filter(isObject), s = { type: TYPES[f.type] || 'string', title: typeof f.label === 'string' && f.label ? f.label : f.id };
         if (opts.length) {
           s.type = 'string';
           s.enum = opts.map((o) => String(o.value));
@@ -801,12 +800,12 @@
       return { type: 'object', properties: properties, required: required, order: formFields(panel).map((f) => f.id) };
     }
     function formValues(panel) {
-      const v = panel && panel.data && isObj(panel.data.values) ? panel.data.values : {}, out = {};
+      const v = panel && panel.data && isObject(panel.data.values) ? panel.data.values : {}, out = {};
       Object.keys(v).forEach((k) => { if (v[k] !== null && v[k] !== undefined) { out[k] = v[k]; } });
       return out;
     }
     function problemsByField(panel, problems) {
-      const fields = formFields(panel), rules = panel.form && Array.isArray(panel.form.rules) ? panel.form.rules.filter(isObj) : [], out = {};
+      const fields = formFields(panel), rules = panel.form && Array.isArray(panel.form.rules) ? panel.form.rules.filter(isObject) : [], out = {};
       list(problems).forEach((p) => {
         const msg = String(p.message);
         const rule = rules.find((r) => r.message === msg && Array.isArray(r.fields) && r.fields.length);
@@ -857,7 +856,7 @@
     function drawActions(ctx, panel, into) {
       const doc = ctx.doc;
       while (into.firstChild) { into.removeChild(into.firstChild); }
-      const acts = list(panel.actions).filter(isObj);
+      const acts = list(panel.actions).filter(isObject);
       into.hidden = !acts.length;
       acts.forEach((a, i) => {
         const allowed = typeof a.requires !== 'string' || !a.requires || ctx.allowed(a.requires);
@@ -984,31 +983,30 @@
   })();
   /* ---- src/drishti_views-layout.js ---- */
   __m["src/drishti_views-layout.js"] = (function () {
-    var h = __lib("drishti-core").h;
+    var h = __lib("drishti-core").h, isObject = __lib("drishti-core").isObject;
     var say = __m["src/drishti_views-cells.js"].say;
     const WIDTHS = Object.freeze({ narrow: 640, medium: 1000 });
     const cellsOf = (row) => String(row || '').trim().split(/\s+/).filter(Boolean);
     const NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
     const fr = (cols) => cols.map((c) => 'minmax(0, ' + (+c) + 'fr)').join(' ');
     const quoted = (rows) => rows.map((r) => '"' + cellsOf(r).join(' ') + '"').join(' ');
-    function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
     function arrange(vm) {
-      const panels = (vm.panels || []).filter(isObj);
-      const layout = isObj(vm.layout) ? vm.layout : null;
-      const place = layout && isObj(layout.place) ? layout.place : {};
+      const panels = (vm.panels || []).filter(isObject);
+      const layout = isObject(vm.layout) ? vm.layout : null;
+      const place = layout && isObject(layout.place) ? layout.place : {};
       const picture = layout && Array.isArray(layout.areas) ? layout.areas.filter((r) => typeof r === 'string' && cellsOf(r).length) : [];
       const names = [];
       picture.forEach((r) => cellsOf(r).forEach((c) => { if (c !== '.' && NAME.test(c) && names.indexOf(c) < 0) { names.push(c); } }));
       const width = picture.length ? cellsOf(picture[0]).length : 0;
       const ok = picture.every((r) => cellsOf(r).length === width) && names.length > 0;
       const areaOf = (p) => {
-        const at = isObj(place[p.id]) ? place[p.id] : {};
+        const at = isObject(place[p.id]) ? place[p.id] : {};
         if (typeof at.area === 'string' && names.indexOf(at.area) >= 0) { return at.area; }
         if (p.area === 'right' && names.length) { return names[names.length - 1]; }
         return names.length ? names[0] : (p.area === 'right' ? 'right' : 'main');
       };
       const rows = panels.map((p, i) => {
-        const at = isObj(place[p.id]) ? place[p.id] : {};
+        const at = isObject(place[p.id]) ? place[p.id] : {};
         const order = Number.isInteger(at.order) && at.order >= 0 ? at.order : i;
         return { id: String(p.id), area: areaOf(p), section: typeof at.section === 'string' ? at.section : null, collapsible: at.collapsible === true, order: order, index: i };
       }).sort((a, b) => a.order - b.order || a.index - b.index);
@@ -1022,14 +1020,14 @@
         out.tabs = [].concat(layout.tabs || []).filter((t) => typeof t === 'string');
         out.sticky = [].concat(layout.sticky || []).filter((t) => typeof t === 'string');
         out.areas = names.map((n) => ({ name: n, panels: rows.filter((r) => r.area === n).map((r) => r.id) }));
-        const s = isObj(layout.split) && Array.isArray(layout.split.between) && layout.split.between.length === 2 ? layout.split : null;
+        const s = isObject(layout.split) && Array.isArray(layout.split.between) && layout.split.between.length === 2 ? layout.split : null;
         if (s) {
           const k = boundary(out.picture, s.between[0], s.between[1]);
           if (k > 0) { out.split = { left: s.between[0], right: s.between[1], at: k, resizable: s.resizable !== false }; }
         }
-      } else if (layout && Array.isArray(layout.sections) && layout.sections.some((s) => isObj(s) && s.id)) {
+      } else if (layout && Array.isArray(layout.sections) && layout.sections.some((s) => isObject(s) && s.id)) {
         out.mode = 'sections';
-        const sections = layout.sections.filter((s) => isObj(s) && typeof s.id === 'string');
+        const sections = layout.sections.filter((s) => isObject(s) && typeof s.id === 'string');
         const known = sections.map((s) => s.id);
         out.top = rows.filter((r) => known.indexOf(r.section) < 0).map((r) => r.id);
         out.sections = sections.map((s) => ({ id: s.id, title: typeof s.title === 'string' ? s.title : s.id, collapsed: s.collapsed === true,
@@ -1052,7 +1050,7 @@
       return -1;
     }
     function phoneOrder(vm, out, rows, names) {
-      const list = (vm.layout && Array.isArray(vm.layout.phone) ? vm.layout.phone : (isObj(vm.phone) && Array.isArray(vm.phone.order) ? vm.phone.order : [])).map(String);
+      const list = (vm.layout && Array.isArray(vm.layout.phone) ? vm.layout.phone : (isObject(vm.phone) && Array.isArray(vm.phone.order) ? vm.phone.order : [])).map(String);
       const rank = {};
       let k = 0;
       list.forEach((x) => rows.forEach((r) => { if (!(r.id in rank) && (r.id === x || (names.indexOf(x) >= 0 && r.area === x))) { rank[r.id] = k++; } }));
@@ -1342,6 +1340,7 @@
   })();
   /* ---- src/drishti_views-patch.js ---- */
   __m["src/drishti_views-patch.js"] = (function () {
+    var now = __lib("drishti-core").now;
     const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored', 'rows']);
     function conflate(patches) {
       const out = [];
@@ -1475,7 +1474,6 @@
         return done;
       }
     }
-    function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
     return { "OPS": OPS, "conflate": conflate, "Patcher": Patcher };
   })();
   /* ---- src/drishti_views-live.js ---- */
@@ -1544,13 +1542,12 @@
   })();
   /* ---- src/drishti_views-data.js ---- */
   __m["src/drishti_views-data.js"] = (function () {
-    var hasFormat = __lib("drishti-core").hasFormat, formatNamed = __lib("drishti-core").formatNamed, formatNumber = __lib("drishti-core").formatNumber, MASK = __lib("drishti-core").MASK;
+    var hasFormat = __lib("drishti-core").hasFormat, formatNamed = __lib("drishti-core").formatNamed, formatNumber = __lib("drishti-core").formatNumber, MASK = __lib("drishti-core").MASK, aggFunc = __lib("drishti-core").aggFunc, aggregate = __lib("drishti-core").aggregate, isMasked = __lib("drishti-core").isMasked;
     const AGGS = Object.freeze(['sum', 'count', 'min', 'max', 'avg', 'first', 'last', 'distinct']);
     const DATASET_FORMS = Object.freeze(['values', 'rows', 'name', 'arrow', 'pages', 'server', 'live']);
     const READ_LIMIT = 100000;
     const SEP = '\u001f';
     const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
-    function isMasked(v) { return v !== null && typeof v === 'object' && v.$masked === true; }
     function valueText(v, fmt, type) {
       if (isMasked(v)) { return MASK; }
       if (v === null || v === undefined || v === '') { return ''; }
@@ -1578,19 +1575,6 @@
       }
       return t || 'string';
     }
-    function aggregate(values, agg) {
-      if (agg === 'count') { return values.filter((v) => v !== null && v !== undefined).length; }
-      if (agg === 'distinct') { return new Set(values.filter((v) => v !== null && v !== undefined).map((v) => (isMasked(v) ? MASK : String(v)))).size; }
-      if (agg === 'first') { return values.length ? values[0] : null; }
-      if (agg === 'last') { return values.length ? values[values.length - 1] : null; }
-      if (values.some(isMasked)) { return { $masked: true }; }
-      const nums = values.filter((v) => typeof v === 'number' && isFinite(v));
-      if (!nums.length) { return null; }
-      if (agg === 'min') { return Math.min.apply(null, nums); }
-      if (agg === 'max') { return Math.max.apply(null, nums); }
-      const sum = nums.reduce((a, b) => a + b, 0);
-      return agg === 'avg' ? sum / nums.length : sum;
-    }
     function derive(rows, q) {
       const y = q.y || [];
       let out = rows;
@@ -1603,7 +1587,7 @@
           g.members.push(r);
         });
         out = Array.from(groups.values()).map((g) => {
-          y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), m.agg || 'sum'); });
+          y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), aggFunc(m.agg) ? m.agg : 'sum'); });
           return g.row;
         });
       }
@@ -1744,11 +1728,11 @@
       Object.keys(d).forEach((name) => { if (!FORBIDDEN.has(name)) { out.set(name, new Dataset(name, d[name], env)); } });
       return out;
     }
-    return { "AGGS": AGGS, "DATASET_FORMS": DATASET_FORMS, "READ_LIMIT": READ_LIMIT, "isMasked": isMasked, "valueText": valueText, "rowKey": rowKey, "inferFields": inferFields, "aggregate": aggregate, "derive": derive, "allowedAddress": allowedAddress, "Dataset": Dataset, "datasetsOf": datasetsOf };
+    return { "AGGS": AGGS, "DATASET_FORMS": DATASET_FORMS, "READ_LIMIT": READ_LIMIT, "valueText": valueText, "rowKey": rowKey, "inferFields": inferFields, "derive": derive, "allowedAddress": allowedAddress, "Dataset": Dataset, "datasetsOf": datasetsOf };
   })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
-    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart;
+    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart, now = __lib("drishti-core").now, fetcher = __lib("drishti-core").fetcher;
     var CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
     var validate = __m["src/drishti_views-validate.js"].validate, formatIssue = __m["src/drishti_views-validate.js"].formatIssue;
     var complete = __m["src/drishti_views-build.js"].complete;
@@ -1766,7 +1750,6 @@
     const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'refused', 'bound', 'drawn', 'dispose', 'point'];
     const CANCELABLE = { link: true, key: true };
     let counter = 0;
-    function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
     function isView(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) && typeof v.then !== 'function' && !(typeof Response !== 'undefined' && v instanceof Response); }
     class ViewHandle {
       constructor(el, options) {
@@ -1877,7 +1860,7 @@
         let p;
         if (typeof source === 'string') {
           this.src = source;
-          const f = this.options.fetch || ((u, init) => fetch(u, init));
+          const f = fetcher(this.options.fetch) || ((u, init) => fetch(u, init));
           p = Promise.resolve().then(() => f(source, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((r) => {
             if (!r.ok) { throw Object.assign(new Error(r.status + ' ' + (r.statusText || '')), { status: r.status }); }
             return r.json();
@@ -2291,7 +2274,7 @@
   })();
   /* ---- src/drishti_views-words.js ---- */
   __m["src/drishti_views-words.js"] = (function () {
-    var h = __lib("drishti-core").h;
+    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var drawCell = __m["src/drishti_views-cells.js"].drawCell, updateCell = __m["src/drishti_views-cells.js"].updateCell, linkTo = __m["src/drishti_views-cells.js"].linkTo, safeHref = __m["src/drishti_views-cells.js"].safeHref, toneClass = __m["src/drishti_views-cells.js"].toneClass, say = __m["src/drishti_views-cells.js"].say;
     var marksOf = __m["src/drishti_views-state.js"].marksOf, clickable = __m["src/drishti_views-state.js"].clickable;
@@ -2440,7 +2423,7 @@
           ol.appendChild(li);
         });
         body.appendChild(ol);
-        if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: panel.data.more.toLocaleString('en-US') }) })); }
+        if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: formatCount(panel.data.more) }) })); }
         return { dispose() { while (body.firstChild) { body.removeChild(body.firstChild); } } };
       }
     };
@@ -2455,7 +2438,7 @@
   })();
   /* ---- src/drishti_views-tables.js ---- */
   __m["src/drishti_views-tables.js"] = (function () {
-    var h = __lib("drishti-core").h;
+    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var drawCell = __m["src/drishti_views-cells.js"].drawCell, say = __m["src/drishti_views-cells.js"].say;
     var marksOf = __m["src/drishti_views-state.js"].marksOf, hasEffects = __m["src/drishti_views-state.js"].hasEffects, clickable = __m["src/drishti_views-state.js"].clickable;
@@ -2574,8 +2557,8 @@
         if (!count) { this.tbody.appendChild(h(doc, 'tr', { cls: 'dv-empty-row' }, [h(doc, 'td', { text: this.d.emptyLabel || say(this.ctx.messages, 'noData'), attrs: { colspan: String(Math.max(1, this.columns.length)) } })])); }
         const left = all - Math.min(all, this.shown);
         this.more.hidden = left <= 0;
-        this.more.textContent = say(this.ctx.messages, 'showMore', { count: Math.min(left, PAGE_ROWS).toLocaleString('en-US') });
-        this.count.textContent = this.query ? say(this.ctx.messages, 'rowsMatch', { count: all.toLocaleString('en-US') }) : '';
+        this.more.textContent = say(this.ctx.messages, 'showMore', { count: formatCount(Math.min(left, PAGE_ROWS)) });
+        this.count.textContent = this.query ? say(this.ctx.messages, 'rowsMatch', { count: formatCount(all) }) : '';
       }
       subHead(level, depth) {
         const doc = this.ctx.doc;
@@ -2677,7 +2660,7 @@
         const table = h(doc, 'table', { cls: 'dv-tbl' }, [thead, tbody, tfoot]);
         while (this.box.firstChild) { this.box.removeChild(this.box.firstChild); }
         this.box.appendChild(h(doc, 'div', { cls: 'dv-tbl-scroll', attrs: { tabindex: '0', role: 'region', 'aria-label': this.panel.title || this.panel.id } }, [table]));
-        if (Number.isInteger(d.more) && d.more > 0) { this.box.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(m, 'moreRows', { count: d.more.toLocaleString('en-US') }) })); }
+        if (Number.isInteger(d.more) && d.more > 0) { this.box.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(m, 'moreRows', { count: formatCount(d.more) }) })); }
       }
       markCell(td, cell, ix) {
         const ev = cell && typeof cell.ev === 'string' ? cell.ev : null;
@@ -2957,10 +2940,10 @@
   })();
   /* ---- src/drishti_views-datakinds.js ---- */
   __m["src/drishti_views-datakinds.js"] = (function () {
-    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock;
+    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, isMasked = __lib("drishti-core").isMasked, formatCount = __lib("drishti-core").formatCount;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var say = __m["src/drishti_views-cells.js"].say, toneClass = __m["src/drishti_views-cells.js"].toneClass;
-    var valueText = __m["src/drishti_views-data.js"].valueText, rowKey = __m["src/drishti_views-data.js"].rowKey, derive = __m["src/drishti_views-data.js"].derive, isMasked = __m["src/drishti_views-data.js"].isMasked;
+    var valueText = __m["src/drishti_views-data.js"].valueText, rowKey = __m["src/drishti_views-data.js"].rowKey, derive = __m["src/drishti_views-data.js"].derive;
     const SEP = '\u001f';
     const DATASET_KINDS = Object.freeze(['grid', 'tree', 'chart', 'live']);
     const list = (x) => (Array.isArray(x) ? x : []);
@@ -3014,7 +2997,7 @@
           const host = h(doc, 'div', { cls: 'dv-ds-host' });          // the library's own element (a grid makes its host .dg, height 100%)
           box.appendChild(host);
           body.appendChild(box);
-          const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: ds.more.toLocaleString() }) }) : null;
+          const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: formatCount(ds.more) }) }) : null;
           if (note) { body.appendChild(note); }
           let drawn = null, gone = false, off = null;
           Promise.all([ctx.library(lib), ctx.styles(lib)]).then(([L]) => {
@@ -3123,7 +3106,7 @@
       const mode = ref.edit === 'cells' || ref.edit === 'beside' ? ref.edit : null;
       const schemaOf = () => (typeof t.schema === 'function' ? Promise.resolve().then(() => t.schema()).then((s) => s || null, () => null) : Promise.resolve(null));
       let g = null, f = null, total = null, gone = false, edit = null, notices = null, timer = null;
-      const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: held.size.toLocaleString(), total: (total === null ? held.size : total).toLocaleString() }); };
+      const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: formatCount(held.size), total: formatCount(total === null ? held.size : total) }); };
       const labelOf = (name) => { const x = ds.field(name); return (x && x.label) || name; };
       const idsOf = (p) => list(p.remove).map((k) => (Array.isArray(k) ? k.map((x) => (x === null || x === undefined ? '' : String(x))).join(SEP) : String(k))).concat(list(p.update).concat(list(p.add)).map(idOf));
       const apply = (p) => {
@@ -3208,7 +3191,7 @@
     var defineElement = __m["src/drishti_views-element.js"].define;
     function registerKind(name, def) { defineKind(name, def); }
     function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }
-    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "StateStore": __m["src/drishti_views-state.js"].StateStore, "marksOf": __m["src/drishti_views-state.js"].marksOf, "effectsOf": __m["src/drishti_views-state.js"].effectsOf, "hasEffects": __m["src/drishti_views-state.js"].hasEffects, "triggerFor": __m["src/drishti_views-state.js"].triggerFor, "requestText": __m["src/drishti_views-state.js"].requestText, "resolveFire": __m["src/drishti_views-state.js"].resolveFire, "resolveWire": __m["src/drishti_views-state.js"].resolveWire, "pickEvent": __m["src/drishti_views-state.js"].pickEvent, "formFields": __m["src/drishti_views-state.js"].formFields, "formSchema": __m["src/drishti_views-forms.js"].formSchema, "formValues": __m["src/drishti_views-forms.js"].formValues, "problemsByField": __m["src/drishti_views-forms.js"].problemsByField, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "isMasked": __m["src/drishti_views-data.js"].isMasked, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "aggregate": __m["src/drishti_views-data.js"].aggregate, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
+    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "StateStore": __m["src/drishti_views-state.js"].StateStore, "marksOf": __m["src/drishti_views-state.js"].marksOf, "effectsOf": __m["src/drishti_views-state.js"].effectsOf, "hasEffects": __m["src/drishti_views-state.js"].hasEffects, "triggerFor": __m["src/drishti_views-state.js"].triggerFor, "requestText": __m["src/drishti_views-state.js"].requestText, "resolveFire": __m["src/drishti_views-state.js"].resolveFire, "resolveWire": __m["src/drishti_views-state.js"].resolveWire, "pickEvent": __m["src/drishti_views-state.js"].pickEvent, "formFields": __m["src/drishti_views-state.js"].formFields, "formSchema": __m["src/drishti_views-forms.js"].formSchema, "formValues": __m["src/drishti_views-forms.js"].formValues, "problemsByField": __m["src/drishti_views-forms.js"].problemsByField, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "isMasked": __lib("drishti-core").isMasked, "aggregate": __lib("drishti-core").aggregate, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.2.0" }, __m["src/drishti_index.js"]));
 });

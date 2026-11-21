@@ -32,7 +32,8 @@ export { inlineNodes, markupNodes, LINK_STATUS } from './drishti_views-words.js'
 export { PAGE_ROWS, numberOfText } from './drishti_views-tables.js';
 export { MAX_NESTING } from './drishti_views-tabs.js';
 export { CHART_KINDS, chartTable } from './drishti_views-charts.js';
-export { AGGS, DATASET_FORMS, READ_LIMIT, isMasked, valueText, rowKey, inferFields, aggregate, derive, allowedAddress, Dataset, datasetsOf } from './drishti_views-data.js';
+export { AGGS, DATASET_FORMS, READ_LIMIT, valueText, rowKey, inferFields, derive, allowedAddress, Dataset, datasetsOf } from './drishti_views-data.js';
+export { isMasked, aggregate } from '../../drishti-core/src/drishti_index.js';
 export { DATASET_KINDS, gridColumns, chartSpec } from './drishti_views-datakinds.js';
 export { LIVE_KINDS, LiveLink } from './drishti_views-live.js';
 

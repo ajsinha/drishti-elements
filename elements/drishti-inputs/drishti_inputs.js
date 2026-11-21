@@ -36,7 +36,7 @@
   var __m = {};
   /* ---- src/drishti_calendar.js ---- */
   __m["src/drishti_calendar.js"] = (function () {
-    var parseDate = __lib("drishti-core").parseDate, isoDate = __lib("drishti-core").isoDate, daysInMonth = __lib("drishti-core").daysInMonth, today = __lib("drishti-core").today;
+    var parseDate = __lib("drishti-core").parseDate, isoDate = __lib("drishti-core").isoDate, daysInMonth = __lib("drishti-core").daysInMonth, today = __lib("drishti-core").today, pad = __lib("drishti-core").pad;
     const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
     const CALENDAR_RULES = Object.freeze({
       US: [{ name: 'New Year\'s Day', fixed: '01-01', roll: 'nearest' }, { name: 'Martin Luther King Jr. Day', nth: 3, weekday: 1, month: 1 },
@@ -53,8 +53,7 @@
         { name: 'Labour Day', nth: 1, weekday: 1, month: 9 }, { name: 'Thanksgiving', nth: 2, weekday: 1, month: 10 }, { name: 'Christmas Day', fixed: '12-25', roll: 'monday' },
         { name: 'Boxing Day', fixed: '12-26', roll: 'monday' }]
     });
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function iso(y, m, d) { return String(y).padStart(4, '0') + '-' + pad(m) + '-' + pad(d); }
+    function iso(y, m, d) { return pad(y, 4) + '-' + pad(m) + '-' + pad(d); }
     function wd(y, m, d) { return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); }
     function shiftIso(s, days) { const b = parseDate(s), t = new Date(Date.UTC(b.y, b.m - 1, b.d + days)); return iso(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate()); }
     function easterSunday(y) {
@@ -452,7 +451,7 @@
   })();
   /* ---- src/drishti_inputs-dom.js ---- */
   __m["src/drishti_inputs-dom.js"] = (function () {
-    var EventBus = __lib("drishti-core").EventBus, h = __lib("drishti-core").h, placeUnder = __lib("drishti-core").placeUnder, stateBlock = __lib("drishti-core").stateBlock;
+    var EventBus = __lib("drishti-core").EventBus, h = __lib("drishti-core").h, placeUnder = __lib("drishti-core").placeUnder, stateBlock = __lib("drishti-core").stateBlock, searchWords = __lib("drishti-core").searchWords;
     let seq = 0;
     function uid(prefix) { return 'di-' + prefix + '-' + (++seq); }
     function debounce(fn, ms) {
@@ -595,7 +594,7 @@
         disabled: !!x.disabled, group: x.group || '' } : { value: x, label: String(x), detail: '', disabled: false, group: '' }));
     }
     function searchOptions(items, q) {
-      const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+      const words = searchWords(q);
       if (!words.length) { return items.slice(); }
       const scored = [];
       items.forEach((raw, i) => {
@@ -1694,7 +1693,7 @@
   })();
   /* ---- src/drishti_field-picker.js ---- */
   __m["src/drishti_field-picker.js"] = (function () {
-    var announce = __lib("drishti-core").announce, h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock;
+    var announce = __lib("drishti-core").announce, h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, searchWords = __lib("drishti-core").searchWords;
     var Popover = __m["src/drishti_inputs-dom.js"].Popover, uid = __m["src/drishti_inputs-dom.js"].uid;
     class FieldPicker {
       constructor(doc, o) {
@@ -1747,7 +1746,7 @@
         return words.every((w) => hay.indexOf(w) >= 0);
       }
       render() {
-        const doc = this.doc, words = this.query.toLowerCase().split(/\s+/).filter(Boolean);
+        const doc = this.doc, words = searchWords(this.query);
         this.list.textContent = '';
         this.rows = [];
         let shown = 0;
@@ -2195,10 +2194,9 @@
   })();
   /* ---- src/drishti_time-picker.js ---- */
   __m["src/drishti_time-picker.js"] = (function () {
-    var announce = __lib("drishti-core").announce, isoDate = __lib("drishti-core").isoDate;
+    var announce = __lib("drishti-core").announce, isoDate = __lib("drishti-core").isoDate, pad = __lib("drishti-core").pad;
     var InputBase = __m["src/drishti_inputs-dom.js"].InputBase, Listbox = __m["src/drishti_inputs-dom.js"].Listbox, Popover = __m["src/drishti_inputs-dom.js"].Popover, uid = __m["src/drishti_inputs-dom.js"].uid;
     var DatePicker = __m["src/drishti_date-picker.js"].DatePicker;
-    const pad = (n) => (n < 10 ? '0' : '') + n;
     function parseTime(text) {
       const t = String(text === undefined || text === null ? '' : text).trim().toLowerCase().replace(/\s+/g, ' ');
       if (!t) { return null; }
@@ -2327,7 +2325,7 @@
   })();
   /* ---- src/drishti_schema.js ---- */
   __m["src/drishti_schema.js"] = (function () {
-    var formatNumber = __lib("drishti-core").formatNumber, formatDate = __lib("drishti-core").formatDate, isoDate = __lib("drishti-core").isoDate, parseNumberText = __lib("drishti-core").parseNumberText;
+    var formatNumber = __lib("drishti-core").formatNumber, formatDate = __lib("drishti-core").formatDate, isoDate = __lib("drishti-core").isoDate, parseNumberText = __lib("drishti-core").parseNumberText, isObject = __lib("drishti-core").isObject;
     var parseTime = __m["src/drishti_time-picker.js"].parseTime, parseDateTime = __m["src/drishti_time-picker.js"].parseDateTime;
     var identityMap = __m["src/drishti_column-map-rules.js"].identityMap, mapProblems = __m["src/drishti_column-map-rules.js"].mapProblems;
     function words(key) {
@@ -2519,8 +2517,7 @@
     }
     function changes(before, after, base) {
       const out = [], p = base || '';
-      const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
-      if (isObj(before) || isObj(after)) {
+      if (isObject(before) || isObject(after)) {
         const keys = new Set(Object.keys(before || {}).concat(Object.keys(after || {})));
         keys.forEach((k) => out.push.apply(out, changes((before || {})[k], (after || {})[k], p ? p + '.' + k : k)));
         return out;
@@ -2654,6 +2651,7 @@
   })();
   /* ---- src/drishti_tree.js ---- */
   __m["src/drishti_tree.js"] = (function () {
+    var searchWords = __lib("drishti-core").searchWords;
     class TreeModel {
       constructor(o) {
         o = o || {};
@@ -2754,7 +2752,7 @@
       search(q, server) {
         this.query = String(q || '').trim();
         if (!this.query) { this.found = null; return Promise.resolve(0); }
-        const words = this.query.toLowerCase().split(/\s+/);
+        const words = searchWords(this.query);
         const run = () => {
           const hit = new Set();
           this.byId.forEach((n, id) => { const t = (n.label + ' ' + (n.detail || '')).toLowerCase(); if (words.every((w) => t.indexOf(w) >= 0)) { hit.add(id); } });
@@ -3564,7 +3562,7 @@
   /* ---- src/drishti_split-pane.js ---- */
   __m["src/drishti_split-pane.js"] = (function () {
     var InputBase = __m["src/drishti_inputs-dom.js"].InputBase;
-    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    var clamp = __lib("drishti-core").clamp;
     function recall(win, key) {
       try { const v = JSON.parse(win.localStorage.getItem('drishti.split.' + key)); return Array.isArray(v) ? v : null; } catch (e) { return null; }
     }
