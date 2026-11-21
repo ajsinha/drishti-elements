@@ -17,6 +17,13 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
+## Unreleased
+
+- **Known duplicates folded into drishti-core** (all libraries): `isObject`, `clamp`, `pad`, `copyText`, `fetcher` and `now` (one copy each, the local ones removed);
+  `searchWords` and `hasWords`, the one quick-search reader (a "quoted phrase" is one word) used by the grid, tree, inputs, designer and core filter;
+  the aggregation engine (`aggFunc`, `aggregate`, `registerAggFunc`, `isMasked`) moved to drishti-core with the masked rule, used by the grid, the views and the
+  Vega-Lite chart (`median` stays in the chart); `formatCount` for counts. The grid, views and chart keep their public names.
+
 ## 3.2.0 (2026-11-21)
 
 - **The painter in a shadow root takes a pack's stylesheet** (drishti-views): when the page links `drishti-elements.css` (a pack), the view's shadow root links it once
