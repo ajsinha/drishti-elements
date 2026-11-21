@@ -19,6 +19,10 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **A surface's point clicked in Chromium, heatmap and 3D** (tests): the 3D view drawn by the vendored ECharts GL, each point clicked
+  where the camera shows it, fires `point-click` on that mark and hands `{panel, ev, set}` to the host; on the heatmap an empty point is
+  no mark. Fix found by it (drishti-chart): the surface heatmap's tooltip no longer asks for ECharts' arrow (`position: 'top'`), whose
+  inline style a strict CSP (`style-src-attr`) refused.
 - **Pivot cells and surface points are marks** (drishti-views, drishti-chart; ViewModel contract 1.2: `Cell.ev`, `set`, `on`,
   `Surface.ev`, `set`, `on`): a pivot cell with a figure is clickable (keyboard too), runs its effects as `point-click` and hands its
   `ev` to the host as the `point` event; a surface point (heatmap and 3D) does the same through the chart. `marksOf` counts a pivot's
