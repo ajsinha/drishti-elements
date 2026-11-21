@@ -192,3 +192,5 @@ th[aria-sort="ascending"] .dv-sort::after { content: " ▲"; } th[aria-sort="des
 .dv-gauge-text { font-size: var(--d-fs-20, 20px); font-weight: 700; font-variant-numeric: tabular-nums; }
 .dv-gauge { height: .9em; border: 1px solid var(--d-border); border-radius: var(--d-radius-pill); overflow: hidden; }
 .dv-gauge-fill { display: block; height: 100%; width: calc(var(--dv-share, 0) * 100%); background: currentColor; }
+.dv-link-state[hidden] { display: none; }
+.dv-link-down .dv-grid { opacity: .8; }

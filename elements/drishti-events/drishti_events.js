@@ -906,7 +906,8 @@
       _can() { this.seq.o.canReplay = this.conn.can.indexOf('replay') >= 0; }
       _resync(streams, reason) {
         this.conn.subs.forEach((s) => {
-          if (!s.streams || !streams.some((x) => Object.prototype.hasOwnProperty.call(s.streams, x))) { return; }
+          const hears = (x) => (s.streams && Object.prototype.hasOwnProperty.call(s.streams, x)) || (isTopic(x) && matches(s.sub.pattern, x));
+          if (!streams.some(hears)) { return; }
           s.sub._setState('recovering');
           const now = this.conn.clock.now();
           s.sub._accept(makeMessage({ id: this.conn.events.ids.next(), topic: streams[0], data: { streams: streams, reason: reason },

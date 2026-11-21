@@ -468,3 +468,61 @@ def test_a_hidden_page_conflates_and_catches_up_in_one_paint_and_a_view_in_piece
         whole = await ev(pg, "[...R.querySelectorAll('.dv-grid .dv-panel')].map((p) => [p.dataset.panel, p.dataset.state, p.querySelector('.dv-panel-b').textContent])")
         assert pieces == whole
     run(browsers, body, "view=V002")
+
+
+LIVE_SETUP = """async (v) => {
+  const C = window.Drishti.elements.core, H = window.__harness;
+  const EV = await C.load('drishti-events'); const M = await C.loadPart('drishti-events', 'mock');
+  const server = new M.MockServer({ address: null, heartbeatMs: 30000 });
+  const events = EV.connect(server, { bus: new C.EventBus(), backoff: { baseMs: 100, maxMs: 200 } });
+  H.server = server; H.liveEvents = events;
+  const again = JSON.parse(JSON.stringify(v)); again.panels[0].data.fields[0].text = 'Resynced';
+  await H.paint(v, { live: { events: events, resync: () => again } });
+  await H.handle.liveLink.ready;
+}"""
+
+
+def test_live_over_drishti_events_frames_views_the_connection_chip_and_a_resync(browsers):
+    async def body(pg):
+        await pg.evaluate(LIVE_SETUP, KINDS_VIEW)
+        assert await pg.evaluate("window.__harness.handle.liveLink.topic") == "views.A-7"
+        await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels.find((x) => x.id === 'fig')));
+            p.data.value.text = '7.0'; H.server.publish('views.A-7', { seq: 1, patches: [{ op: 'panel', panel: p }] }, { kind: 'view.frame', stream: 'views.A-7' }); }""")
+        await pg.wait_for_function("() => " + ROOT + ".querySelector('.dv-metric-value').textContent === '7.0'", timeout=10000)
+        await pg.evaluate("() => window.__harness.server.publish('views.A-7', { op: 'strip', index: 0, cell: { label: 'x', text: 'y' } }, { kind: 'view.piece', stream: 'views.A-7' })")
+        await pg.evaluate("() => window.__harness.server.partition(1e12)")
+        await pg.wait_for_function("() => { const c = " + ROOT + ".querySelector('.dv-link-state'); return c && !c.hidden && /reconnecting|connecting|offline/.test(c.textContent); }", timeout=10000)
+        assert await ev(pg, "R.querySelector('.dv-view').classList.contains('dv-link-down')")
+        await pg.evaluate("() => { window.__harness.server.partition(0); window.__harness.liveEvents.reconnect(); }")
+        await pg.wait_for_function("() => " + ROOT + ".querySelector('.dv-link-state').hidden", timeout=10000)
+        await pg.evaluate("() => window.__harness.server.restart()")                          # a new epoch: the view is read again
+        await pg.wait_for_function("() => window.__harness.handle.metrics().resyncs >= 1", timeout=10000)
+        await pg.wait_for_function("() => " + ROOT + ".querySelector('[data-panel=facts] dd').textContent === 'Resynced'", timeout=10000)
+        await pg.evaluate("""() => { const H = window.__harness, v = JSON.parse(JSON.stringify(H.handle.viewModel)); v.panels[0].data.fields[0].text = 'Whole';
+            H.server.publish('views.A-7', v, { kind: 'view', stream: 'views.A-7' }); }""")
+        await pg.wait_for_function("() => " + ROOT + ".querySelector('[data-panel=facts] dd').textContent === 'Whole'", timeout=10000)
+        await pg.evaluate("window.__harness.handle.dispose()")
+        assert await pg.evaluate("window.__harness.handle.liveLink.stopped")
+    run(browsers, body, "view=V002")
+
+
+def test_live_from_a_plain_stream_through_raw_mode(browsers):
+    async def body(pg):
+        await pg.evaluate("""async (v) => {
+          const H = window.__harness;
+          class FakeSource { constructor(url) { this.url = url; this.readyState = 0; this.l = {}; FakeSource.last = this; setTimeout(() => { this.readyState = 1; this.fire('open', {}); }, 0); }
+            addEventListener(n, f) { (this.l[n] = this.l[n] || []).push(f); } removeEventListener(n, f) { this.l[n] = (this.l[n] || []).filter((x) => x !== f); }
+            fire(n, e) { (this.l[n] || []).forEach((f) => f(Object.assign({ type: n }, e))); } close() { this.readyState = 2; } }
+          H.Fake = FakeSource;
+          await H.paint(v, { live: { url: 'https://example.org/views/A-7', raw: true, connect: { env: { EventSource: FakeSource } } } });
+          await H.handle.liveLink.ready;
+        }""", KINDS_VIEW)
+        await pg.wait_for_function("() => window.__harness.Fake.last && window.__harness.Fake.last.readyState === 1", timeout=10000)
+        await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels.find((x) => x.id === 'fig')));
+            p.data.value.text = 'raw 1'; H.Fake.last.fire('frame', { data: JSON.stringify({ seq: 5, patches: [{ op: 'panel', panel: p }] }), lastEventId: '5' }); }""")
+        await pg.wait_for_function("() => " + ROOT + ".querySelector('.dv-metric-value').textContent === 'raw 1'", timeout=10000)
+        await pg.evaluate("""() => { const H = window.__harness, v = JSON.parse(JSON.stringify(H.handle.viewModel)); v.panels[0].data.fields[0].text = 'Raw view';
+            H.Fake.last.fire('view', { data: JSON.stringify(v), lastEventId: '6' }); }""")
+        await pg.wait_for_function("() => " + ROOT + ".querySelector('[data-panel=facts] dd').textContent === 'Raw view'", timeout=10000)
+        assert (await pg.evaluate("window.__harness.Fake.last.url")).startswith("https://example.org/views/A-7")
+    run(browsers, body, "view=V002")

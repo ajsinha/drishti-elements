@@ -123,6 +123,20 @@ export class Screen {
   }
 
   /**
+   * The live stream's connection: a chip beside the status line while it is down (reconnecting, offline, ...), none when it is open.
+   * @param {?string} down the words' name, or null
+   * @returns {void}
+   */
+  setLink(down) {
+    if (!this.link) {
+      this.link = h(this.ctx.doc, 'span', { cls: 'dv-chip dv-t-warn dv-link-state', attrs: { role: 'status' } });
+      this.status.parentNode ? this.status.after(this.link) : this.element.appendChild(this.link);
+    }
+    this.link.hidden = !down;
+    this.link.textContent = down ? say(this.ctx.messages, down) : '';
+  }
+
+  /**
    * The view's subject is gone (a deleted patch) or back (restored): a banner, the view greyed under it.
    * @param {?string} at when it was deleted, or null when it is back
    * @returns {void}

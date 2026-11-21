@@ -21438,6 +21438,35 @@ The rows of a chart's data table: its column heads and rows of text (at most 500
 
 Returns `{columns: string[], rows: string[][]}`.
 
+### drishti_views-live.js
+
+#### `LIVE_KINDS`
+
+The message kinds a view's stream carries.
+
+#### class `LiveLink`
+
+One view's subscription to its stream.
+
+##### `new LiveLink(handle, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `handle` | `Object` | the view's handle (ViewHandle) |
+| `o` | `LiveOptions` |  |
+
+##### `LiveLink.resync()`
+
+Reads the view again and paints it (a gap the stream could not fill, or a new epoch).
+
+Returns `void`.
+
+##### `LiveLink.stop()`
+
+Stops the subscription (and the connection it made).
+
+Returns `void`.
+
 ### drishti_index.js
 
 #### `registerKind(name, def)`
@@ -21464,6 +21493,17 @@ registerKind('note', { paint(body, panel, ctx) { body.textContent = panel.data.t
 | `paint` | `function(HTMLElement, Object, Object): ?{update: function(Object): void, dispose: function(): void}` | draws panel.data into the body (the element, the panel, the paint's context); answers what updates and disposes it, or nothing |
 | `[chart]` | `boolean` | true for a kind whose drawing is a picture (it keeps a data table as its text alternative) |
 
+#### `LiveOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[events]` | `Object` | the page's Events (drishti-events) to subscribe through |
+| `[url]` | `string` | the server's events address, connected for this view when no events is given |
+| `[topic]` | `string` | the view's topic (default "views.&lt;ref.id&gt;") |
+| `[raw=false]` | `boolean` | the address is a plain stream: SSE events named "view" and "frame", no protocol, nothing replayed |
+| `[resync]` | `function(): *` | the ViewModel again (a ViewModel, an address or a promise of either), after a gap that could not be filled; default the address the view was painted from |
+| `[connect]` | `Object` | more options for drishti-events' connect (auth, headers, namespace, share) |
+
 #### `PaintOptions` : `Object`
 
 | Name | Type | Meaning |
@@ -21482,6 +21522,7 @@ registerKind('note', { paint(body, panel, ctx) { body.textContent = panel.data.t
 | `[libraries]` | `Object&lt;string, Object&gt;` | the libraries a kind draws with, given by the host (drishti-chart, drishti-graph); else the ones on the page, else loaded by drishti-core's loader the first time a view has such a panel |
 | `[geo]` | `function(): Promise&lt;Object&gt;` | the host's map helper for map panels (world, region, find, option, codeOf) |
 | `[gl]` | `function(): Promise&lt;void&gt;` | loads the 3D engine for a surface's 3D view |
+| `[live]` | `import('./drishti_views-live.js').LiveOptions` | the view's live stream over drishti-events (subscribed after the first paint) |
 
 #### `ViewIssue` : `Object`
 

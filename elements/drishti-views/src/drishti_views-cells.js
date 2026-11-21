@@ -61,7 +61,12 @@ export const MESSAGES = Object.freeze({
   tooDeep: 'Panels nest at most four deep',
   dataTable: 'Data table',
   noCharts: 'Charts are not available on this page',
-  noMaps: 'Maps need the page\'s map helper (the option geo)'
+  noMaps: 'Maps need the page\'s map helper (the option geo)',
+  linkConnecting: 'connecting',
+  linkReconnecting: 'reconnecting',
+  linkOffline: 'offline',
+  linkRefused: 'the live stream was refused',
+  linkClosed: 'disconnected'
 });
 
 /** The tones of the specification; a word outside it is drawn untoned. */

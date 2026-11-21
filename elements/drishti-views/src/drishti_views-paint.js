@@ -27,6 +27,7 @@ import { PanelFrame } from './drishti_views-panels.js';
 import { arrange, Layout } from './drishti_views-layout.js';
 import { Screen, problemCard } from './drishti_views-screen.js';
 import { Patcher } from './drishti_views-patch.js';
+import { LiveLink } from './drishti_views-live.js';
 
 /** The contract majors this painter draws. */
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
@@ -54,6 +55,7 @@ let counter = 0;
  *   the ones on the page, else loaded by drishti-core's loader the first time a view has such a panel
  * @property {function(): Promise<Object>} [geo] the host's map helper for map panels (world, region, find, option, codeOf)
  * @property {function(): Promise<void>} [gl] loads the 3D engine for a surface's 3D view
+ * @property {import('./drishti_views-live.js').LiveOptions} [live] the view's live stream over drishti-events (subscribed after the first paint)
  */
 
 function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
@@ -86,6 +88,9 @@ export class ViewHandle {
     /** @type {Promise<ViewHandle>} the first paint is done (every panel drawn or in a state, or a card in its place) */
     this.ready = new Promise((r) => { done = r; });
     this.resolveReady = done;
+    if (this.options.live) {
+      this.ready.then(() => { if (!this.disposed && !this.liveLink) { this.liveLink = new LiveLink(this, this.options.live); this.liveLink.ready.catch((e) => this.emit('error', { code: 'view.live', error: e })); } });
+    }
   }
 
   /** @private */
@@ -170,6 +175,7 @@ export class ViewHandle {
     }
     let p;
     if (typeof source === 'string') {
+      this.src = source;
       const f = this.options.fetch || ((u, init) => fetch(u, init));
       p = Promise.resolve().then(() => f(source, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((r) => {
         if (!r.ok) { throw Object.assign(new Error(r.status + ' ' + (r.statusText || '')), { status: r.status }); }
@@ -232,6 +238,7 @@ export class ViewHandle {
     const panels = (Array.isArray(vm.panels) ? vm.panels : []).filter((p) => p && typeof p === 'object' && (!only || only.indexOf(String(p.id)) >= 0));
     ctx.label = this.options.label || (vm.title && (vm.title.pill || vm.title.id)) || (vm.ref && vm.ref.id) || '';
     this.screen = new Screen(ctx, vm, this.options.header);
+    if (this.linkState) { this.screen.setLink(this.linkState); }
     panels.forEach((p) => { if (!this.frames.has(String(p.id))) { this.frames.set(String(p.id), new PanelFrame(ctx, p)); } });
     this.layout = new Layout(ctx, arrange(Object.assign({}, vm, { panels: panels })), this.frames);
     this.root.setAttribute('aria-labelledby', this.screen.title.id);
@@ -440,6 +447,18 @@ export class ViewHandle {
   }
 
   /**
+   * The live stream's connection on the view: a chip in the status line and the view marked stale while it is down.
+   * @private
+   * @param {?string} down the state's words' name (linkConnecting, linkReconnecting, linkOffline, linkRefused, linkClosed), or null when open
+   * @returns {void}
+   */
+  setLink(down) {
+    this.linkState = down;
+    this.root.classList.toggle('dv-link-down', !!down);
+    if (this.screen) { this.screen.setLink(down); }
+  }
+
+  /**
    * Stops everything, disposes every panel's drawing and empties the container.
    * @returns {void}
    */
@@ -449,6 +468,7 @@ export class ViewHandle {
     if (this.panelCharts) { this.panelCharts.dispose(); }
     if (this.ro) { this.ro.disconnect(); }
     this.patcher.stop();
+    if (this.liveLink) { this.liveLink.stop(); }
     this.disposed = true;
     this.emit('dispose', {});
     this.listeners.clear();

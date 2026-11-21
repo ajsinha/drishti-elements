@@ -47,6 +47,14 @@ Each release lists what changed, by library. One version for every library: the 
   strip cell per index, panel per id and provenance win, in the order of their last arrival, never across `deleted` or `restored`;
   `metrics().conflated` counts them); a hidden page paints nothing, keeps only the conflated pending state and catches up in one paint
   when shown; a view that arrives in pieces (every panel computing, then a `panel` patch each) ends as a one-shot paint of it.
+- **drishti-views** (step 8, live): `paint(el, view, { live: { events | url, topic?, raw?, resync?, connect? } })` subscribes the view's
+  topic (default `views.<the view's id>`) through the page's Events or one connected for it (drishti-events loaded only then); a
+  message of kind `view` paints the whole view again, `view.frame` applies a frame, `view.piece` one patch; a gap drishti-events cannot
+  fill (a resync notice, a new epoch) reads the view again (`resync()`, else the address it was painted from) and paints it
+  (`metrics().resyncs`); a plain stream (Server-Sent Events named `view` and `frame`) through raw mode; the connection's state is a chip
+  in the status line and the view is marked while the line is down; the subscription and its connection stop with the view.
+- **drishti-events**: a stream born after its subscription was answered (the server named no streams yet) is now resynced too when
+  the server restarts: the resync notice reaches every subscription whose pattern hears the stream.
 
 ## 3.0.0
 

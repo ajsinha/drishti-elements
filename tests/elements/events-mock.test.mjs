@@ -204,3 +204,17 @@ test('the conformance vectors pass against the mock server (the protocol\'s refe
   assert.ok(frameMatches({ a: '<one-of:x,y>', b: '<save:k>' }, { a: 'y', b: 3 }, {}, {}));
   server.close();
 });
+
+test('a stream born after the subscription is resynced too when the server restarts (its subscription is told)', async () => {
+  const { clock, server, ev } = await setup();
+  const got = [];
+  await ev.subscribe('views.>', (m) => got.push(m.kind === 'resync' ? 'resync' : m.seq)).ready;
+  server.publish('views.a', 1, { stream: 'views.a' }); server.publish('views.a', 2, { stream: 'views.a' });
+  await flush();
+  server.restart();
+  await flush();
+  clock.tick(30000);
+  await flush(20);
+  assert.ok(got.indexOf('resync') > 1, JSON.stringify(got));
+  ev.destroy();
+});

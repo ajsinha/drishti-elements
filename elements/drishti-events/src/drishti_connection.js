@@ -129,7 +129,9 @@ class ConnectionSequencer {
   /** @private the subscriptions that hear a stream enter `recovering`, are told by a resync notice (to that subscription only), and are active again */
   _resync(streams, reason) {
     this.conn.subs.forEach((s) => {
-      if (!s.streams || !streams.some((x) => Object.prototype.hasOwnProperty.call(s.streams, x))) { return; }
+      // the streams the server named when it answered, or (a stream born after the subscription) the streams its pattern hears
+      const hears = (x) => (s.streams && Object.prototype.hasOwnProperty.call(s.streams, x)) || (isTopic(x) && matches(s.sub.pattern, x));
+      if (!streams.some(hears)) { return; }
       s.sub._setState('recovering');
       const now = this.conn.clock.now();
       s.sub._accept(makeMessage({ id: this.conn.events.ids.next(), topic: streams[0], data: { streams: streams, reason: reason },

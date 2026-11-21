@@ -374,7 +374,12 @@
       tooDeep: 'Panels nest at most four deep',
       dataTable: 'Data table',
       noCharts: 'Charts are not available on this page',
-      noMaps: 'Maps need the page\'s map helper (the option geo)'
+      noMaps: 'Maps need the page\'s map helper (the option geo)',
+      linkConnecting: 'connecting',
+      linkReconnecting: 'reconnecting',
+      linkOffline: 'offline',
+      linkRefused: 'the live stream was refused',
+      linkClosed: 'disconnected'
     });
     const TONES = Object.freeze(['pos', 'neg', 'link', 'accent', 'ok', 'warn', 'bad', 'muted', 'inactive']);
     const DASH = '—';
@@ -982,6 +987,14 @@
             [h(doc, 'strong', { text: say(m, 'partial') }), list.length ? h(doc, 'ul', null, list.map((x) => h(doc, 'li', { text: x }))) : null]));
         }
       }
+      setLink(down) {
+        if (!this.link) {
+          this.link = h(this.ctx.doc, 'span', { cls: 'dv-chip dv-t-warn dv-link-state', attrs: { role: 'status' } });
+          this.status.parentNode ? this.status.after(this.link) : this.element.appendChild(this.link);
+        }
+        this.link.hidden = !down;
+        this.link.textContent = down ? say(this.ctx.messages, down) : '';
+      }
       setDeleted(at) {
         const old = this.banner.querySelector('.dv-deleted');
         if (old) { old.remove(); }
@@ -1009,6 +1022,70 @@
     }
     return { "Screen": Screen, "problemCard": problemCard };
   })();
+  /* ---- src/drishti_views-live.js ---- */
+  __m["src/drishti_views-live.js"] = (function () {
+    const LIVE_KINDS = Object.freeze(['view', 'view.frame', 'view.piece']);
+    const DOWN = { connecting: 'linkConnecting', reconnecting: 'linkReconnecting', offline: 'linkOffline', refused: 'linkRefused', closed: 'linkClosed' };
+    class LiveLink {
+      constructor(handle, o) {
+        this.handle = handle;
+        this.o = Object.assign({}, o);
+        this.offs = [];
+        this.own = null;
+        this.stopped = false;
+        this.state = null;
+        const vm = handle.viewModel || {};
+        this.topic = typeof this.o.topic === 'string' && this.o.topic ? this.o.topic : 'views.' + String((vm.ref && vm.ref.id) || 'view');
+        this.ready = this.events().then((ev) => { if (!this.stopped) { this.subscribe(ev); } });
+      }
+      events() {
+        if (this.o.events) { return Promise.resolve(this.o.events); }
+        if (typeof this.o.url !== 'string' || !this.o.url) { return Promise.reject(new Error('live: give events (the page\'s Events) or url (the server\'s events address)')); }
+        return this.handle.library('drishti-events').then((EV) => {
+          const topic = this.topic;
+          const opts = Object.assign({}, this.o.connect || {}, this.o.raw ? { protocol: 'raw', transport: 'sse', events: ['view', 'frame'], topicOf: () => topic,
+            kindOf: (v, meta) => (meta && meta.event === 'view' ? 'view' : 'view.frame') } : {});
+          this.own = EV.connect(this.o.url, opts);
+          return this.own;
+        });
+      }
+      subscribe(ev) {
+        this.ev = ev;
+        const sub = ev.subscribe(this.topic, (m) => this.message(m));
+        this.offs.push(() => { if (sub && typeof sub.off === 'function') { sub.off(); } });
+        this.offs.push(ev.on('$events.state', (m) => this.setState(m.data && m.data.state)));
+        const s = ev.metrics && ev.metrics();
+        if (s && s.server && s.server.state) { this.setState(s.server.state); }
+      }
+      message(m) {
+        if (this.stopped || !m) { return; }
+        const h = this.handle;
+        if (m.kind === 'resync') { this.resync(); return; }
+        if (m.kind === 'view') { h.patcher.lastSeq = null; h.update(m.data); return; }
+        if (m.kind === 'view.piece') { h.patch([m.data]); return; }
+        h.patch(m.data);
+      }
+      resync() {
+        const h = this.handle, src = typeof this.o.resync === 'function' ? this.o.resync() : h.src;
+        h.stats.resyncs = (h.stats.resyncs || 0) + 1;
+        if (src === undefined || src === null) { return; }
+        h.patcher.lastSeq = null;
+        h.update(src);
+      }
+      setState(state) {
+        if (!state || state === this.state) { return; }
+        this.state = state;
+        this.handle.setLink(DOWN[state] ? DOWN[state] : null);
+      }
+      stop() {
+        this.stopped = true;
+        this.offs.forEach((f) => { try { f(); } catch (e) { /* stopped */ } });
+        this.offs = [];
+        if (this.own && typeof this.own.destroy === 'function') { this.own.destroy(); }
+      }
+    }
+    return { "LIVE_KINDS": LIVE_KINDS, "LiveLink": LiveLink };
+  })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
     var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded;
@@ -1019,6 +1096,7 @@
     var arrange = __m["src/drishti_views-layout.js"].arrange, Layout = __m["src/drishti_views-layout.js"].Layout;
     var Screen = __m["src/drishti_views-screen.js"].Screen, problemCard = __m["src/drishti_views-screen.js"].problemCard;
     var Patcher = __m["src/drishti_views-patch.js"].Patcher;
+    var LiveLink = __m["src/drishti_views-live.js"].LiveLink;
     const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
     const HANDLES = new WeakMap();
     const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'dispose'];
@@ -1047,6 +1125,9 @@
         let done;
         this.ready = new Promise((r) => { done = r; });
         this.resolveReady = done;
+        if (this.options.live) {
+          this.ready.then(() => { if (!this.disposed && !this.liveLink) { this.liveLink = new LiveLink(this, this.options.live); this.liveLink.ready.catch((e) => this.emit('error', { code: 'view.live', error: e })); } });
+        }
       }
       context() {
         const self = this, o = this.options, doc = this.el.ownerDocument;
@@ -1117,6 +1198,7 @@
         }
         let p;
         if (typeof source === 'string') {
+          this.src = source;
           const f = this.options.fetch || ((u, init) => fetch(u, init));
           p = Promise.resolve().then(() => f(source, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((r) => {
             if (!r.ok) { throw Object.assign(new Error(r.status + ' ' + (r.statusText || '')), { status: r.status }); }
@@ -1175,6 +1257,7 @@
         const panels = (Array.isArray(vm.panels) ? vm.panels : []).filter((p) => p && typeof p === 'object' && (!only || only.indexOf(String(p.id)) >= 0));
         ctx.label = this.options.label || (vm.title && (vm.title.pill || vm.title.id)) || (vm.ref && vm.ref.id) || '';
         this.screen = new Screen(ctx, vm, this.options.header);
+        if (this.linkState) { this.screen.setLink(this.linkState); }
         panels.forEach((p) => { if (!this.frames.has(String(p.id))) { this.frames.set(String(p.id), new PanelFrame(ctx, p)); } });
         this.layout = new Layout(ctx, arrange(Object.assign({}, vm, { panels: panels })), this.frames);
         this.root.setAttribute('aria-labelledby', this.screen.title.id);
@@ -1303,12 +1386,18 @@
         }
         return this.chartsP;
       }
+      setLink(down) {
+        this.linkState = down;
+        this.root.classList.toggle('dv-link-down', !!down);
+        if (this.screen) { this.screen.setLink(down); }
+      }
       dispose() {
         if (this.disposed) { return; }
         this.clear();
         if (this.panelCharts) { this.panelCharts.dispose(); }
         if (this.ro) { this.ro.disconnect(); }
         this.patcher.stop();
+        if (this.liveLink) { this.liveLink.stop(); }
         this.disposed = true;
         this.emit('dispose', {});
         this.listeners.clear();
@@ -1920,7 +2009,7 @@
   __m["src/drishti_index.js"] = (function () {
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     function registerKind(name, def) { defineKind(name, def); }
-    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable };
+    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.0.0" }, __m["src/drishti_index.js"]));
 });
