@@ -711,7 +711,8 @@ and loads only the libraries they need.
 | `handle.controls()` / `handle.setControl(id, value)` | | The controls' values. |
 | `handle.open(link)` / `handle.back()` | | Navigation between views in place. |
 | `handle.export(panelId, format)` | `Promise<Blob>` | A panel's download. |
-| `handle.fire(panel, trigger, mark?)` | `Promise<{effects, problems, state}>` | Fires a trigger (`row-click`, `bar-click`, `point-click`) on a mark as a click does (section 8.5). |
+| `handle.fire(panel, trigger, mark?, values?)` | `Promise<{effects, problems, state}>` | Fires a trigger (`row-click`, `bar-click`, `point-click`; `submit` and `cancel` of a `form` panel with the submitted `values`; `action` with the button's place as `mark`) as a click does (section 8.5). A submit is refused (RCH-5003, nothing runs) with the messages the host's `check({panel, form, values})` hook answers: the form's rules, required fields and limits belong to the Rachana runtime, never to the painter. |
+| `handle.change(control, value)` | `Promise<{effects, problems, state}>` | A control's change (`ControlView.on.change`): the effects run with the value as the event; the bind request carries `controls` and `ctl.<id>` params. The host draws controls and calls this. |
 | `handle.stateValues` | object | The screen's state values now (contract 1.2), id to value. |
 | `handle.on(name, fn)` | `off()` | The events below. |
 | `handle.metrics()` | | Paint times, patches applied, conflated, ignored. |
@@ -763,7 +764,12 @@ events) and are never run by Elements. Then `options.host.bind({state, params, c
 `state.<id>` request parameters; a cleared state is `null` in `state` and absent from `params`: its default stands) and answers the next
 ViewModel; only the panels the changed states' `reads` name are drawn again (a `reads` that names the title, or that is missing, draws the whole
 view), then `state[]` is taken from it and `bound` is raised. Without `bind` the values are kept and nothing is drawn again. Triggers run one
-after the other. `submit` and `cancel` of a form panel come with that panel.
+after the other. A `form` panel is drishti-inputs' Form drawn from its fields (starting values from the ViewModel's `initial` result) with Submit and
+Cancel; a submit hands its values to `options.host.check({panel, form, values})`, which answers the problems the Rachana runtime found (the rules are
+never evaluated in the browser): any problem refuses the submit, shown at its field, and nothing runs; otherwise the `submit` effects run with
+`event` the values (`set` takes `event.<field>`, a `host` effect's `withEvent` arguments are filled from them). `cancel` runs without checks. A panel's
+`actions` are buttons in its header (`confirm` asks in a dialog first, or `options.host.confirm(text)`; a `requires` that `options.host.allowed(name)`
+answers no leaves the button disabled). A control's `on.change` runs through `handle.change(control, value)`.
 
 ### 8.3 `<elements-view>`
 

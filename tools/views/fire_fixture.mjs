@@ -39,12 +39,13 @@ for (const f of readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) {
     const id = doc.suite + '/' + c.id;
     if (only && !only.includes(c.id)) { continue; }
     const given = Object.assign({}, doc.given || {}, c.given || {});
-    const req = { sutra: c.sutra, given: given, steps: c.steps, since: c.since || doc.since };
+    const req = { sutra: c.sutra, files: c.files, given: given, steps: c.steps, since: c.since || doc.since };
     const got = JSON.parse(rt.fire(JSON.stringify(req)));
     if (got.error) { throw new Error(id + ': ' + got.error); }
     const exp = (c.expect && c.expect.steps) || [];
     out.cases.push({ id: id, since: req.since, viewModel: got.viewModel, steps: c.steps.map((st, i) => ({
-      panel: st.panel, trigger: st.trigger, mark: st.mark === undefined ? null : st.mark,
+      panel: st.panel === undefined ? null : st.panel, control: st.control === undefined ? null : st.control, trigger: st.trigger,
+      mark: st.mark === undefined ? null : st.mark, values: st.values === undefined ? null : st.values, value: st.value === undefined ? null : st.value,
       expect: { state: (exp[i] || {}).state, effects: (exp[i] || {}).effects, problems: (exp[i] || {}).problems },
       actual: { state: got.steps[i].state, effects: got.steps[i].effects, problems: got.steps[i].problems },
       viewModel: got.steps[i].viewModel })) });

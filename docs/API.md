@@ -4429,7 +4429,7 @@ Returns `void`.
 
 #### class `Form`
 
-A form from a schema. Events: change {path, value, values}, invalid {errors}, submitted {values, result}, proposed {proposal, result}, reset, step {index, id}.
+A form from a schema. Events: change {path, value, values}, invalid {errors}, submitted {values, result}, proposed {proposal, result}, reset, cancel {values}, step {index, id}.
 
 ##### `new Form(host, options)`
 
@@ -5649,6 +5649,8 @@ A custom widget: draws a field's control. Returns its element and, as it can, se
 | `[label]` | `string` | the form's name for a reader (default: the schema's title) |
 | `[submitHook]` | `string` | a data attribute on the submit button ("lookup-go" is data-lookup-go), for tutorials and tests |
 | `[resetButton=true]` | `boolean` | the Reset button |
+| `[cancelLabel]` | `string` | a Cancel button with these words (after Submit; no checks, no validation): it emits cancel {values} and calls onCancel with the values as they are |
+| `[onCancel]` | `function(Object): *` |  |
 
 #### `MultiSelectOptions` : `Object`
 
@@ -21826,17 +21828,30 @@ Goes back to the view before the last one opened in place.
 
 Returns `boolean`: whether there was one.
 
-##### `ViewHandle.fire(panel, trigger, mark)`
+##### `ViewHandle.fire(panel, trigger, mark, values, checked)`
 
 Fires a trigger on a mark of a panel as a click does (a row, a bar, a point, a step, an event, a candle, a figure): the mark's effect list runs in order (set, toggle, clear on the state; notify and host go to the host's hooks), the state goes back to the host's bind, and the panels the changed states' reads name are drawn again from the ViewModel it answers. Triggers run one after the other.
 
 | Parameter | Type | Meaning |
 |---|---|---|
 | `panel` | `string` | the panel's id |
-| `trigger` | `string` | row-click, bar-click or point-click |
-| `[mark=0]` | `number` | the mark's place, in the order the specification counts them |
+| `trigger` | `string` | row-click, bar-click, point-click, submit or cancel (a form panel), or action (a panel's button) |
+| `[mark=0]` | `number` | the mark's place, in the order the specification counts them (an action's place in the panel's list) |
+| `[values]` | `Object` | a form's submitted values (event.&lt;field&gt; in its effects) |
+| `[checked=false]` | `boolean` | the values were checked already (the form drawn by the painter checks them as the reader submits) |
 
 Returns `Promise&lt;{effects: Object[], problems: Object[], state: Object&lt;string, *&gt;}&gt;`: effects as run; problems: RCH-5001 for a panel, trigger or mark the screen does not have (nothing runs).
+
+##### `ViewHandle.change(control, value)`
+
+A control's change (contract 1.2): the control takes the value and its change effects run in order with that value as the event, the state and the control go back to the host's bind, and the panels that read them are drawn again. A control the screen lacks is refused (RCH-5001; nothing runs). The host draws the controls (the painter draws panels): it calls this when the reader picks a value.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `control` | `string` | the control's id |
+| `value` | `*` | the new value (a list for a multi-select) |
+
+Returns `Promise&lt;{effects: Object[], problems: Object[], state: Object&lt;string, *&gt;}&gt;`.
 
 ##### `ViewHandle.metrics()`
 
@@ -21936,13 +21951,14 @@ The panels (and strip or title) that read any of the states, each once.
 
 Returns `?string[]`: null when one of them does not say.
 
-##### `StateStore.run(effects)`
+##### `StateStore.run(effects, event)`
 
-Runs an effect list on the values, in order. set, toggle and clear change them (a state the ViewModel does not hold is made); notify and host change nothing and are handed back for the host. Answers the effects as run: {do, state, value} for the three, the effect itself for the two.
+Runs an effect list on the values, in order. set, toggle and clear change them (a state the ViewModel does not hold is made); notify and host change nothing and are handed back for the host. Answers the effects as run: {do, state, value} for the three, the effect itself for the two. With an event (a submitted form's values, a control's new value), a set that names `event` takes that part of it and a host effect's `withEvent` arguments are filled from it; nothing is evaluated.
 
 | Parameter | Type | Meaning |
 |---|---|---|
 | `effects` | `Object[]` |  |
+| `[event]` | `*` |  |
 
 Returns `{ran: Object[], changed: string[]}`.
 
@@ -22009,6 +22025,73 @@ Checks a trigger against the screen as the specification's fire cases do. Answer
 | `[mark=0]` | `number` |  |
 
 Returns `{problems: Object[], effects?: Object[]}`.
+
+#### `resolveWire(panel, id, trigger, o)`
+
+Checks a form trigger (submit or cancel), an action button's press or a control's change against the screen as the specification's fire cases do. Answers the effects and the values they read as event, or the refusal (RCH-5001; nothing runs). The form's own rules are not evaluated here: the host's check hook answers them (paint.js).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `?Object` | the panel as drawn (null for a control's change) |
+| `id` | `string` | the panel's id (or the control's) as asked |
+| `trigger` | `string` | submit, cancel, action or change |
+| `[o]` | `{mark: (number\|undefined), values: ?Object, control: ?Object}` | mark: the action's place; values: the submitted values; control: the ControlView |
+
+Returns `{problems: Object[], effects?: Object[], event?: *}`.
+
+#### `pickEvent(event, path)`
+
+The part of an event a path names: '' the whole event, else the dotted fields of it (null when it has none).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `event` | `*` |  |
+| `path` | `string` |  |
+
+Returns `*`.
+
+#### `formFields(panel)`
+
+The fields of a form panel as the ViewModel gives them.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `Object` |  |
+
+Returns `Object[]`.
+
+### drishti_views-forms.js
+
+#### `formSchema(panel)`
+
+The object schema drishti-inputs' Form draws for a form panel's fields.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `Object` | a form panel |
+
+Returns `Object`.
+
+#### `formValues(panel)`
+
+The values a form starts with (the ViewModel's, the empty ones left out).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `Object` |  |
+
+Returns `Object`.
+
+#### `problemsByField(panel, problems)`
+
+Where each problem the host answered belongs in the form: a rule's message at the rule's first field, a message that begins with a field's label at that field, any other at the first field. The form shows them in its summary and at those fields.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `Object` |  |
+| `problems` | `Object[]` |  |
+
+Returns `Object&lt;string, string&gt;`: field id to message.
 
 ### drishti_views-words.js
 

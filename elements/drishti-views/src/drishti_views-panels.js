@@ -21,6 +21,7 @@
 import { h, showState, stateBlock } from '../../drishti-core/src/drishti_index.js';
 import { kindOf } from './drishti_views-kinds.js';
 import { say } from './drishti_views-cells.js';
+import { drawActions } from './drishti_views-forms.js';
 
 /** The states a panel's frame is drawn in (data-state on the frame). */
 export const PANEL_STATES = Object.freeze(['ready', 'error', 'denied', 'waiting', 'computing', 'stale', 'failed', 'empty', 'unknown-kind']);
@@ -48,7 +49,8 @@ export class PanelFrame {
     const doc = ctx.doc, hid = ctx.uid('h-' + this.id);
     this.title = h(doc, 'h3', { cls: 'dv-panel-title', attrs: { id: hid } });
     this.tags = h(doc, 'span', { cls: 'dv-panel-tags' });
-    this.head = h(doc, 'header', { cls: 'dv-panel-h' }, [this.title, this.tags]);
+    this.acts = h(doc, 'span', { cls: 'dv-panel-acts', attrs: { hidden: '' } });
+    this.head = h(doc, 'header', { cls: 'dv-panel-h' }, [this.title, this.tags, this.acts]);
     this.body = h(doc, 'div', { cls: 'dv-panel-b', attrs: { id: ctx.uid('b-' + this.id) } });
     this.element = h(doc, 'section', { cls: 'dv-panel', attrs: { role: 'group', 'aria-labelledby': hid, tabindex: '-1', 'data-panel': this.id, id: ctx.uid('p-' + this.id) } },
       [this.head, this.body]);
@@ -71,6 +73,7 @@ export class PanelFrame {
     el.classList.toggle('dv-has-title', !!panel.title);
     this.title.textContent = typeof panel.title === 'string' && panel.title ? panel.title : this.id;
     this.headTags(panel);
+    drawActions(ctx, panel, this.acts);
     if (panel.span && Number.isInteger(panel.span)) { el.style.setProperty('--dv-span', String(Math.max(1, Math.min(12, panel.span)))); } else { el.style.removeProperty('--dv-span'); }
     if (panel.height && Number.isInteger(panel.height)) { el.style.setProperty('--dv-rows', String(Math.max(1, Math.min(48, panel.height)))); } else { el.style.removeProperty('--dv-rows'); }
     if (same && this.instance && typeof this.instance.update === 'function') {

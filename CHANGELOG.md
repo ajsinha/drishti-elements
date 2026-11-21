@@ -19,6 +19,8 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Forms, actions and control changes** (drishti-views, drishti-inputs; ViewModel contract 1.2): the `form` panel drawn by drishti-inputs' Form (types, options, required, min and max, starting values, Submit and Cancel; a refused submit shows the messages the host's `check` hook answers, nothing is evaluated in the browser); panel `actions:` buttons in the header (confirm in a dialog, `requires` through `host.allowed`); `handle.change(control, value)` for a control's `on.change`; effects read `event` (a submitted value, the new control value). `Form` option `cancelLabel` and `onCancel`. The `fire/forms`, `fire/actions` and `fire/change` cases of drishti-rachana run through the painter in Chromium and on the store under Node.
+
 - **Charts, views**: a chart drawn before its box had a height (the engine at 0 px high) now follows its own box: each chart container is observed, not only the view, so the chart-point click is steady under parallel load (the browser test waits for the chart to be sized to its box).
 - **IDE launchers**: `run-configs/` (PyCharm configurations for the checks and the pytest suites; Maven launchers of `pom.xml` for the Node tests and the gallery server, so IntelliJ Community on Windows needs no bash) and `drishti-elements.code-workspace` for VS Code; README, Build and run in the IDE.
 

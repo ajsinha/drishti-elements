@@ -30,13 +30,14 @@ import { Screen, problemCard } from './drishti_views-screen.js';
 import { Patcher } from './drishti_views-patch.js';
 import { LiveLink } from './drishti_views-live.js';
 import { datasetsOf } from './drishti_views-data.js';
-import { StateStore, resolveFire } from './drishti_views-state.js';
+import { StateStore, resolveFire, resolveWire, requestText } from './drishti_views-state.js';
+import { ask } from './drishti_views-forms.js';
 
 /** The contract majors this painter draws. */
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'bound', 'drawn', 'dispose', 'point'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'refused', 'bound', 'drawn', 'dispose', 'point'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -127,6 +128,11 @@ export class ViewHandle {
       charts: () => self.charts(),
       styles: (name) => self.styles(name),
       fire: (id, trigger, mark) => self.fire(id, trigger, mark).catch(() => null),
+      root: self.root,
+      checkForm: (id, values) => self.checkForm(id, values),
+      submitForm: (id, values) => self.fire(id, 'submit', 0, values, true),
+      ask: (text) => (o.host && typeof o.host.confirm === 'function' ? Promise.resolve(o.host.confirm(text)).then((v) => v === true) : ask(self.ctx, text)),
+      allowed: (name) => !(o.host && typeof o.host.allowed === 'function') || o.host.allowed(name) !== false,
       dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
       tables: (ref) => (typeof o.tables === 'function' ? o.tables(ref) || null : null),
       density: o.density || null,
@@ -447,46 +453,109 @@ export class ViewHandle {
    * list runs in order (set, toggle, clear on the state; notify and host go to the host's hooks), the state goes back to the host's bind, and the
    * panels the changed states' reads name are drawn again from the ViewModel it answers. Triggers run one after the other.
    * @param {string} panel the panel's id
-   * @param {string} trigger row-click, bar-click or point-click
-   * @param {number} [mark=0] the mark's place, in the order the specification counts them
+   * @param {string} trigger row-click, bar-click, point-click, submit or cancel (a form panel), or action (a panel's button)
+   * @param {number} [mark=0] the mark's place, in the order the specification counts them (an action's place in the panel's list)
+   * @param {Object} [values] a form's submitted values (event.<field> in its effects)
+   * @param {boolean} [checked=false] the values were checked already (the form drawn by the painter checks them as the reader submits)
    * @returns {Promise<{effects: Object[], problems: Object[], state: Object<string, *>}>} effects as run; problems: RCH-5001 for a panel, trigger or mark the screen does not have (nothing runs)
    */
-  fire(panel, trigger, mark) {
-    const job = this.firing.then(() => this.runFire(panel, trigger, mark));
+  fire(panel, trigger, mark, values, checked) {
+    const job = this.firing.then(() => this.runFire(panel, trigger, mark, values, checked));
     this.firing = job.catch(() => null);
     return job;
   }
 
+  /**
+   * A control's change (contract 1.2): the control takes the value and its change effects run in order with that value as the event, the
+   * state and the control go back to the host's bind, and the panels that read them are drawn again. A control the screen lacks is refused
+   * (RCH-5001; nothing runs). The host draws the controls (the painter draws panels): it calls this when the reader picks a value.
+   * @param {string} control the control's id
+   * @param {*} value the new value (a list for a multi-select)
+   * @returns {Promise<{effects: Object[], problems: Object[], state: Object<string, *>}>}
+   */
+  change(control, value) {
+    const job = this.firing.then(() => this.runFire(null, 'change', 0, undefined, false, control, value));
+    this.firing = job.catch(() => null);
+    return job;
+  }
+
+  /**
+   * The problems the host's check hook answers for a form's values (the form's rules, required fields and limits: evaluated by the Rachana
+   * runtime, never here), as RCH-5003 problems; the values naming a field the form lacks are refused first (RCH-5001). No hook: none.
+   * @private
+   * @param {string} id the form panel's id
+   * @param {Object} values
+   * @returns {Promise<Object[]>}
+   */
+  async checkForm(id, values) {
+    const frame = this.frames.get(String(id)), found = resolveWire(frame ? frame.panel : null, String(id), 'submit', { values: values });
+    if (found.problems.length) { this.emit('refused', { panel: String(id), problems: found.problems }); return found.problems; }
+    const check = this.options.host && this.options.host.check;
+    if (typeof check !== 'function') { return []; }
+    let got;
+    try { got = await check({ panel: String(id), form: frame.panel.form, values: values }); } catch (x) { this.emit('error', { code: 'view.check', error: x }); return []; }
+    if (got && !Array.isArray(got) && Array.isArray(got.problems)) { got = got.problems; }
+    const problems = (Array.isArray(got) ? got : []).map((p) => (typeof p === 'string' ? { message: p } : p)).filter((p) => p && typeof p.message === 'string')
+      .map((p) => ({ code: typeof p.code === 'string' ? p.code : 'RCH-5003', message: p.message, severity: p.severity || 'error' }));
+    if (problems.length) { this.emit('refused', { panel: String(id), problems: problems }); }
+    return problems;
+  }
+
   /** @private */
-  async runFire(id, trigger, mark) {
-    const frame = this.frames.get(String(id));
-    const found = resolveFire(frame ? frame.panel : null, String(id), trigger, mark);
-    if (found.problems.length) { return { effects: [], problems: found.problems, state: this.state.values() }; }
-    const where = { panel: String(id), trigger: trigger, mark: mark || 0 }, host = this.options.host || {};
-    const done = this.state.run(found.effects);
+  async runFire(id, trigger, mark, values, checked, control, value) {
+    const hostHooks = this.options.host || {};
+    let found, where;
+    if (trigger === 'change') {
+      const ctl = (Array.isArray(this.vm && this.vm.controls) ? this.vm.controls : []).find((c) => c && String(c.id) === String(control));
+      found = resolveWire(null, String(control), 'change', { control: ctl || null, value: value });
+      where = { control: String(control), trigger: 'change', value: value };
+      id = control;
+    } else if (trigger === 'submit' || trigger === 'cancel' || trigger === 'action') {
+      const frame = this.frames.get(String(id)), panel = frame ? frame.panel : null;
+      found = resolveWire(panel, String(id), trigger, { mark: mark, values: values });
+      where = { panel: String(id), trigger: trigger, mark: mark || 0 };
+      if (!found.problems.length && trigger === 'submit' && !checked) { found = { problems: await this.checkForm(id, values || {}), effects: found.effects, event: found.event }; }
+    } else {
+      const frame = this.frames.get(String(id));
+      found = resolveFire(frame ? frame.panel : null, String(id), trigger, mark);
+      where = { panel: String(id), trigger: trigger, mark: mark || 0 };
+    }
+    if (found.problems.length) {
+      return { effects: [], problems: found.problems, state: this.state.values() };
+    }
+    const done = trigger === 'change' || trigger === 'submit' || trigger === 'cancel' ? this.state.run(found.effects, found.event) : trigger === 'action' ? this.state.run(found.effects, null) : this.state.run(found.effects);
     done.ran.forEach((e) => {
-      const hook = e.do === 'notify' ? host.notify : e.do === 'host' ? host.run : null;
+      const hook = e.do === 'notify' ? hostHooks.notify : e.do === 'host' ? hostHooks.run : null;
       if (e.do === 'notify' || e.do === 'host') {
         this.emit(e.do, Object.assign({}, e, where));
         if (typeof hook === 'function') { try { hook(e, where); } catch (x) { this.emit('error', { code: 'view.host', error: x }); } }
       }
     });
-    if (done.changed.length) {
-      this.emit('state-change', { changed: done.changed, values: this.state.values(), panel: where.panel, trigger: trigger, mark: where.mark });
-      await this.rebind(done.changed);
+    const ctlChanged = trigger === 'change' ? [{ id: String(control), value: value }] : [];
+    if (done.changed.length || ctlChanged.length) {
+      if (done.changed.length) { this.emit('state-change', { changed: done.changed, values: this.state.values(), panel: where.panel || null, trigger: trigger, mark: where.mark }); }
+      await this.rebind(done.changed, ctlChanged);
     }
     return { effects: done.ran, problems: [], state: this.state.values() };
   }
 
   /** @private sends the state back to the host and draws what the changed states' reads name */
-  async rebind(changed) {
+  async rebind(changed, controls) {
     const bind = this.options.host && this.options.host.bind;
     if (typeof bind !== 'function') { return; }
-    const readers = this.state.readers(changed), state = this.state.request(), params = {};
+    controls = controls || [];
+    let readers = [];           // the panels the changed states and controls read (null: one of them does not say, so the whole view)
+    const add = (names) => { if (readers === null) { return; } if (!Array.isArray(names)) { readers = null; return; } names.forEach((r) => { if (readers.indexOf(r) < 0) { readers.push(r); } }); };
+    if (changed.length) { add(this.state.readers(changed)); }
+    controls.forEach((c) => { const v = (Array.isArray(this.vm && this.vm.controls) ? this.vm.controls : []).find((x) => x && String(x.id) === c.id); add(v ? v.reads : null); });
+    const state = this.state.request(), params = {}, ctl = {};
     changed.forEach((id) => { if (this.state.get(id) === null) { state[id] = null; } });
     Object.keys(state).forEach((id) => { if (state[id] !== null) { params['state.' + id] = state[id]; } });
+    controls.forEach((c) => { const t = requestText(c.value); ctl[c.id] = t; if (t !== null) { params['ctl.' + c.id] = t; } });
+    const req = { state: state, params: params, changed: changed.slice() };
+    if (controls.length) { req.controls = ctl; }
     let next;
-    try { next = await bind({ state: state, params: params, changed: changed.slice() }); } catch (e) { this.emit('error', { code: 'view.bind', error: e }); return; }
+    try { next = await bind(req); } catch (e) { this.emit('error', { code: 'view.bind', error: e }); return; }
     if (this.disposed || !isView(next)) { return; }
     if (this.options.complete) { next = complete(JSON.parse(JSON.stringify(next)), 'ViewModel'); }
     this.adopt(next, readers);
@@ -508,6 +577,7 @@ export class ViewHandle {
       if (i >= 0 && frame) { frame.draw(next.panels[i]); vm.panels[vm.panels.findIndex((x) => x && String(x.id) === String(r))] = next.panels[i]; drawn.push(String(r)); }
     });
     vm.state = next.state;
+    if (next.controls !== undefined) { vm.controls = next.controls; }
     this.state.load(next.state);
     this.emit('bound', { panels: drawn, full: false });
   }

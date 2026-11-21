@@ -95,6 +95,19 @@ export function requestText(v) {
   return Array.isArray(v) ? v.map(String).join(',') : String(v);
 }
 
+/**
+ * The part of an event a path names: '' the whole event, else the dotted fields of it (null when it has none).
+ * @param {*} event
+ * @param {string} path
+ * @returns {*}
+ */
+export function pickEvent(event, path) {
+  let v = event;
+  if (path === '') { return v === undefined ? null : v; }
+  for (const k of String(path).split('.')) { v = isObj(v) && Object.prototype.hasOwnProperty.call(v, k) ? v[k] : null; }
+  return v === undefined ? null : v;
+}
+
 /** The screen's state values as the ViewModel's state[] gave them and as the effects changed them. */
 export class StateStore {
   /** An empty store (load fills it from the ViewModel's state[]). */
@@ -155,16 +168,18 @@ export class StateStore {
   /**
    * Runs an effect list on the values, in order. set, toggle and clear change them (a state the ViewModel does not hold is made); notify
    * and host change nothing and are handed back for the host. Answers the effects as run: {do, state, value} for the three, the
-   * effect itself for the two.
+   * effect itself for the two. With an event (a submitted form's values, a control's new value), a set that names `event` takes that part of
+   * it and a host effect's `withEvent` arguments are filled from it; nothing is evaluated.
    * @param {Object[]} effects
+   * @param {*} [event]
    * @returns {{ran: Object[], changed: string[]}}
    */
-  run(effects) {
-    const ran = [], changed = [];
+  run(effects, event) {
+    const ran = [], changed = [], given = arguments.length > 1;
     const touch = (id) => { if (changed.indexOf(id) < 0) { changed.push(id); } };
     list(effects).forEach((e) => {
       if (e.do === 'set' && typeof e.state === 'string') {
-        this.write(e.state, e.value === undefined ? null : e.value);
+        this.write(e.state, given && typeof e.event === 'string' ? pickEvent(event, e.event) : e.value === undefined ? null : e.value);
         ran.push({ do: 'set', state: e.state, value: this.get(e.state) });
         touch(e.state);
       } else if (e.do === 'toggle' && typeof e.state === 'string') {
@@ -176,8 +191,16 @@ export class StateStore {
         this.write(e.state, null);
         ran.push({ do: 'clear', state: e.state, value: null });
         touch(e.state);
-      } else if (e.do === 'notify' || e.do === 'host') {
+      } else if (e.do === 'notify') {
         ran.push(Object.assign({}, e));
+      } else if (e.do === 'host') {
+        const out = Object.assign({}, e), wired = isObj(e.withEvent) ? e.withEvent : null;
+        delete out.withEvent;
+        if (wired && given) {
+          out.with = Object.assign({}, isObj(e.with) ? e.with : {});
+          Object.keys(wired).forEach((k) => { out.with[k] = pickEvent(event, wired[k]); });
+        }
+        ran.push(out);
       }
     });
     return { ran: ran, changed: changed };
@@ -208,6 +231,47 @@ export function resolveFire(panel, id, trigger, mark) {
   if (!Number.isInteger(ix) || ix < 0 || ix >= marks.length) { return refuse("panel '" + id + "' shows no mark " + ix + ' (it shows ' + marks.length + ')'); }
   return { problems: [], effects: effectsOf(marks[ix], trigger) };
 }
+
+/**
+ * Checks a form trigger (submit or cancel), an action button's press or a control's change against the screen as the specification's fire
+ * cases do. Answers the effects and the values they read as event, or the refusal (RCH-5001; nothing runs). The form's own rules are not
+ * evaluated here: the host's check hook answers them (paint.js).
+ * @param {?Object} panel the panel as drawn (null for a control's change)
+ * @param {string} id the panel's id (or the control's) as asked
+ * @param {string} trigger submit, cancel, action or change
+ * @param {{mark: (number|undefined), values: ?Object, control: ?Object}} [o] mark: the action's place; values: the submitted values; control: the ControlView
+ * @returns {{problems: Object[], effects?: Object[], event?: *}}
+ */
+export function resolveWire(panel, id, trigger, o) {
+  o = o || {};
+  const refuse = (message) => ({ problems: [{ code: 'RCH-5001', message: message }], effects: [] });
+  if (trigger === 'change') {
+    if (!o.control) { return refuse("no control '" + id + "' on the screen"); }
+    const on = isObj(o.control.on) && Array.isArray(o.control.on.change) ? o.control.on.change.filter(isObj) : [];
+    return { problems: [], effects: on, event: o.value === undefined ? null : o.value };
+  }
+  if (!panel) { return refuse("no panel '" + id + "' on the screen"); }
+  if (trigger === 'action') {
+    const acts = Array.isArray(panel.actions) ? panel.actions.filter(isObj) : [], ix = o.mark === undefined || o.mark === null ? 0 : o.mark;
+    if (!Number.isInteger(ix) || ix < 0 || ix >= acts.length) { return refuse("panel '" + id + "' has no action " + ix + ' (it has ' + acts.length + ')'); }
+    return { problems: [], effects: list(acts[ix].effects).filter(isObj), event: null };
+  }
+  if (panel.kind !== 'form') { return refuse("panel '" + id + "' (" + panel.kind + ') does not fire ' + trigger); }
+  const values = isObj(o.values) ? o.values : {};
+  if (trigger === 'submit') {
+    const known = formFields(panel).map((f) => f.id), extra = Object.keys(values).filter((k) => known.indexOf(k) < 0);
+    if (extra.length) { return refuse("the form of panel '" + id + "' has no field '" + extra[0] + "'"); }
+  }
+  const on = panel.data && isObj(panel.data.on) && Array.isArray(panel.data.on[trigger]) ? panel.data.on[trigger].filter(isObj) : [];
+  return { problems: [], effects: on, event: values };
+}
+
+/**
+ * The fields of a form panel as the ViewModel gives them.
+ * @param {Object} panel
+ * @returns {Object[]}
+ */
+export function formFields(panel) { return panel && isObj(panel.form) ? list(panel.form.fields).filter((f) => isObj(f) && typeof f.id === 'string') : []; }
 
 /**
  * Makes an element fire a mark's trigger when clicked (or Enter or Space on it), when the mark carries effects: the pointer cursor, a place

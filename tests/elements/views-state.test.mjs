@@ -73,15 +73,21 @@ for (const c of CASES) {
   test('fire case ' + c.id + ' on the store', () => {
     const store = new V.StateStore(), live = (vm) => new Map(vm.panels.map((p) => [p.id, p]));
     store.load(c.viewModel.state);
-    let panels = live(c.viewModel);
+    let panels = live(c.viewModel), controls = c.viewModel.controls || [];
     c.steps.forEach((st, i) => {
-      const found = V.resolveFire(panels.get(st.panel) || null, st.panel, st.trigger, st.mark === null ? undefined : st.mark);
+      const wired = st.control !== null || ['submit', 'cancel', 'action'].includes(st.trigger);
+      let found = st.control !== null ? V.resolveWire(null, st.control, 'change', { control: controls.find((x) => x.id === st.control) || null, value: st.value })
+        : wired ? V.resolveWire(panels.get(st.panel) || null, st.panel, st.trigger, { mark: st.mark === null ? undefined : st.mark, values: st.values || undefined })
+          : V.resolveFire(panels.get(st.panel) || null, st.panel, st.trigger, st.mark === null ? undefined : st.mark);
+      const rules = st.trigger === 'submit' ? st.actual.problems.filter((p) => p.code === 'RCH-5003') : [];
+      if (!found.problems.length && rules.length) { found = { problems: rules, effects: [] }; }    // the form's rules: the runtime's answer as recorded
       const want = st.expect;
-      if (want.problems !== undefined) { assert.deepEqual(found.problems.map((p) => [p.code, p.message]), want.problems.map((p) => [p.code, p.message]), c.id + ' step ' + i); }
-      const ran = found.problems.length ? [] : store.run(found.effects).ran;
+      if (want.problems !== undefined) { assert.deepEqual(found.problems.map((p, k) => [p.code, p.message.slice(0, want.problems[k] && want.problems[k].message === undefined ? (want.problems[k].messageStart || '').length : undefined)]), want.problems.map((p) => [p.code, p.message === undefined ? p.messageStart : p.message]), c.id + ' step ' + i); }
+      const ran = found.problems.length ? [] : (wired ? store.run(found.effects, found.event) : store.run(found.effects)).ran;
       if (want.effects !== undefined) { assert.deepEqual(ran, want.effects, c.id + ' step ' + i); }
       store.load(st.viewModel.state);                                                  // the next bind answers the screen
       panels = live(st.viewModel);
+      controls = st.viewModel.controls || controls;
       if (want.state !== undefined) {
         const keep = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null));
         assert.deepEqual(keep(store.values()), keep(want.state), c.id + ' step ' + i);
@@ -99,4 +105,52 @@ test('the donut shape of an hbar: a slice carries its bar, so a click names the 
   assert.equal(data[1].bar, bars[2]);                                  // the slice is found again in the panel's bars (index 2, not 1)
   assert.equal(V.marksOf({ kind: 'hbar', data: { shape: 'donut', bars } }).indexOf(data[1].bar), 2);
   assert.equal(V.triggerFor('hbar'), 'bar-click');
+});
+
+test('pickEvent reads a field of the event, dotted, or the whole of it', () => {
+  assert.equal(V.pickEvent({ a: { b: 3 } }, 'a.b'), 3);
+  assert.deepEqual(V.pickEvent({ a: 1 }, ''), { a: 1 });
+  assert.equal(V.pickEvent('EMEA', ''), 'EMEA');
+  assert.equal(V.pickEvent({ a: 1 }, 'x.y'), null);
+});
+
+test('running effects with an event: set takes its field, a host effect is filled from withEvent, nothing is evaluated', () => {
+  const s = new V.StateStore();
+  s.load([{ id: 'qty', value: 0 }, { id: 'sent', value: false }]);
+  const r = s.run([{ do: 'set', state: 'qty', event: 'qty' }, { do: 'toggle', state: 'sent' },
+    { do: 'host', action: 'order.place', with: { desk: 'FX' }, withEvent: { side: 'side', all: '' } }], { side: 'BUY', qty: 5 });
+  assert.deepEqual(s.values(), { qty: 5, sent: true });
+  assert.deepEqual(r.ran[2], { do: 'host', action: 'order.place', with: { desk: 'FX', side: 'BUY', all: { side: 'BUY', qty: 5 } } });
+  s.run([{ do: 'set', state: 'qty', event: '' }], 7);
+  assert.equal(s.get('qty'), 7);                                       // a control's event is the value itself
+});
+
+test('resolveWire: submit and cancel of a form, an action by its place, a control change, and the refusals', () => {
+  const form = { id: 't', kind: 'form', form: { fields: [{ id: 'qty' }, { id: 'side' }] }, data: { values: {}, on: { submit: [{ do: 'toggle', state: 'x' }], cancel: [] } },
+    actions: [{ id: 'a', label: 'A', effects: [{ do: 'clear', state: 'x' }] }] };
+  assert.deepEqual(V.resolveWire(form, 't', 'submit', { values: { qty: 1 } }), { problems: [], effects: [{ do: 'toggle', state: 'x' }], event: { qty: 1 } });
+  assert.equal(V.resolveWire(form, 't', 'submit', { values: { extra: 1 } }).problems[0].message, "the form of panel 't' has no field 'extra'");
+  assert.deepEqual(V.resolveWire(form, 't', 'cancel', { values: { extra: 1 } }).problems, []);       // cancel checks nothing
+  assert.equal(V.resolveWire(form, 't', 'action', { mark: 0 }).effects.length, 1);
+  assert.equal(V.resolveWire(form, 't', 'action', { mark: 1 }).problems[0].message, "panel 't' has no action 1 (it has 1)");
+  assert.equal(V.resolveWire(null, 'z', 'submit').problems[0].message, "no panel 'z' on the screen");
+  assert.equal(V.resolveWire({ id: 'm', kind: 'metric' }, 'm', 'submit').problems[0].code, 'RCH-5001');
+  const ctl = { id: 'region', on: { change: [{ do: 'set', state: 'p', event: '' }] } };
+  assert.deepEqual(V.resolveWire(null, 'region', 'change', { control: ctl, value: 'EMEA' }), { problems: [], effects: ctl.on.change, event: 'EMEA' });
+  assert.equal(V.resolveWire(null, 'nothing', 'change', { control: null }).problems[0].message, "no control 'nothing' on the screen");
+});
+
+test('formSchema draws the fields as an object schema; problemsByField puts each message at its field', () => {
+  const panel = { id: 't', kind: 'form', data: { values: { side: 'SELL', qty: null } }, form: { fields: [
+    { id: 'side', label: 'Side', type: 'enum', required: true, options: [{ value: 'BUY', label: 'Buy' }, { value: 'SELL', label: 'Sell' }] },
+    { id: 'qty', label: 'Quantity', type: 'number', required: true, min: 1 }, { id: 'book', label: 'Book' }],
+    rules: [{ rule: 'qty <= 1000', message: 'At most 1,000', fields: ['qty'] }] } };
+  const sc = V.formSchema(panel);
+  assert.deepEqual(sc.required, ['side', 'qty']);
+  assert.deepEqual(sc.properties.side.enum, ['BUY', 'SELL']);
+  assert.deepEqual(sc.properties.side.enumLabels, ['Buy', 'Sell']);
+  assert.equal(sc.properties.qty.type, 'number'); assert.equal(sc.properties.qty.minimum, 1); assert.equal(sc.properties.book.type, 'string');
+  assert.deepEqual(V.formValues(panel), { side: 'SELL' });             // the empty ones left out
+  assert.deepEqual(V.problemsByField(panel, [{ message: 'At most 1,000' }, { message: 'Side is required' }, { message: 'something else' }]),
+    { qty: 'At most 1,000', side: 'Side is required; something else' });
 });

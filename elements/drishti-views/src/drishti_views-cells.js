@@ -21,6 +21,11 @@ import { h, safeUrl } from '../../drishti-core/src/drishti_index.js';
 /** The painter's own words; a host's options.messages replaces any of them ({name} is filled in as text). */
 export const MESSAGES = Object.freeze({
   noData: 'No data available',
+  submit: 'Submit',
+  cancel: 'Cancel',
+  yes: 'Yes',
+  no: 'No',
+  sure: '{label}: are you sure?',
   noLinks: 'No linked entities',
   denied: 'No access',
   error: 'This panel could not be filled',

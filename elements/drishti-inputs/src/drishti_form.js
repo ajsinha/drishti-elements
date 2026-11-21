@@ -62,11 +62,14 @@ import { drawField, defaultWidget, writeNames } from './drishti_form-fields.js';
  * @property {string} [label] the form's name for a reader (default: the schema's title)
  * @property {string} [submitHook] a data attribute on the submit button ("lookup-go" is data-lookup-go), for tutorials and tests
  * @property {boolean} [resetButton=true] the Reset button
+ * @property {string} [cancelLabel] a Cancel button with these words (after Submit; no checks, no validation): it emits cancel {values} and
+ *   calls onCancel with the values as they are
+ * @property {function(Object): *} [onCancel]
  */
 
 /**
  * A form from a schema. Events: change {path, value, values}, invalid {errors}, submitted {values, result}, proposed {proposal, result},
- * reset, step {index, id}.
+ * reset, cancel {values}, step {index, id}.
  */
 export class Form extends InputBase {
   /**
@@ -133,6 +136,10 @@ export class Form extends InputBase {
       this.submitBtn = this.el('button', { cls: 'di-btn di-primary', text: this.o.fourEyes ? 'Submit for approval' : (this.o.submitLabel || 'Save'), attrs: { type: 'submit' }, data: { act: 'submit' } });
       if (this.o.submitHook) { this.submitBtn.setAttribute('data-' + this.o.submitHook, ''); }
       bar.appendChild(this.submitBtn);
+    }
+    if (this.o.cancelLabel) {
+      bar.appendChild(this.el('button', { cls: 'di-btn', text: this.o.cancelLabel, attrs: { type: 'button' }, data: { act: 'cancel' },
+        on: { click: () => { const values = this.getValue(); this.emit('cancel', { values: values }); if (this.o.onCancel) { this.o.onCancel(values); } } } }));
     }
     if (this.o.resetButton !== false) { bar.appendChild(this.el('button', { cls: 'di-btn', text: 'Reset', attrs: { type: 'button' }, data: { act: 'reset' }, on: { click: () => this.reset() } })); }
     return bar;

@@ -3272,6 +3272,10 @@
           if (this.o.submitHook) { this.submitBtn.setAttribute('data-' + this.o.submitHook, ''); }
           bar.appendChild(this.submitBtn);
         }
+        if (this.o.cancelLabel) {
+          bar.appendChild(this.el('button', { cls: 'di-btn', text: this.o.cancelLabel, attrs: { type: 'button' }, data: { act: 'cancel' },
+            on: { click: () => { const values = this.getValue(); this.emit('cancel', { values: values }); if (this.o.onCancel) { this.o.onCancel(values); } } } }));
+        }
         if (this.o.resetButton !== false) { bar.appendChild(this.el('button', { cls: 'di-btn', text: 'Reset', attrs: { type: 'button' }, data: { act: 'reset' }, on: { click: () => this.reset() } })); }
         return bar;
       }
