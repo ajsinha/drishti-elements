@@ -501,7 +501,10 @@ export class LiveNotices {
   /** @private */
   clear() { this.fresh = 0; this.news.hidden = true; this.news.textContent = ''; }
 
-  /** @returns {void} */
+  /**
+   * Takes the notices away.
+   * @returns {void}
+   */
   destroy() { this.banner.remove(); this.news.remove(); }
 }
 

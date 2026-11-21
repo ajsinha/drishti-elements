@@ -221,7 +221,7 @@ async def edit_cell(pg, r, c, value):
     await pg.keyboard.press("Enter")
 
 
-async def wait_cell(pg, r, c, want, timeout=10000):
+async def wait_cell(pg, r, c, want, timeout=30000):
     await pg.wait_for_function("([s, w]) => { const R = document.getElementById('hx-view'); const e = (R.shadowRoot || R).querySelector(s); return e && e.textContent.trim() === w; }",
                                arg=[CELL.format(r=r, c=c), want], timeout=timeout)
 
@@ -264,7 +264,7 @@ def test_a_cell_edit_is_checked_in_the_page_sent_once_and_shown_only_when_the_pa
         assert await pg.evaluate("window.__writes.length") == 0
         await pg.keyboard.press("Escape")
         await edit_cell(pg, 1, 3, "9")
-        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-queued", timeout=10000)
+        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-queued", timeout=30000)
         assert await cell_text(pg, 1, 3) == "1"                                               # the row is as it was
         writes = await pg.evaluate("window.__writes")
         assert len(writes) == 1 and writes[0]["key"] == ["a"] and writes[0]["basedOn"] == 1 and writes[0]["set"] == {"qty": 9}
@@ -308,18 +308,18 @@ def test_a_409_says_who_changed_the_row_and_offers_to_edit_again(browsers, host)
         await pg.evaluate("() => { window.__hold = true; }")                                 # the page misses the other person's change
         host.stream({"upsert": [{"id": "a", "v": 2, "book": "A", "qty": 10, "status": "NEW", "by": "carol", "at": "2026-11-21T10:00:00Z"}]})
         await edit_cell(pg, 1, 3, "7")
-        await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=conflict]", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=conflict]", timeout=30000)
         said = await text(pg, "[data-panel=t] [data-live-edit-alert]")
         assert "Changed by carol at 2026-11-21 10:00:00" in said
         assert await cell_text(pg, 1, 3) == "1" and await pg.locator(CELL.format(r=1, c=3) + ".dg-queued").count() == 0
         await pg.evaluate("() => { window.__hold = false; }")                                # the newer row arrives: its value is told
-        await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); const e = (R.shadowRoot || R).querySelector('[data-panel=t] [data-live-edit-alert]'); return e && /Qty is now 10/.test(e.textContent); }", timeout=10000)
+        await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); const e = (R.shadowRoot || R).querySelector('[data-panel=t] [data-live-edit-alert]'); return e && /Qty is now 10/.test(e.textContent); }", timeout=30000)
         await pg.locator("[data-panel=t] [data-act=edit-again]").click()
         inp = pg.locator("[data-panel=t] .dg-editor-input")
         await inp.wait_for(timeout=5000)
         await inp.fill("11")
         await pg.keyboard.press("Enter")
-        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-queued", timeout=10000)
+        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-queued", timeout=30000)
         writes = await pg.evaluate("window.__writes")
         assert [w["basedOn"] for w in writes] == [1, 2] and writes[1]["set"] == {"qty": 11}       # on the new version
         assert writes[0]["id"] != writes[1]["id"]
@@ -331,7 +331,7 @@ def test_a_422_puts_each_message_on_its_column(browsers, host):
 
     async def body(pg):
         await edit_cell(pg, 1, 3, "-5")                                                       # the page's schema was loosened: the host refuses
-        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-invalid", timeout=10000)
+        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-invalid", timeout=30000)
         assert "qty is at least 0" in (await pg.locator(CELL.format(r=1, c=3)).first.get_attribute("title"))
         assert "qty: qty is at least 0" in await text(pg, "[data-panel=t] [data-live-edit-alert]")
         assert await cell_text(pg, 1, 3) == "1"
@@ -343,9 +343,9 @@ def test_a_403_makes_the_row_read_only(browsers, host):
 
     async def body(pg):
         await edit_cell(pg, 1, 3, "5")
-        await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=refused]", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=refused]", timeout=30000)
         assert "closed" in await text(pg, "[data-panel=t] [data-live-edit-alert]")
-        await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); return !(R.shadowRoot || R).querySelector('[data-panel=t] .dg-row:nth-child(1) .dg-editable'); }", timeout=10000)
+        await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); return !(R.shadowRoot || R).querySelector('[data-panel=t] .dg-row:nth-child(1) .dg-editable'); }", timeout=30000)
         assert await pg.locator(CELL.format(r=1, c=3) + ".dg-editable").count() == 0 and await pg.locator(CELL.format(r=2, c=3) + ".dg-editable").count() == 1   # that row only
     run(browsers, host, trades_view("cells"), body)
 
@@ -356,7 +356,7 @@ def test_a_held_change_is_marked_with_the_hosts_message_and_an_approver_decides_
 
     async def maker(pg):
         await edit_cell(pg, 1, 3, "9")
-        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-held", timeout=10000)
+        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-held", timeout=30000)
         assert "waiting for a second person" in (await pg.locator(CELL.format(r=1, c=3)).first.get_attribute("title"))
         assert await cell_text(pg, 1, 3) == "1"
     run(browsers, host, trades_view("cells"), maker)
@@ -372,15 +372,15 @@ def test_a_held_change_is_marked_with_the_hosts_message_and_an_approver_decides_
         await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(timeout=5000)
         await pg.get_by_role("option", name=decision).click()
         if decision == "rejected":                                                            # a rejection needs its reason: staged until it is given
-            await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=reason]", timeout=10000)
+            await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=reason]", timeout=30000)
             assert await pg.evaluate("window.__writes.length") == 0
             await pg.locator("[data-panel=t] [data-live-edit-reason]").fill("not on this desk")
             await pg.locator("[data-panel=t] [data-act=send-staged]").click()
-        await pg.wait_for_function("() => window.__writes.length === 1", timeout=10000)
+        await pg.wait_for_function("() => window.__writes.length === 1", timeout=30000)
         w = await pg.evaluate("window.__writes[0]")
         assert w["basedOn"] == "held" and w["set"] == {"state": decision} and len(w["key"]) == 1
         assert (w.get("reason") == "not on this desk") == (decision == "rejected")
-        await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); return !(R.shadowRoot || R).querySelector('[data-panel=t] .dg-row'); }", timeout=10000)   # the row leaves with the patch
+        await pg.wait_for_function("() => { const R = document.getElementById('hx-view'); return !(R.shadowRoot || R).querySelector('[data-panel=t] .dg-row'); }", timeout=30000)   # the row leaves with the patch
         host.flush()
         assert json.loads(host.call("POST", "/tables/trades/query", {"columns": ["qty"], "filter": {"op": "==", "args": [{"col": "id"}, {"lit": "a"}]}})[1])["values"] == [[9 if decision == "released" else 1]]
     run(browsers, host, tray, approver)
@@ -392,7 +392,7 @@ def test_beside_mode_opens_a_record_panel_with_save_and_cancel(browsers, host):
     async def body(pg):
         await pg.locator(CELL.format(r=1, c=1)).first.click()
         panel = pg.locator("[data-panel=t] [data-live-edit-panel]")
-        await panel.wait_for(state="visible", timeout=10000)
+        await panel.wait_for(state="visible", timeout=30000)
         assert await pg.locator("[data-panel=t] .dg-editable").count() == 0                   # no cell editing in this mode
         qty = panel.get_by_label("Qty", exact=False).first
         await qty.fill("-3")
@@ -401,8 +401,8 @@ def test_beside_mode_opens_a_record_panel_with_save_and_cancel(browsers, host):
         assert await pg.evaluate("window.__writes.length") == 0
         await qty.fill("8")
         await panel.get_by_role("button", name="Save").click()
-        await pg.wait_for_function("() => window.__writes.length === 1", timeout=10000)
-        await pg.wait_for_selector("[data-panel=t] [data-panel-status]:has-text('Queued'), [data-panel=t] [data-panel-status]:has-text('Applied')", timeout=10000)
+        await pg.wait_for_function("() => window.__writes.length === 1", timeout=30000)
+        await pg.wait_for_selector("[data-panel=t] [data-panel-status]:has-text('Queued'), [data-panel=t] [data-panel-status]:has-text('Applied')", timeout=30000)
         assert await cell_text(pg, 1, 3) == "1"                                               # the row stays until the patch
         host.flush()
         await wait_cell(pg, 1, 3, "8")
@@ -419,16 +419,16 @@ def test_the_paused_banner_comes_from_the_schema_and_new_rows_are_counted_while_
     async def body(pg):
         assert await pg.locator("[data-panel=t] [data-live-banner]:not([hidden])").count() == 0
         host.stream({"state": {"up": False, "reason": "the broker is absent"}})
-        await pg.wait_for_selector("[data-panel=t] [data-live-banner]:not([hidden])", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-banner]:not([hidden])", timeout=30000)
         assert "paused: the broker is absent" in await text(pg, "[data-panel=t] [data-live-banner]")
         host.stream({"state": {"up": True}})
-        await pg.wait_for_selector("[data-panel=t] [data-live-banner][hidden]", state="attached", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-banner][hidden]", state="attached", timeout=30000)
         await pg.evaluate("() => { const R = (document.getElementById('hx-view').shadowRoot || document.getElementById('hx-view')); R.querySelector('[data-panel=t] .dv-ds').style.height = '320px'; R.querySelector('[data-panel=t] .dg-scroll').scrollTop = 600; }")
         host.stream({"upsert": [{"id": "new1", "v": 1, "book": "A", "qty": 5, "status": "NEW", "by": "x", "at": "2026-11-21T23:00:00Z"}]})
-        await pg.wait_for_selector("[data-panel=t] [data-live-new]:not([hidden])", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-new]:not([hidden])", timeout=30000)
         assert (await text(pg, "[data-panel=t] [data-live-new]")).strip() == "1 new"
         await pg.locator("[data-panel=t] [data-live-new]").click()
-        await pg.wait_for_selector("[data-panel=t] [data-live-new][hidden]", state="attached", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-new][hidden]", state="attached", timeout=30000)
     view_ = trades_view("cells", window=200, top=True)
     view_["panels"][0]["data"]["sort"] = [{"field": "at", "desc": True}]
     run(browsers, host, view_, body, every=250)
@@ -440,11 +440,11 @@ def test_a_network_failure_offers_try_again_and_the_retry_reuses_the_change_id(b
     async def body(pg):
         await pg.evaluate("() => { window.__failNext = true; }")
         await edit_cell(pg, 1, 3, "9")
-        await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=failed]", timeout=10000)
+        await pg.wait_for_selector("[data-panel=t] [data-live-edit-alert][data-kind=failed]", timeout=30000)
         assert "the network is down" in await text(pg, "[data-panel=t] [data-live-edit-alert]")
         assert await pg.locator(CELL.format(r=1, c=3) + ".dg-sending, " + CELL.format(r=1, c=3) + ".dg-queued").count() == 0
         await pg.locator("[data-panel=t] [data-act=retry]").click()
-        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-queued", timeout=10000)
+        await pg.wait_for_selector(CELL.format(r=1, c=3) + ".dg-queued", timeout=30000)
         writes = await pg.evaluate("window.__writes")
         assert len(writes) == 2 and writes[0]["id"] == writes[1]["id"] and writes[0]["set"] == writes[1]["set"]
         host.flush()

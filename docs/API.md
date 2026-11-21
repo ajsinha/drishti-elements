@@ -8935,6 +8935,10 @@ Returns `string`.
 
 The state of the changes a reader sent that wait for the table's patch: by row, until a patch names the row (or the row goes).
 
+##### `new PendingChanges()`
+
+Starts with nothing pending.
+
 ##### `PendingChanges.idFor(key, basedOn, set, reason)`
 
 The id to send a change with: the one a failed try used when the same change is sent again, else a new one.
@@ -8973,6 +8977,8 @@ Marks a row pending.
 Returns `void`.
 
 ##### `PendingChanges.get(rowId)`
+
+The row's pending change, if any.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -9125,6 +9131,8 @@ Rows arrived above the page: counted while the page is scrolled down.
 Returns `void`.
 
 ##### `LiveNotices.destroy()`
+
+Takes the notices away.
 
 Returns `void`.
 
@@ -10372,6 +10380,17 @@ A cell's element by its place (the grid may sit in a shadow root, where the docu
 | `c` | `number` |  |
 
 Returns `?HTMLElement`.
+
+##### `Grid.focusCell(r, c)`
+
+Puts the focus on a cell (and the range there) and scrolls it into view.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `r` | `number` |  |
+| `c` | `number` |  |
+
+Returns `void`.
 
 ##### `Grid.getState()`
 

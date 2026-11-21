@@ -207,6 +207,7 @@ export function changedWords(current) {
  * The state of the changes a reader sent that wait for the table's patch: by row, until a patch names the row (or the row goes).
  */
 export class PendingChanges {
+  /** Starts with nothing pending. */
   constructor() {
     this.rows = new Map();                  // row id -> {id, state, message, columns, change}
     this.attempts = new Map();              // the signature of a change -> the id it was sent with (a retry reuses it)
@@ -246,6 +247,7 @@ export class PendingChanges {
   mark(rowId, p) { this.rows.set(rowId, p); }
 
   /**
+   * The row's pending change, if any.
    * @param {string} rowId
    * @returns {?{id: string, state: string, message: string, columns: string[]}}
    */
