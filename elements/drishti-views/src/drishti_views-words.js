@@ -20,6 +20,7 @@
 import { h } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { drawCell, updateCell, linkTo, safeHref, toneClass, say } from './drishti_views-cells.js';
+import { marksOf, clickable } from './drishti_views-state.js';
 
 /** The words of the link statuses (a status outside them is drawn as its own word). */
 export const LINK_STATUS = Object.freeze({ resolved: 'resolved', pending: 'pending', missing: 'missing', denied: 'no access', inactive: 'inactive' });
@@ -43,6 +44,7 @@ function fieldsKind(chips) {
       };
       draw(list(panel.data.fields));
       body.appendChild(dl);
+      clickable(ctx, dl, panel, 'point-click', 0, marksOf(panel)[0]);            // the record is one mark (contract 1.2)
       return {
         update(p) {
           const fields = list(p.data && p.data.fields);
@@ -72,6 +74,7 @@ const metric = {
     };
     draw(d);
     body.appendChild(box);
+    clickable(ctx, box, panel, 'point-click', 0, marksOf(panel)[0]);            // the figure is one mark (contract 1.2)
     return {
       update(p) {
         const m = p.data || {}, v = box.querySelector('.dv-metric-value'), dl = box.querySelector('.dv-metric-delta');
@@ -181,14 +184,16 @@ const links = {
 const timeline = {
   paint(body, panel, ctx) {
     const doc = ctx.doc, ol = h(doc, 'ol', { cls: 'dv-timeline' });
-    const events = list(panel.data.events).slice().sort((a, b) => String((a && a.date) || '').localeCompare(String((b && b.date) || '')));
+    const events = list(panel.data.events).slice().sort((a, b) => String((a && a.date) || '').localeCompare(String((b && b.date) || ''))), marks = marksOf(panel);
     events.forEach((e) => {
       e = e || {};
-      ol.appendChild(h(doc, 'li', { cls: ['dv-tl-item', toneClass(e.tone)].filter(Boolean).join(' ') }, [
+      const li = h(doc, 'li', { cls: ['dv-tl-item', toneClass(e.tone)].filter(Boolean).join(' ') }, [
         h(doc, 'time', { cls: 'dv-tl-date', text: typeof e.date === 'string' ? e.date : '', attrs: { datetime: typeof e.date === 'string' ? e.date : null } }),
         h(doc, 'span', { cls: 'dv-tl-label', text: typeof e.label === 'string' ? e.label : '' }),
         typeof e.status === 'string' && e.status ? h(doc, 'span', { cls: 'dv-chip ' + toneClass(e.tone), text: e.status }) : null,
-        typeof e.detail === 'string' && e.detail ? h(doc, 'span', { cls: 'dv-tl-detail', text: e.detail }) : null]));
+        typeof e.detail === 'string' && e.detail ? h(doc, 'span', { cls: 'dv-tl-detail', text: e.detail }) : null]);
+      clickable(ctx, li, panel, 'point-click', marks.indexOf(e), e);                 // an event that carries effects (contract 1.2)
+      ol.appendChild(li);
     });
     body.appendChild(ol);
     if (Number.isInteger(panel.data.more) && panel.data.more > 0) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'moreEvents', { count: panel.data.more.toLocaleString('en-US') }) })); }

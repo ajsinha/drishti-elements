@@ -711,6 +711,8 @@ and loads only the libraries they need.
 | `handle.controls()` / `handle.setControl(id, value)` | | The controls' values. |
 | `handle.open(link)` / `handle.back()` | | Navigation between views in place. |
 | `handle.export(panelId, format)` | `Promise<Blob>` | A panel's download. |
+| `handle.fire(panel, trigger, mark?)` | `Promise<{effects, problems, state}>` | Fires a trigger (`row-click`, `bar-click`, `point-click`) on a mark as a click does (section 8.5). |
+| `handle.stateValues` | object | The screen's state values now (contract 1.2), id to value. |
 | `handle.on(name, fn)` | `off()` | The events below. |
 | `handle.metrics()` | | Paint times, patches applied, conflated, ignored. |
 | `handle.dispose()` | | Stops the stream, disposes every component, empties the container. |
@@ -740,11 +742,28 @@ and loads only the libraries they need.
 | `explain` | none | The Explain hook of the grid and chart, passed through. |
 | `limits` | section 7.5 | |
 | `label` | the title | The region's accessible name. |
+| `host` | none | `{notify(effect, where), run(effect, where), bind({state, params, changed})}`: the host's hooks for effects and the next bind (section 8.5). |
 
 **Events** (on the handle, and as DOM events `elements-view:<name>` on the container; those marked * are cancelable)
 
 `ready`, `error`, `issues`, `link`*, `action`*, `control-change`*, `select` (rows, points, places), `drill`*, `patch`, `state` (the stream's),
-`resync`, `navigate`, `dispose`.
+`resync`, `navigate`, `state-change`, `notify`, `host`, `bound`, `dispose`.
+
+### 8.5 State and effects (contract 1.2)
+
+The painter keeps the ViewModel's `state[]` and, on a click, runs what the clicked mark carries, never evaluating an expression: a mark's `set`
+(or its `on` list: `set`, `toggle`, `clear`, `notify`, `host`, each already evaluated for that mark, a false `when` left out) comes in the
+ViewModel. Marks are counted as the specification counts them: a table's rows depth first through `children`, an hbar's bars, a chart's points,
+steps, events or candles, a line or area chart's x positions, the one mark of a metric, gauge or fields panel. A row, bar, event, figure or
+chart point that carries effects is clickable (the pointer, the keyboard: Enter or Space). A trigger fired on a panel, trigger or mark the screen
+does not have runs nothing and answers `RCH-5001`.
+
+`set`, `toggle` and `clear` change the values; `notify` and `host` go to `options.host.notify` and `options.host.run` (and the `notify` and `host`
+events) and are never run by Elements. Then `options.host.bind({state, params, changed})` is called with every value as text (`params` as the
+`state.<id>` request parameters; a cleared state is `null` in `state` and absent from `params`: its default stands) and answers the next
+ViewModel; only the panels the changed states' `reads` name are drawn again (a `reads` that names the title, or that is missing, draws the whole
+view), then `state[]` is taken from it and `bound` is raised. Without `bind` the values are kept and nothing is drawn again. Triggers run one
+after the other. `submit` and `cancel` of a form panel come with that panel.
 
 ### 8.3 `<elements-view>`
 

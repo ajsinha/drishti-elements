@@ -21,6 +21,7 @@
 import { h } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';
+import { marksOf, hasEffects, clickable } from './drishti_views-state.js';
 
 /** The kinds drawn by drishti-chart's panel charts (hbar only in its donut shape). */
 export const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'surface', 'graph', 'map']);
@@ -28,6 +29,8 @@ export const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogra
 const list = (x) => (Array.isArray(x) ? x : []);
 const str = (v) => (v === null || v === undefined ? '' : String(v));
 const LIMIT_ROWS = 500;
+/** The chart kinds whose marks fire point-click (a point, a step, a candle, an x position). */
+const POINT_CHARTS = { line: true, area: true, scatter: true, waterfall: true, candlestick: true };
 
 /**
  * The rows of a chart's data table: its column heads and rows of text (at most 500 rows).
@@ -95,10 +98,30 @@ function engineKind(kind) {
       let gone = false;
       const words = (w) => { el.removeAttribute('data-r-chart'); el.className = 'dv-chart-off'; el.textContent = w; };
       if (kind === 'map' && !ctx.can('geo')) { words(say(ctx.messages, 'noMaps')); } else {
-        ctx.charts().then((pc) => { if (!gone) { return pc.draw(box); } return null; }).catch(() => { if (!gone) { words(say(ctx.messages, 'noCharts')); } });
+        ctx.charts().then((pc) => { if (!gone) { return pc.draw(box); } return null; }).then(() => { if (!gone) { wire(); } })
+          .catch(() => { if (!gone) { words(say(ctx.messages, 'noCharts')); } });
       }
+      /* a click on a point, a step, a candle or a line's x position fires point-click on that mark (contract 1.2); the engine's click
+         names the datum, whose own object (or its index) is the mark's place */
+      let cur = panel;
+      const wire = () => {
+        const win = doc.defaultView, E = win && win.echarts, chart = E && E.getInstanceByDom && E.getInstanceByDom(el);
+        if (!chart || el.__dvMarks || kind === 'hbar' || !POINT_CHARTS[kind]) { return; }
+        el.__dvMarks = true;
+        chart.on('click', (e) => {
+          const marks = marksOf(cur);
+          if (!marks.some(hasEffects)) { return; }
+          const d = e && e.data ? e.data : null;
+          const find = (m) => { let i = marks.indexOf(m); if (i < 0 && m) { const t = JSON.stringify(m); i = marks.findIndex((x) => JSON.stringify(x) === t); } return i; };   // the engine may hold a copy
+          let ix = kind === 'scatter' ? find(d && d.point) : kind === 'waterfall' ? find(d && d.step) : e.dataIndex;
+          if (kind === 'candlestick' && e.seriesIndex > 0) { ix = -1; }
+          if (Number.isInteger(ix) && ix >= 0) { ctx.fire(String(cur.id), 'point-click', ix); }
+        });
+        if (marksOf(cur).some(hasEffects)) { el.classList.add('dv-pick'); }
+      };
       return {
         update(p) {
+          cur = p;
           el.__drishti = { kind: k, data: p.data };
           const fresh = dataTable(ctx, kind, p.data);
           fresh.open = table.open;
@@ -124,13 +147,15 @@ const bars = {
     if (panel.data.shape === 'donut') { return engineKind('hbar').paint(body, panel, ctx); }
     const doc = ctx.doc, d = panel.data, items = list(d.bars);
     const max = Math.max.apply(null, items.map((b) => Math.abs(Number(b && b.value) || 0)).concat([0]));
-    const ul = h(doc, 'ul', { cls: 'dv-bars' });
+    const ul = h(doc, 'ul', { cls: 'dv-bars' }), marks = marksOf(panel);
     items.forEach((b) => {
       b = b || {};
       const share = max > 0 ? Math.abs(Number(b.value) || 0) / max : 0;
       const bar = h(doc, 'span', { cls: ['dv-bar', toneClass(b.tone) || 'dv-t-accent'].join(' '), style: { '--dv-share': String(Math.round(share * 1000) / 1000) } });
-      ul.appendChild(h(doc, 'li', {}, [h(doc, 'span', { cls: 'dv-bar-label', text: str(b.label) }), h(doc, 'span', { cls: 'dv-bar-track' }, [bar]),
-        h(doc, 'span', { cls: 'dv-bar-text', text: str(b.text || b.value) })]));
+      const li = h(doc, 'li', {}, [h(doc, 'span', { cls: 'dv-bar-label', text: str(b.label) }), h(doc, 'span', { cls: 'dv-bar-track' }, [bar]),
+        h(doc, 'span', { cls: 'dv-bar-text', text: str(b.text || b.value) })]);
+      clickable(ctx, li, panel, 'bar-click', marks.indexOf(b), b);               // a bar that carries effects (contract 1.2)
+      ul.appendChild(li);
     });
     body.appendChild(ul);
     if (typeof d.total === 'string' && d.total) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: d.total })); }
@@ -150,6 +175,7 @@ const gauge = {
     const box = h(doc, 'div', { cls: 'dv-gauge-box' }, [h(doc, 'div', { cls: 'dv-gauge-text', text: text }), meter,
       typeof d.label === 'string' && d.label ? h(doc, 'div', { cls: 'dv-metric-caption', text: d.label }) : null]);
     body.appendChild(box);
+    clickable(ctx, box, panel, 'point-click', 0, marksOf(panel)[0]);            // the gauge is one mark (contract 1.2)
     return { dispose() { box.remove(); } };
   }
 };
