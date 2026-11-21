@@ -19,6 +19,7 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **A link whose target is missing is still a link** (drishti-views, links): its `missing` chip says so; only a `denied` target is drawn as words.
 - **Table tools for embeds** (drishti-views, drishti-chart): the paint option `tableTools: {filters, chart}` gives a table a funnel on each column
   heading (values with counts, search, Select all, a number condition such as `> 1m`; filters combine across columns and survive a patch) and Chart any
   table (the rows as shown opened as a chart in a dialog beside the table: kind, across, series; the card's data table and export). drishti-chart's new

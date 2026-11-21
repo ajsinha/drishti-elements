@@ -2442,10 +2442,10 @@
     const links = {
       paint(body, panel, ctx) {
         const doc = ctx.doc, ul = h(doc, 'ul', { cls: 'dv-links' });
-        list(panel.data.links).forEach((it) => {
+        list(panel.data.links).forEach((it) => {          // a denied target is never a link; a missing one is (its chip says so: it may be found when opened)
           it = it || {};
           const label = typeof it.label === 'string' ? it.label : '', text = typeof it.text === 'string' && it.text ? it.text : label;
-          const name = it.link && typeof it.link === 'object' && it.status !== 'denied' && it.status !== 'missing' ? linkTo(ctx, it.link, text) : h(doc, 'span', { cls: 'dv-links-text', text: text });
+          const name = it.link && typeof it.link === 'object' && it.status !== 'denied' ? linkTo(ctx, it.link, text) : h(doc, 'span', { cls: 'dv-links-text', text: text });
           const st = typeof it.status === 'string' && it.status && it.status !== 'resolved' ? h(doc, 'span', { cls: 'dv-chip dv-links-st dv-st-' + it.status, text: LINK_STATUS[it.status] || it.status }) : null;
           const badge = typeof it.badge === 'string' && it.badge ? h(doc, 'span', { cls: 'dv-tag', text: it.badge }) : null;
           ul.appendChild(h(doc, 'li', { cls: it.status ? 'dv-st-' + it.status : null }, [label && label !== text ? h(doc, 'span', { cls: 'dv-links-label', text: label }) : null, name, badge, st]));

@@ -324,7 +324,8 @@ KINDS_VIEW = {
         {"id": "fig", "kind": "metric", "data": {"value": {"text": "1,204.5", "emphasis": True}, "delta": {"text": "+2.1%", "tone": "pos"}, "unit": "k", "caption": "orders today"}},
         {"id": "note", "kind": "markdown", "data": {"text": "# Heading\nSome **bold** and *soft* `code` [docs](https://example.org/x) [bad](javascript:alert(1)) <b>tag</b>\n\n- one\n- two\n\n```\nraw <i>\n```"}},
         {"id": "rel", "kind": "links", "data": {"links": [{"label": "Parent", "text": "Group B", "link": {"kind": "order", "id": "B", "mnemonic": "GRP"}, "badge": "2", "status": "resolved"},
-                                                        {"label": "Owner", "text": "Ops", "link": None, "badge": None, "status": "denied"}]}},
+                                                        {"label": "Owner", "text": "Ops", "link": None, "badge": None, "status": "denied"},
+                                                        {"label": "Book", "text": "B-9", "link": {"kind": "order", "id": "B-9"}, "badge": None, "status": "missing"}]}},
         {"id": "events", "kind": "timeline", "data": {"events": [{"date": "2026-03-01", "label": "Second"}, {"date": "2026-01-05", "label": "First", "status": "done", "tone": "ok"}], "more": 3}},
         {"id": "rows", "kind": "table", "data": {"columns": ["Name", "Amount"], "numeric": [False, True], "search": True, "expand": 0, "more": "Showing 3 of 3",
             "rows": [{"cells": [{"text": "Beta"}, {"text": "1,200"}], "highlight": False, "path": "b", "pick": "B", "children": [{"cells": [{"text": "Beta child"}, {"text": "200"}], "highlight": False, "path": "b/1"}]},
@@ -362,6 +363,7 @@ def test_the_kinds_of_words_and_tables(browsers):
         md = got["md"]
         assert md[:4] == ["Heading", "bold", "soft", "code"] and md[4] == ["https://example.org/x"] and md[5] == 0 and md[6] == 2 and md[7] == "raw <i>"
         assert got["links"][0][0] == "Group B" and "no access" in got["links"][1][1] and got["links"][1][0] is None
+        assert got["links"][2][0] == "B-9" and "missing" in got["links"][2][1]              # a missing target is still a link, its chip says so
         assert got["tl"] == ["First", "Second", "3 more events"]
         rows = "[...R.querySelectorAll('[data-panel=rows] tbody tr')].map((r) => r.textContent)"
         assert await ev(pg, rows) == ["▸Beta1,200", "Alpha(50)", "Gamma9"]
