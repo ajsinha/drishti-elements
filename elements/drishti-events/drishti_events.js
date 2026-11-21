@@ -2777,6 +2777,7 @@
         /** @private publishes waiting for the server, by id: the tabs (and their ops) to tell */ this.pubs = new Map();
         this.nextAsk = 1;
         this.conn = new Connection(this.events, o.address, copts);
+        if (this.conn.protocol === 'raw' && typeof o.lastEventId === 'string' && o.lastEventId.length <= MAX_ID_LENGTH) { this.conn.lastEventId = o.lastEventId; }
         this.events.on('$events.state', (m) => { this.lastState = m.data; this._all({ t: 'state', d: plain(m.data) }); });
         this.events.on('$events.gap', (m) => this._all({ t: 'gap', d: plain(m.data) }));
         this.events.on('$events.subscription', (m) => this._subState(m.data));
@@ -2844,6 +2845,8 @@
         if (this.clients.has(cid)) { this._leave(cid, true); }
         this.clients.set(cid, { seen: this.o.clock.now(), subs: new Map(), reqs: new Map(), hasAuth: !!f.hasAuth });
         if (f.positions && typeof f.positions === 'object' && this.conn.sequencer) { this.conn.sequencer.seq.seed(f.positions); }
+        if (this.conn.protocol === 'raw' && this.conn.state === 'idle' && this.conn.lastEventId === null && typeof f.lastEventId === 'string' &&
+          f.lastEventId.length <= MAX_ID_LENGTH) { this.conn.lastEventId = f.lastEventId; }
         this._to(cid, { t: 'hello', host: this.id, state: this.lastState ? plain(this.lastState) : { state: this.conn.state } });
       }
       _leave(cid, rejoining) {
@@ -2879,12 +2882,12 @@
         }
       }
       _fanOut(h, m) {
-        const w = wireOf(m), sent = new Set();
+        const w = wireOf(m), sent = new Set(), eid = this.conn.protocol === 'raw' ? this.conn.lastEventId : null;
         h.holders.forEach((subId, key) => {
           const cid = key.slice(0, key.lastIndexOf('|'));
           if (sent.has(cid)) { return; }
           sent.add(cid);
-          this._to(cid, { t: 'msg', m: w });
+          this._to(cid, eid ? { t: 'msg', m: w, eid: eid } : { t: 'msg', m: w });
         });
       }
       _unsub(cid, c, subId) {
@@ -2945,6 +2948,7 @@
         this.ops = new Map();
         this.nextOp = 1;
         this.positions = {};
+        /** @type {?string} raw mode: the server's event id last heard (a hub that takes over resumes from it) */ this.lastEventId = null;
         this.seen = new Map();
         this.hostMetrics = null;
         this.closed = false;
@@ -2955,14 +2959,16 @@
       }
       _post(f) { if (!this.closed) { try { this.link.post(f); } catch (e) { this.events._error(e, { where: 'hub' }); } } }
       _alive() { if (this.closed) { return; } this._post({ t: 'alive' }); this.alive = this.clock.setTimeout(() => this._alive(), HUB_TIMING.aliveMs); }
-      _join() { this._post({ t: 'join', hasAuth: typeof this.o.auth === 'function', positions: this.positions }); }
+      _join() {
+        this._post(Object.assign({ t: 'join', hasAuth: typeof this.o.auth === 'function', positions: this.positions }, this.lastEventId ? { lastEventId: this.lastEventId } : {}));
+      }
       _in(f) {
         if (this.closed || !f || typeof f !== 'object' || CLIENT_FRAMES_IN.indexOf(f.t) < 0) { return; }
         switch (f.t) {
           case 'leader': if (f.rejoin) { this.host = null; } if (f.host !== this.host) { this._join(); } break;
           case 'hello': this._hello(f); break;
           case 'state': this._state(f.d); break;
-          case 'msg': this._msg(f.m); break;
+          case 'msg': if (typeof f.eid === 'string' && f.eid.length <= MAX_ID_LENGTH) { this.lastEventId = f.eid; } this._msg(f.m); break;
           case 'substate': {
             const s = this.subs.get(f.id);
             if (!s) { return; }
@@ -3161,12 +3167,12 @@
         };
         leader = new Leader({ name: 'drishti-events.leader.' + key, env: env, onLead: () => {
           const hostId = me + ':' + events.clock.now().toString(36);
-          host = new HubHost({ id: hostId, address: address, options: o, clock: events.clock, env: env, auth: o.auth,
+          host = new HubHost({ id: hostId, address: address, options: o, clock: events.clock, env: env, auth: o.auth, lastEventId: client.lastEventId,
             post: (cid, f) => { if (cid === me) { Promise.resolve().then(() => { if (local) { local(f); } }); } else { ch.postMessage(Object.assign({ to: cid, from: me }, f)); } } });
           ch.postMessage({ t: 'leader', to: '*', from: me, host: hostId });
           Promise.resolve().then(() => { if (local) { local({ t: 'leader', host: hostId }); } });
         } });
-        new HubClient(events, link, { mode: 'leader', auth: o.auth });
+        const client = new HubClient(events, link, { mode: 'leader', auth: o.auth });
         leader.start();
         return 'leader';
       }
@@ -3185,7 +3191,7 @@
           if (!f || typeof f !== 'object') { return; }
           if (f.t === 'join' && !host) {
             if (!f.options || typeof f.options !== 'object') { return; }
-            host = new HubHost({ id: 'worker:' + Date.now().toString(36), address: f.address, options: f.options, env: opts.env || {},
+            host = new HubHost({ id: 'worker:' + Date.now().toString(36), address: f.address, options: f.options, env: opts.env || {}, lastEventId: f.lastEventId,
               clock: clock || systemClock(), post: (id, fr) => { const p = ports.get(id); if (p) { p.postMessage(fr); } },
               onEmpty: () => { host.conn.close(); host.destroy(); host = null; } });
           }

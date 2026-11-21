@@ -19,6 +19,12 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **drishti-events** (eventing step E11, the gallery and the browser tests): the gallery's Eventing pages on the mock server (Connection,
+  Ticker, Chat, Across tabs, Offline, Unreliable network, Why, Inspector), each with the status badge and "Open the inspector"; the
+  library's fixture harness (`drishti_harness.html`: the shared hub, the queue across a reload, the inspector, the ticker) and its browser
+  tests over a real local HTTP server (three tabs on one stream in the SharedWorker and in the leader tab, the leader's hand-over, five
+  queued edits sent once in order after a reload, the inspector's names and keys, the badge, 10,000 messages a second into a grid). The
+  shared hub in raw mode resumes from the server's event id the tabs last heard when a new leader takes over (it started the feed again).
 - **drishti-events** (eventing step E10, the inspector): `events.inspect(el?)` opens the inspector (its own file and sheet, loaded when
   opened, with drishti-grid): Messages (time, direction, scope, topic, kind, seq, latency, what happened; a filter by pattern or words;
   pause), Subscriptions, Connection (figures and the state timeline), Queue, Why (`explain` drawn); keys `/`, Space, Enter, Escape;
