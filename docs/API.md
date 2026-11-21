@@ -22076,7 +22076,7 @@ Returns `Map&lt;string, Dataset&gt;`.
 
 #### `DATASET_KINDS`
 
-The kinds drawn from a dataset (contract 1.1).
+The kinds drawn from a dataset (contract 1.1; live 1.2).
 
 #### `gridColumns(d, ds)`
 

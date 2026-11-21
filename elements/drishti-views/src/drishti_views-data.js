@@ -16,7 +16,8 @@
 /* Datasets (contract 1.1, VIEWS_DESIGN step 5): the rows a view's grid, tree and chart panels read, by name, shared. A dataset is ONE
    of: values (rows as lists in the order of its fields: what drishti-rachana writes), rows (objects), name (rows, Arrow bytes or a
    drishti-data source the page hands the painter: options.data[name]), arrow ({url} or {base64}), pages (REST pages read a window at a
-   time as the reader scrolls) or server (a server-side row model). Inline rows are held here and turned into objects once; the forms by
+   time as the reader scrolls), server (a server-side row model) or live (contract 1.2: a live table of the Data Protocol, read a window
+   at a time through options.tables and followed by key: the live kind's alone). Inline rows are held here and turned into objects once; the forms by
    address become drishti-data sources (loaded only then), so a grid of a million server rows holds only the rows in view. Every
    address passes the data allow-list: the page's origin, the view's own origin and options.data.allow. A rows patch (contract 1.1)
    changes a dataset by key (reset, remove, update, add) and reaches every panel that reads it. Values are raw: the panels format them
@@ -27,7 +28,7 @@ import { hasFormat, formatNamed, formatNumber, MASK } from '../../drishti-core/s
 /** The aggregations a measure may name. */
 export const AGGS = Object.freeze(['sum', 'count', 'min', 'max', 'avg', 'first', 'last', 'distinct']);
 /** The forms a dataset's rows come in. */
-export const DATASET_FORMS = Object.freeze(['values', 'rows', 'name', 'arrow', 'pages', 'server']);
+export const DATASET_FORMS = Object.freeze(['values', 'rows', 'name', 'arrow', 'pages', 'server', 'live']);
 /** How many rows a chart or a tree reads from a source by address at most. */
 export const READ_LIMIT = 100000;
 
@@ -201,7 +202,7 @@ export class Dataset {
   }
 
   /** Whether the rows are read a window at a time (pages, a server). */
-  get windowed() { return this.form === 'pages' || this.form === 'server' || (this.form === 'arrow' && !!(this.def.arrow && this.def.arrow.paged)); }
+  get windowed() { return this.form === 'pages' || this.form === 'server' || this.form === 'live' || (this.form === 'arrow' && !!(this.def.arrow && this.def.arrow.paged)); }
 
   /** How many rows the producer left out. */
   get more() { return Number(this.def.more) || 0; }

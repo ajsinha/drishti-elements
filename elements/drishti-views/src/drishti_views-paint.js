@@ -119,6 +119,7 @@ export class ViewHandle {
       charts: () => self.charts(),
       styles: (name) => self.styles(name),
       dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
+      tables: (ref) => (typeof o.tables === 'function' ? o.tables(ref) || null : null),
       density: o.density || null,
       can: (what) => (what === 'geo' ? o.geo !== false : false),
       time: (iso) => {

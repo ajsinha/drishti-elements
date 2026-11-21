@@ -19,6 +19,13 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **The live kind** (drishti-views; ViewModel contract 1.2, the pin moved to drishti-rachana g3/kinds): a grid over a live table of the
+  Data Protocol. The dataset's `live` reference (table, window, top, filter) is read through `options.tables(ref)`, the page's live tables
+  (drishti-rachana's `liveTables` over its DataClient: `page(query)` and `follow(after, keys, top, onPatch, onGap)`): the first window in the
+  panel's order, a windowed subscription with its keys, each patch applied (reset, remove by key lists, update with ticking cells, add,
+  `top` inserts first, the total), rows past the window leave from the bottom and the window follows, a gap reads the page again; "n of N
+  rows, live" under the grid; without `options.tables` the panel says so. Cell bars: a column's `bar` (grid and live) draws drishti-grid's
+  `barCell` against the column's largest magnitude. Browser tests with an in-page live table.
 - **Studio widgets** (drishti-inputs, for Rachana Studio's screens; no bespoke UI): `SplitPane` (horizontal or vertical, minimum and maximum sizes,
   sizes kept as shares, the separator by pointer and by keyboard: arrows, Shift, Home, End, Enter; remembered with `persistKey`; `<drishti-split>`);
   `Tabs` (tablist, roving arrows, disabled tabs skipped, badge, closable, a panel made when first opened; `<drishti-tabs>`); `NavList` (a searchable

@@ -255,3 +255,85 @@ def test_the_gallery_pages_of_datasets_draw_every_example_with_its_made_up_data(
         first = await pg.evaluate(pv)
         await pg.wait_for_function("(a) => { const now = (" + pv + ")(); return now && now !== a; }", arg=first, timeout=20000)   # the chart sharing the dataset follows
     gallery_run(browsers, body, "#c=view-datasets")
+
+
+LIVE_TABLES = """() => {
+  const rows = [];
+  for (let i = 1; i <= 40; i++) { rows.push({ id: 'O-' + String(i).padStart(3, '0'), side: i % 2 ? 'BUY' : 'SELL', qty: i * 100, changed: '2026-11-20T09:' + String(i).padStart(2, '0') + ':00Z' }); }
+  const L = window.__live = { rows: rows, asked: [], windows: [], follows: 0, subs: [] };
+  L.push = (p) => L.subs.forEach((s) => s.onPatch(p));
+  L.gap = () => L.subs.splice(0).forEach((s) => s.onGap());
+  return (ref) => ({
+    page(q) {
+      L.asked.push(q);
+      const s = (q.sort || [])[0], out = L.rows.slice();
+      if (s) { out.sort((a, b) => (a[s.col] < b[s.col] ? -1 : a[s.col] > b[s.col] ? 1 : 0) * (s.dir === 'desc' ? -1 : 1)); }
+      return Promise.resolve({ rows: out.slice(0, q.limit), total: L.rows.length, version: { epoch: 'e1', seq: 1 } });
+    },
+    follow(after, keys, top, onPatch, onGap) {
+      L.follows++; L.windows.push({ keys: keys, top: top });
+      const sub = { onPatch: onPatch, onGap: onGap };
+      L.subs.push(sub);
+      return { window(k, t) { L.windows.push({ keys: k, top: t }); return Promise.resolve(); }, stop() { const i = L.subs.indexOf(sub); if (i >= 0) { L.subs.splice(i, 1); } } };
+    }
+  });
+}"""
+
+
+def test_a_live_panel_reads_a_window_follows_its_patches_and_draws_bars(browsers):
+    vm = view([{"id": "blotter", "kind": "live", "title": "Orders", "span": 12, "height": 12,
+                "data": {"dataset": "orders", "columns": [{"field": "id"}, {"field": "side"}, {"field": "qty", "bar": True}],
+                         "sort": [{"field": "changed", "desc": True}], "search": True}}],
+              {"orders": {"key": ["id"], "fields": [{"name": "id", "type": "string", "label": "Order"}, {"name": "side", "type": "string", "label": "Side"},
+                                                    {"name": "qty", "type": "number", "label": "Qty", "fmt": "amount0"}, {"name": "changed", "type": "datetime"}],
+                          "live": {"table": "orders", "window": 10, "top": True, "filter": {"op": "==", "args": [{"col": "side"}, {"lit": "BUY"}]}}}})
+    vm["contract"] = "1.2"
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v, { tables: (" + LIVE_TABLES + ")() })", vm)
+        await pg.wait_for_function(DRAWN, arg=["blotter"], timeout=60000)
+        await frame(pg)
+        got = await ev(pg, """{ asked: window.__live.asked, windows: window.__live.windows.length, keys: window.__live.windows[0].keys.length,
+            top: window.__live.windows[0].top, rows: R.querySelectorAll('[data-panel=blotter] .dg-row').length,
+            first: [...R.querySelector('[data-panel=blotter] .dg-row').children].map((c) => c.textContent),
+            bars: R.querySelectorAll('[data-panel=blotter] .dc-bullet').length,
+            count: R.querySelector('[data-panel=blotter] .dv-live-count').textContent,
+            issues: window.__harness.events.filter((e) => e.type === 'issues').length }""")
+        assert got["asked"] == [{"limit": 10, "sort": [{"col": "changed", "dir": "desc"}], "filter": {"op": "==", "args": [{"col": "side"}, {"lit": "BUY"}]}}]
+        assert got["keys"] == 10 and got["top"] is True and got["rows"] == 10
+        assert "O-040" in got["first"] and "4,000" in " ".join(got["first"])
+        assert got["bars"] > 0 and got["count"] == "10 of 40 rows, live" and got["issues"] == 0
+        await shot(pg, "views-live.png")
+        await pg.evaluate("""() => window.__live.push({ table: 'orders', update: [{ id: 'O-040', qty: 9999 }],
+            add: [{ id: 'O-041', side: 'BUY', qty: 50, changed: '2026-11-20T10:00:00Z' }], top: [['O-041']], total: 41 })""")
+        await frame(pg)
+        await frame(pg)
+        after = await ev(pg, """{ rows: R.querySelectorAll('[data-panel=blotter] .dg-row').length,
+            first: [...R.querySelector('[data-panel=blotter] .dg-row').children].map((c) => c.textContent),
+            all: [...R.querySelectorAll('[data-panel=blotter] .dg-row')].map((r) => r.textContent).join('|'),
+            windows: window.__live.windows.length, last: window.__live.windows[window.__live.windows.length - 1].keys.length,
+            count: R.querySelector('[data-panel=blotter] .dv-live-count').textContent }""")
+        assert after["rows"] == 10 and "O-041" in after["first"]       # new on top; the bottom row left the window
+        assert "O-031" not in after["all"] and "9,999" in after["all"], after["all"]
+        assert after["windows"] == 2 and after["last"] == 10 and after["count"] == "10 of 41 rows, live"
+        await pg.evaluate("() => window.__live.push({ table: 'orders', remove: [['O-041']], total: 40 })")
+        await frame(pg)
+        assert await ev(pg, "R.querySelectorAll('[data-panel=blotter] .dg-row').length") == 9
+        await pg.evaluate("() => window.__live.gap()")                  # a gap reads the page again and follows anew
+        await pg.wait_for_function("() => window.__live.asked.length === 2 && window.__live.follows === 2", timeout=10000)
+        await frame(pg)
+        assert await ev(pg, "R.querySelectorAll('[data-panel=blotter] .dg-row').length") == 10
+        await pg.evaluate("window.__harness.handle.dispose()")
+        assert await pg.evaluate("window.__live.subs.length") == 0
+    run_with(browsers, body)
+
+
+def test_a_live_panel_without_live_tables_says_so(browsers):
+    vm = view([{"id": "blotter", "kind": "live", "data": {"dataset": "orders"}}],
+              {"orders": {"key": ["id"], "fields": [{"name": "id", "type": "string"}], "live": {"table": "orders", "window": 10}}})
+    vm["contract"] = "1.2"
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", vm)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=blotter]'); return e && /options.tables/.test(e.textContent); }", timeout=30000)
+    run_with(browsers, body)
