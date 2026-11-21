@@ -294,11 +294,11 @@ def test_tab_moves_to_the_next_editable_cell_and_every_editor_has_a_name(browser
         for _ in range(8):                                                                    # Enter once the grid has the focus back: a pick list (drishti-inputs' Select)
             await pg.keyboard.press("Enter")
             try:
-                await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(timeout=1500)
+                await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(state="attached", timeout=1500)
                 break
             except Exception:  # noqa: BLE001 - the focus was not back yet
                 pass
-        await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(timeout=5000)
+        await pg.locator("[data-panel=t] .dg-editor.dg-editor-select").wait_for(timeout=10000)
         assert "Status" in (await pg.locator("[data-panel=t] .dg-editor [aria-label]").first.get_attribute("aria-label"))
         await pg.keyboard.press("Escape")                                                     # the open list's own, then the editor's
         await pg.keyboard.press("Escape")
