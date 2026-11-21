@@ -88,6 +88,14 @@ as a titled panel that says so) and refuses another major in words. A live view'
 conformance vectors (`elements/drishti-views/spec/drishti_vectors.json`) say what a validator answers for valid and invalid views and
 frames.
 
+**A view's live stream.** A painter with the option `live` subscribes the view's topic (`live.topic`, default `views.<ref.id>`) through
+drishti-events. Each message's `kind` says what it carries: `view` (a whole ViewModel, painted again), `view.frame` (a frame) or
+`view.piece` (one patch). Over the events protocol (below) the stream is ordered, resumed and replayed by it; a gap it cannot fill, or a
+new epoch, makes the painter read the view again (`live.resync()`, else the address it was painted from). A server that speaks no
+protocol sends Server-Sent Events named `view` (data: a ViewModel) and `frame` (data: a frame), with `id:` for its own resume; the
+painter reads them through raw mode (`live: { url, raw: true }`), and every reconnect of such a stream should begin with a `view`.
+`sse(write, { topic, raw })` (drishti-views' builders, Node or the browser) writes either form.
+
 ## The events contract (drishti-events, protocol version 1)
 
 A neutral, written contract any server in any language can implement; drishti-events is one client of it and names no particular server.

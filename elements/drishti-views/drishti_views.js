@@ -2050,13 +2050,140 @@
     defineKind('gauge', gauge);
     return { "CHART_KINDS": CHART_KINDS, "chartTable": chartTable };
   })();
+  /* ---- src/drishti_views-build.js ---- */
+  __m["src/drishti_views-build.js"] = (function () {
+    var SCHEMA = __m["src/drishti_views-schema.js"].SCHEMA, CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
+    var validate = __m["src/drishti_views-validate.js"].validate, formatIssue = __m["src/drishti_views-validate.js"].formatIssue;
+    const KIND_DATA = Object.freeze({ kv: 'Fields', status: 'Fields', provenance: 'Fields', table: 'Table', ladder: 'Table', tabs: 'Tabs', line: 'Chart',
+      area: 'Chart', hbar: 'Bars', links: 'Links', markdown: 'Text', gauge: 'Gauge', surface: 'Surface', waterfall: 'Waterfall', histogram: 'Histogram',
+      scatter: 'Scatter', candlestick: 'Candles', graph: 'Graph', timeline: 'Timeline', pivot: 'Pivot', metric: 'Metric', map: 'GeoMap' });
+    class ViewError extends Error {
+      constructor(message, issues) {
+        super(message);
+        this.name = 'ViewError';
+        /** @type {Object[]} */ this.issues = issues || [];
+      }
+    }
+    const DEFS = SCHEMA.$defs;
+    const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+    function defOf(node, value) {
+      if (!node) { return null; }
+      if (node.$ref) { return DEFS[node.$ref.slice('#/$defs/'.length)] || null; }
+      if (node.allOf && node.allOf.length === 1) { return defOf(node.allOf[0], value); }
+      if (node.anyOf) {
+        const want = Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value === 'object' ? 'object' : null;
+        const b = node.anyOf.find((x) => (want === 'array' ? x.type === 'array' : want === 'object' ? (x.$ref || x.type === 'object') : false));
+        return b ? defOf(b, value) : null;
+      }
+      return node;
+    }
+    function nullable(node) { return !!(node && node.anyOf && node.anyOf.some((x) => x.type === 'null')); }
+    function emptyOf(node) {
+      if (nullable(node)) { return null; }
+      const t = node && node.type;
+      return t === 'array' ? [] : t === 'boolean' ? false : t === 'integer' || t === 'number' ? 0 : t === 'string' ? '' : t === 'object' ? {} : null;
+    }
+    function complete(value, def) { return fill(value, { $ref: '#/$defs/' + def }); }
+    function fill(v, node) {
+      if (Array.isArray(v)) {
+        const d = defOf(node, v);
+        return d && d.items ? v.map((x) => fill(x, d.items)) : v;
+      }
+      if (!v || typeof v !== 'object') { return v; }
+      const d = defOf(node, v);
+      if (!d || !d.properties) { return v; }
+      (d.required || []).forEach((k) => { if (v[k] === undefined && d.properties[k]) { v[k] = emptyOf(d.properties[k]); } });
+      Object.keys(v).forEach((k) => {
+        if (k === 'data' && d === DEFS.PanelView && KIND_DATA[v.kind]) { v.data = fill(v.data, { $ref: '#/$defs/' + KIND_DATA[v.kind] }); return; }
+        if (d.properties[k]) { v[k] = fill(v[k], d.properties[k]); }
+      });
+      return v;
+    }
+    function refuse(what, issues) {
+      const errors = issues.filter((i) => i.level === 'error');
+      if (errors.length) { throw new ViewError(what + ': ' + errors.slice(0, 5).map(formatIssue).join('; '), errors); }
+    }
+    function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'panel'; }
+    class ViewBuilder {
+      constructor(title) {
+        this.vm = { contract: CONTRACT, ref: { kind: null, id: null }, title: { pill: null, id: title ? String(title) : null, with: null }, strip: [], panels: [], keys: [],
+          provenance: {}, timings: {} };
+        this.ids = new Set();
+      }
+      ref(kind, id) { this.vm.ref = { kind: kind === undefined ? null : kind, id: id === undefined ? null : String(id) }; return this; }
+      title(pill, id, withCell) { this.vm.title = { pill: pill === undefined ? null : pill, id: id === undefined ? this.vm.title.id : id, with: withCell || null }; return this; }
+      mnemonic(m) { this.vm.mnemonic = String(m); return this; }
+      strip(cells) { this.vm.strip = copy(cells || []); return this; }
+      key(k) { this.vm.keys.push(copy(k)); return this; }
+      provenance(p) { this.vm.provenance = Object.assign({}, this.vm.provenance, copy(p)); return this; }
+      layout(l) { this.vm.layout = copy(l); return this; }
+      panel(p) {
+        const panel = copy(p) || {};
+        if (!panel.id) { let id = slug(panel.title || panel.kind), n = 2; while (this.ids.has(id)) { id = slug(panel.title || panel.kind) + '-' + n++; } panel.id = id; }
+        if (this.ids.has(String(panel.id))) { throw new ViewError('panel ' + panel.id + ': another panel has this id; ids are unique in a view', []); }
+        complete(panel, 'PanelView');
+        const probe = complete({ contract: CONTRACT, ref: this.vm.ref, title: this.vm.title, strip: [], panels: [panel], keys: [], provenance: {}, timings: {} }, 'ViewModel');
+        const at = 'panels[' + this.vm.panels.length + ']';
+        refuse('panel ' + panel.id, validate(probe).issues.filter((i) => String(i.path).indexOf('panels[0]') === 0)
+          .map((i) => Object.assign({}, i, { path: at + String(i.path).slice('panels[0]'.length) })));
+        this.ids.add(String(panel.id));
+        this.vm.panels.push(panel);
+        return this;
+      }
+      toJSON() {
+        const vm = complete(copy(this.vm), 'ViewModel');
+        refuse('the view', validate(vm).issues);
+        return vm;
+      }
+    }
+    Object.keys(KIND_DATA).forEach((kind) => {
+      ViewBuilder.prototype[kind === 'provenance' ? 'provenancePanel' : kind] = function (title, data, more) { return this.panel(Object.assign({ kind: kind, title: title, data: data }, more || {})); };
+    });
+    function view(title) { return new ViewBuilder(title); }
+    class FrameBuilder {
+      constructor(seq) { this.f = { seq: Number.isInteger(seq) ? seq : 0, generation: 0, patches: [], latencyMs: null, p99Ms: null }; }
+      generation(g) { this.f.generation = g; return this; }
+      strip(index, cell) { this.f.patches.push({ op: 'strip', index: index, cell: copy(cell) }); return this; }
+      panel(panel) { this.f.patches.push({ op: 'panel', panel: complete(copy(panel), 'PanelView') }); return this; }
+      provenance(p) { this.f.patches.push({ op: 'provenance', provenance: complete(copy(p), 'Provenance') }); return this; }
+      deleted(at) { this.f.patches.push(at ? { op: 'deleted', at: at } : { op: 'deleted' }); return this; }
+      restored() { this.f.patches.push({ op: 'restored' }); return this; }
+      toJSON() {
+        const f = copy(this.f);
+        refuse('the frame', validate(f, { as: 'frame' }).issues);
+        return f;
+      }
+    }
+    function frame(seq) { return new FrameBuilder(seq); }
+    function sse(write, o) {
+      o = Object.assign({ topic: 'views.view', raw: false, epoch: 'e1', session: 's1', heartbeatMs: 15000, now: () => Date.now() }, o);
+      let seq = 0;
+      const event = (name, data, id) => write((id !== undefined ? 'id: ' + id + '\n' : '') + 'event: ' + name + '\ndata: ' + JSON.stringify(data) + '\n\n');
+      if (!o.raw) {
+        event('welcome', { t: 'welcome', v: 1, session: o.session, time: o.now(), heartbeatMs: o.heartbeatMs, can: [], limits: {}, resumed: false });
+        event('subd', { t: 'subd', id: 1, streams: { [o.topic]: { epoch: o.epoch, seq: 0 } }, recovered: true });
+      }
+      const send = (kind, data) => {
+        seq++;
+        if (o.raw) { event(kind === 'view' ? 'view' : 'frame', kind === 'view.piece' ? { seq: seq, generation: 0, patches: [data], latencyMs: null, p99Ms: null } : data, String(seq)); return; }
+        event('msg', { t: 'msg', id: o.session + '-' + seq, topic: o.topic, stream: o.topic, seq: seq, kind: kind, time: o.now(), source: 'views', data: data }, String(seq));
+      };
+      return {
+        view: (vm) => send('view', vm),
+        frame: (f) => send('view.frame', f),
+        piece: (p) => send('view.piece', p),
+        beat: () => write(': hb\n\n')
+      };
+    }
+    return { "KIND_DATA": KIND_DATA, "ViewError": ViewError, "complete": complete, "ViewBuilder": ViewBuilder, "view": view, "FrameBuilder": FrameBuilder, "frame": frame, "sse": sse };
+  })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var defineElement = __m["src/drishti_views-element.js"].define;
     function registerKind(name, def) { defineKind(name, def); }
     function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }
-    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define };
+    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.0.0" }, __m["src/drishti_index.js"]));
 });

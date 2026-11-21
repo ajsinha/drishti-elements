@@ -53,6 +53,14 @@ Each release lists what changed, by library. One version for every library: the 
   fill (a resync notice, a new epoch) reads the view again (`resync()`, else the address it was painted from) and paints it
   (`metrics().resyncs`); a plain stream (Server-Sent Events named `view` and `frame`) through raw mode; the connection's state is a chip
   in the status line and the view is marked while the line is down; the subscription and its connection stop with the view.
+- **drishti-views** (steps 12 and 13, the element and the builders): `<elements-view>` (`define({ tag })`, installed by the bundle;
+  `viewModel` and `options` properties, `src`, an inline JSON script, the attributes `density`, `header`, `panels`, `locale`,
+  `validate`, `label` and `live`; disposed when it leaves the page; `elements-view:painted`); `view(title)` with one method per kind
+  of contract 1 (`provenancePanel` for that kind), `panel(obj)`, `ref`, `title`, `strip`, `key`, `provenance`, `layout`, ids guessed
+  from titles and the fields contract 1 requires filled from the schema (`complete`), each panel checked when added and the whole by
+  `toJSON()` (a `ViewError` names the path and the fix); `frame(seq)` with `strip`, `panel`, `provenance`, `deleted`, `restored`;
+  `sse(write, { topic, raw })` writes a view's stream as the read-only events protocol or the plain form; no DOM touched, so Node runs
+  them. Budget 156,000 (measured plus about 5%). USING has a drishti-views section; CONTRACTS the live stream.
 - **drishti-events**: a stream born after its subscription was answered (the server named no streams yet) is now resynced too when
   the server restarts: the resync notice reaches every subscription whose pattern hears the stream.
 

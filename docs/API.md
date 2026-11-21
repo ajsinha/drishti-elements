@@ -21487,6 +21487,247 @@ Registers &lt;elements-view&gt; (or another tag) in a window's custom elements; 
 
 Returns `boolean`: whether it was registered now.
 
+### drishti_views-build.js
+
+#### `KIND_DATA`
+
+The record each kind's data is (contract 1).
+
+#### class `ViewError`
+
+A ViewModel or frame the builders refused: the problems, each with its path and what to write.
+
+##### `new ViewError(message, issues)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `message` | `string` |  |
+| `issues` | `Object[]` | the validator's issues |
+
+#### `complete(value, def)`
+
+The value with every field contract 1 requires and the producer left out filled in: null where the schema allows it, otherwise the type's empty value (false, 0, '', [], {}); nested records alike. Nothing is removed or changed.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `value` | `*` |  |
+| `def` | `string` | a record of the schema ("ViewModel", "PanelView", "Frame", "Metric", ...) |
+
+Returns `*`.
+
+#### class `ViewBuilder`
+
+The ViewModel builder: view(title) answers one.
+
+##### `new ViewBuilder(title)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[title]` | `string` | the title line's words (title.id); a pill is title(pill, id) |
+
+##### `ViewBuilder.ref(kind, id)`
+
+The subject of the view ({kind, id}): links and the live topic name it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` |  |
+| `id` | `string` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.title(pill, id, withCell)`
+
+The title line: its pill, words and the cell beside them.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `pill` | `string` |  |
+| `[id]` | `string` |  |
+| `[withCell]` | `Object` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.mnemonic(m)`
+
+The mnemonic the view answers to.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `m` | `string` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.strip(cells)`
+
+The strip of figures ({label, text, tone?, emphasis?, link?}).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `cells` | `Object[]` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.key(k)`
+
+A function key ({key, label, action, panel?, link?}).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `k` | `Object` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.provenance(p)`
+
+The view's provenance (source, updatedAt, businessDate, live, stale, ...).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `p` | `Object` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.layout(l)`
+
+The layout (areas, tabs, sections, the split).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `l` | `Object` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.panel(p)`
+
+A panel of any kind, checked now: {id?, kind, title?, data, span?, height?, ...}. The id is guessed from the title when missing.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `p` | `Object` |  |
+
+Returns `ViewBuilder`.
+
+##### `ViewBuilder.toJSON()`
+
+The ViewModel, checked whole (a ViewError when it is not valid).
+
+Returns `Object`.
+
+#### `view(title)`
+
+A new ViewModel builder.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[title]` | `string` |  |
+
+Returns `ViewBuilder`.
+
+```js
+view('EMEA').title('Region · Orders').ref('region', 'EMEA').kv('Summary', { fields: [{ label: 'Owner', text: 'Ann' }] }).toJSON()
+```
+
+#### class `FrameBuilder`
+
+The frame builder: frame(seq) answers one.
+
+##### `new FrameBuilder(seq)`
+
+A frame at its place in the stream.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[seq]` | `number` |  |
+
+##### `FrameBuilder.generation(g)`
+
+The view's generation the frame belongs to.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `g` | `number` |  |
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.strip(index, cell)`
+
+A strip cell at its index.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `index` | `number` |  |
+| `cell` | `Object` |  |
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.panel(panel)`
+
+A whole panel again (by its id).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `panel` | `Object` |  |
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.provenance(p)`
+
+The view's provenance.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `p` | `Object` |  |
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.deleted(at)`
+
+The view's subject is gone.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[at]` | `string` | when (ISO time) |
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.restored()`
+
+The view's subject is back.
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.toJSON()`
+
+The frame, checked (a ViewError when it is not valid).
+
+Returns `Object`.
+
+#### `frame(seq)`
+
+A new frame builder.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `[seq]` | `number` |  |
+
+Returns `FrameBuilder`.
+
+```js
+frame(4113).strip(0, { label: 'Booked', text: '18,432,850' }).toJSON()
+```
+
+#### `sse(write, o)`
+
+Writes a view's live stream as Server-Sent Events through write(text) (a Node response's write, for one): the read-only form of the events protocol (welcome, subd, then msg frames with a rising seq, ids for resume), or with raw the plain form (events named view and frame). The caller sends the headers (Content-Type: text/event-stream, Cache-Control: no-store).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `write` | `function(string): *` |  |
+| `[o]` | `{topic: string, raw: boolean, epoch: string, session: string, heartbeatMs: number, now: function(): number}` | topic: default "views.view" |
+
+Returns `{view: function(Object): void, frame: function(Object): void, piece: function(Object): void, beat: function(): void}`.
+
 ### drishti_index.js
 
 #### `registerKind(name, def)`

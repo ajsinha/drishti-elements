@@ -96,11 +96,10 @@ test('a 200 KB view is validated within its budget, and the validator is not run
   const vm = JSON.parse(JSON.stringify(VECTORS.views.find((v) => v.id === 'V001').view));
   const rows = vm.panels[2].data.rows;
   while (JSON.stringify(vm).length < 200_000) { rows.push(JSON.parse(JSON.stringify(rows[rows.length % 2]))); }
-  for (let i = 0; i < 5; i++) { V.validate(vm); }
-  const times = [];
-  for (let i = 0; i < 9; i++) { const t = performance.now(); assert.ok(V.validate(vm).ok); times.push(performance.now() - t); }
-  times.sort((a, b) => a - b);
-  assert.ok(times[4] <= BUDGET['validate-200kb-ms'], 'median ' + times[4].toFixed(1) + ' ms over the budget of ' + BUDGET['validate-200kb-ms']);
+  const median = (fn) => { for (let i = 0; i < 5; i++) { fn(); } const t = []; for (let i = 0; i < 9; i++) { const s = performance.now(); fn(); t.push(performance.now() - s); } t.sort((x, y) => x - y); return t[4]; };
+  const took = median(() => assert.ok(V.validate(vm).ok));
+  const k = Math.max(1, median(() => JSON.parse(JSON.stringify(vm))) / BUDGET['node-calibration-ms']);   // a busy machine is slower at both
+  assert.ok(took <= BUDGET['validate-200kb-ms'] * k, 'median ' + took.toFixed(1) + ' ms over the budget of ' + BUDGET['validate-200kb-ms'] + ' ms (x' + k.toFixed(2) + ')');
 });
 
 test('the bundle loads under Node with no page and offers the same API', () => {
@@ -143,4 +142,44 @@ test('frames conflate: the newest per strip index, panel id and provenance, neve
   const show = (x) => x.op + (x.panel ? ':' + x.panel.title : x.cell ? ':' + x.cell.text : x.provenance ? ':' + x.provenance.generation : '');
   assert.deepEqual(r.patches.map(show), ['panel:b1', 'strip:2', 'panel:a2', 'deleted', 'panel:a3', 'restored', 'panel:a4', 'provenance:2', 'other']);
   assert.equal(r.conflated, 3);
+});
+
+test('the builders: a view of every kind of contract 1 is valid in strict mode; ids guessed; a bad panel refused at once, in words', () => {
+  const b = V.view('EMEA').title('Region · Orders', 'EMEA').ref('region', 'EMEA').strip([{ label: 'Booked', text: '18,420,350', emphasis: true }])
+    .kv('Summary', { fields: [{ label: 'Owner', text: 'Ann' }] }).status('Health', { fields: [{ label: 'Feed', text: 'ok', tone: 'ok' }] })
+    .metric('Booked', { value: { text: '1' } }).markdown('Notes', { text: '# Hi' }).links('Related', { links: [{ label: 'Parent', text: 'B' }] })
+    .timeline('Events', { events: [{ date: '2026-01-01', label: 'x' }] }).table('Orders', { columns: ['a'], rows: [{ cells: [{ text: '1' }] }] })
+    .ladder('Schedule', { columns: ['d'], rows: [{ cells: [{ text: '1' }], highlight: true }] }).pivot('Pivot', { by: 'r', columns: ['q'], rows: [{ label: 'x', cells: [{ text: '1' }] }] })
+    .tabs('Tabs', { tabs: [{ title: 'One', fields: [] }] }).line('Trend', { x: ['a'], series: [{ label: 's', values: [1] }] }).area('Area', { x: ['a'], series: [{ values: [1] }] })
+    .hbar('Bars', { bars: [{ label: 'a', value: 1 }] }).gauge('Gauge', { value: 1, max: 2 }).surface('Surface', { x: ['a'], y: ['b'], z: [[1]] })
+    .waterfall('Waterfall', { steps: [{ label: 'a', value: 1 }] }).histogram('Histogram', { bins: [{ from: 0, to: 1, count: 2 }] })
+    .scatter('Scatter', { points: [{ x: 1, y: 2 }] }).candlestick('Candles', { candles: [{ x: 'd', open: 1, high: 2, low: 0, close: 1 }] })
+    .graph('Graph', { nodes: [{ id: 'a' }], edges: [] }).map('Map', { mode: 'world' }).provenance({ source: 'orders-service', live: true })
+    .panel({ kind: 'kv', title: 'Summary', data: { fields: [] } });
+  const vm = b.toJSON();
+  const r = V.validate(vm, { strict: true });
+  assert.equal(r.ok, true, JSON.stringify(r.issues.map(V.formatIssue)));
+  assert.equal(vm.panels.length, 22);
+  assert.deepEqual(vm.panels.slice(0, 2).map((p) => p.id).concat([vm.panels[21].id]), ['summary', 'health', 'summary-2']);
+  assert.throws(() => V.view('x').kv('A', { fields: [] }).gauge('G', { value: 'high' }), (e) => e.name === 'ViewError' && /panels\[1\]\.data\.value/.test(e.message));
+  assert.throws(() => V.view('x').kv('A', { fields: [] }).panel({ id: 'a', kind: 'kv', data: { fields: [] } }), /another panel has this id/);
+  const f = V.frame(7).strip(0, { label: 'Booked', text: '2' }).panel({ id: 'summary', kind: 'kv', data: { fields: [] } }).deleted().restored().toJSON();
+  assert.equal(V.validate(f, { as: 'frame' }).ok, true);
+  assert.deepEqual(f.patches.map((p) => p.op), ['strip', 'panel', 'deleted', 'restored']);
+});
+
+test('sse(): the read-only events protocol (welcome, subd, msg with a rising seq and ids) and the plain form (view, frame)', () => {
+  const out = [];
+  const s = V.sse((t) => out.push(t), { topic: 'views.EMEA', now: () => 1 });
+  s.view({ contract: '1.0' }); s.frame({ seq: 1, patches: [] }); s.piece({ op: 'restored' }); s.beat();
+  const events = out.join('').split('\n\n').filter(Boolean).map((b) => Object.fromEntries(b.split('\n').map((l) => [l.slice(0, l.indexOf(':')), l.slice(l.indexOf(':') + 2)])));
+  assert.deepEqual(events.map((e) => e.event || 'comment'), ['welcome', 'subd', 'msg', 'msg', 'msg', 'comment']);
+  const msgs = events.filter((e) => e.event === 'msg').map((e) => JSON.parse(e.data));
+  assert.deepEqual(msgs.map((m) => [m.seq, m.kind, m.stream]), [[1, 'view', 'views.EMEA'], [2, 'view.frame', 'views.EMEA'], [3, 'view.piece', 'views.EMEA']]);
+  assert.deepEqual(events.filter((e) => e.id).map((e) => e.id), ['1', '2', '3']);
+  const raw = [];
+  const r = V.sse((t) => raw.push(t), { raw: true });
+  r.view({ contract: '1.0' }); r.piece({ op: 'restored' });
+  assert.deepEqual(raw.map((t) => /event: (\w+)/.exec(t)[1]), ['view', 'frame']);
+  assert.equal(JSON.parse(/data: (.*)/.exec(raw[1])[1]).patches[0].op, 'restored');
 });

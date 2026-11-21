@@ -156,6 +156,60 @@ Reference: [API.md](API.md#drishti-events) (every call and option), the wire pro
 [CONTRACTS.md](CONTRACTS.md#the-events-contract-drishti-events-protocol-version-1), and how it is built in [DESIGN.md](DESIGN.md#8-drishti-events).
 The gallery's Eventing pages run every example on the mock server.
 
+## drishti-views
+
+Whole screens from a **ViewModel** (contract 1, its schema in [CONTRACTS.md](CONTRACTS.md#the-viewmodel-drishti-views)): a title line, a
+strip of figures, panels of twenty-two kinds (label and value pairs, status chips, a metric, markdown, links, a timeline, tables, a
+ladder, a pivot, tabs, lines and areas, bars, a gauge, a surface, a waterfall, a histogram, a scatter, candlesticks, a graph, a map) and a
+layout. The painter computes and formats nothing: every figure is the producer's text.
+
+**1. Paint a view**
+
+```js
+await Drishti.elements.load('drishti-views');
+const handle = Drishti.elements.views.paint(document.getElementById('orders'), '/views/orders.json');   // or a ViewModel object
+handle.on('link', (e) => console.log(e.detail.link));          // a link the page resolves (options.links.href makes it an address)
+handle.on('pick', (e) => console.log(e.detail.pick));          // a table row with a pick
+```
+
+The view draws inside a shadow root (`shadow: false` draws into the element). A chart, a graph or a map loads drishti-chart (and
+drishti-graph) the first time a view has one; a page of words and tables never loads a chart engine. A map needs the page's map helper
+(`geo`).
+
+**2. The element**
+
+```html
+<elements-view src="/views/orders.json" density="compact" panels="summary,orders"></elements-view>
+```
+
+Or set `.viewModel` (an object) and `.options`; an inline `<script type="application/json">` child is a view in a one-file page.
+
+**3. Live**
+
+```js
+const events = Drishti.elements.events.connect('/events', { namespace: 'my-app.' + userId });
+paint(el, '/views/orders.json', { live: { events: events } });            // topic views.<the view's id>
+paint(el, '/views/orders.json', { live: { url: '/views/orders/stream', raw: true } });   // a plain SSE stream: events view and frame
+handle.patch({ seq: 4113, generation: 0, patches: [{ op: 'strip', index: 0, cell: { label: 'Booked', text: '18,432,850' } }] });  // by hand
+```
+
+Frames that arrive faster than the page paints are conflated; a hidden page catches up in one paint when shown.
+
+**4. Build a view (browser or Node)**
+
+```js
+import { view, frame, sse } from '/elements/drishti-views/src/drishti_index.js';   // under Node: require('drishti_views.js')
+const vm = view('EMEA').title('Region · Orders', 'EMEA').ref('region', 'EMEA')
+  .strip([{ label: 'Booked', text: '18,420,350', emphasis: true }])
+  .kv('Summary', { fields: [{ label: 'Owner', text: 'Northwind Sales' }] })
+  .hbar('By country', { bars: [{ label: 'DEU', value: 40, text: '40' }] }, { span: 4 })
+  .toJSON();                                                     // checked; a ViewError names the path and the fix
+const stream = sse((text) => res.write(text), { topic: 'views.EMEA' });   // Content-Type: text/event-stream
+stream.view(vm); stream.frame(frame(1).strip(0, { label: 'Booked', text: '18,432,850' }).toJSON());
+```
+
+`validate(view, { strict })` checks any ViewModel; `registerKind(name, { paint })` adds a host's own kind.
+
 ## Versions and integrity
 
 One semantic version for every library, `elements` in `elements/drishti_elements.json`; what changed is in [../CHANGELOG.md](../CHANGELOG.md). The
