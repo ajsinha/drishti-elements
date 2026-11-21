@@ -138,6 +138,7 @@ export class ViewHandle {
       dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
       tables: (ref) => (typeof o.tables === 'function' ? o.tables(ref) || null : null),
       density: o.density || null,
+      schemaEvery: o.liveSchemaMs > 0 ? o.liveSchemaMs : 15000,
       can: (what) => (what === 'geo' ? o.geo !== false : false),
       time: (iso) => {
         const d = new Date(iso);

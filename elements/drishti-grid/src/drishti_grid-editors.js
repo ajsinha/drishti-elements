@@ -62,7 +62,7 @@ export class CellEditor {
     v.focusCell(r, c);
     // the rows in view drawn now when the cell is not: the editor goes over its cell at once (an editor without its cell is hidden, and its
     // focus would scroll the grid back to where the editor last was, so the cell never came into view)
-    if (!this.doc.getElementById(v.uid + '-r' + r + '-c' + c)) { v.body.render(); }
+    if (!v.cellEl(r, c)) { v.body.render(); }
     this.at = { r: r, c: c, ed: ed, col: col, old: cur };
     const box = this.el = h(this.doc, 'div', { cls: 'dg-editor dg-editor-' + ed, attrs: { role: 'presentation' } });
     const msg = this.msg = h(this.doc, 'div', { cls: 'dg-editor-msg', attrs: { role: 'alert', id: v.uid + '-edit-msg', hidden: true } });
@@ -126,7 +126,7 @@ export class CellEditor {
    */
   place() {
     if (!this.at || !this.el) { return; }
-    const v = this.view, cell = this.doc.getElementById(v.uid + '-r' + this.at.r + '-c' + this.at.c);
+    const v = this.view, cell = v.cellEl(this.at.r, this.at.c);
     if (!cell) { this.el.style.visibility = 'hidden'; return; }
     const a = v.body.area.getBoundingClientRect(), r = cell.getBoundingClientRect();
     const shown = this.el.style.visibility === 'hidden';               // a cell scrolled into view after editing started (out of view at first)
@@ -198,13 +198,28 @@ export class CellEditor {
     if (plan.problems.length) { return Promise.resolve(this.problem(plan.problems[0].message, leaving)); }
     const p = m.editing.apply(plan.edits, 'edit');
     this.close(true);
+    if (move && move.dr === 0 && m.editing.o.tabEditable) { const n = this.nextEditable(r, c, move.dc); if (n) { move = { dr: n.r - r, dc: n.c - c }; } }   // Tab: the next cell that can be edited
     if (move) { m.navigator.setFocus(r + move.dr, c + move.dc); m.selection.startRange(m.navigator.focus.row, m.navigator.focus.col, {}); v.afterFocus(true); }
     v.body.scroller.focus({ preventScroll: true });
     return p.then((tx) => {
       if (tx.status === 'proposed') { v.say('Sent for approval (' + tx.proposalId + '): the cell is marked until a second person decides'); }
-      else if (tx.edits.length) { v.say('Saved ' + col.header); }
+      else if (tx.edits.length) { v.say((tx.status === 'pending' ? 'Sending ' : 'Saved ') + col.header); }
       return true;
     }, (err) => { v.say('Not saved: ' + err.message); return false; });
+  }
+
+  /**
+   * The next cell after (r, c) that may be edited, going right (dc 1) or left (dc -1) and on to the next or the previous row; null when none.
+   * @param {number} r
+   * @param {number} c
+   * @param {number} dc
+   * @returns {?{r: number, c: number}}
+   */
+  nextEditable(r, c, dc) {
+    const m = this.view.model, C = m.shownColumns().length, R = m.rowCount(), step = dc < 0 ? -1 : 1;
+    let i = r * C + c + step;
+    for (; i >= 0 && i < R * C; i += step) { const rr = Math.floor(i / C), cc = i % C; if (m.editing.canEdit(rr, cc)) { return { r: rr, c: cc }; } }
+    return null;
   }
 
   /** @private a value that is not valid */

@@ -453,6 +453,14 @@ export class Grid extends GridBase {
    * @param {number} c
    * @returns {void}
    */
+  /**
+   * A cell's element by its place (the grid may sit in a shadow root, where the document does not look).
+   * @param {number} r
+   * @param {number} c
+   * @returns {?HTMLElement}
+   */
+  cellEl(r, c) { const root = this.body.scroller.getRootNode(), id = this.uid + '-r' + r + '-c' + c; return root && root.getElementById ? root.getElementById(id) : this.doc.getElementById(id); }
+
   focusCell(r, c) { this.model.cellClicked(r, c, {}); this.afterFocus(true); this.body.scroller.focus({ preventScroll: true }); }
 
   /**

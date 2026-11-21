@@ -209,7 +209,7 @@ export function renderExplainArea(v) {
   if (!v.exOpen) { return; }
   renderExplain(place, v.ex, L === 'panel' ? 'card' : 'drawer', { onClose: close, explainable: !!v.o.explain });
   if (L === 'panel' && v.ex) {
-    const cell = v.doc.getElementById(v.uid + '-r' + v.ex.row + '-c' + v.ex.col);
+    const cell = v.cellEl(v.ex.row, v.ex.col);
     const box = R.main.getBoundingClientRect();
     if (cell) {
       const r = cell.getBoundingClientRect(), w = place.offsetWidth || 330;
