@@ -43,6 +43,10 @@ Each release lists what changed, by library. One version for every library: the 
   for a host that gives its own); `hbar`'s bars and `gauge` (a `meter`) drawn as elements; every chart carries its data table, closed
   until opened; a patch moves a drawn chart to its new data; the charts are disposed with the view. Every kind of contract 1 is now
   drawn; datasets and the `grid`, `tree` and `chart` kinds wait for the specification (contract 1 has no `datasets`).
+- **drishti-views** (step 7, patches): frames that arrive faster than the page paints are conflated (`conflate(patches)`: the newest
+  strip cell per index, panel per id and provenance win, in the order of their last arrival, never across `deleted` or `restored`;
+  `metrics().conflated` counts them); a hidden page paints nothing, keeps only the conflated pending state and catches up in one paint
+  when shown; a view that arrives in pieces (every panel computing, then a `panel` patch each) ends as a one-shot paint of it.
 
 ## 3.0.0
 

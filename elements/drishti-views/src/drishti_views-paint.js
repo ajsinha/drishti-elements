@@ -448,6 +448,7 @@ export class ViewHandle {
     this.clear();
     if (this.panelCharts) { this.panelCharts.dispose(); }
     if (this.ro) { this.ro.disconnect(); }
+    this.patcher.stop();
     this.disposed = true;
     this.emit('dispose', {});
     this.listeners.clear();

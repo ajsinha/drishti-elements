@@ -767,6 +767,28 @@
   /* ---- src/drishti_views-patch.js ---- */
   __m["src/drishti_views-patch.js"] = (function () {
     const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored']);
+    function conflate(patches) {
+      const out = [];
+      let seg = [], conflated = 0;
+      const close = () => {
+        const last = new Map();
+        seg.forEach((p, i) => { const k = identity(p); if (k !== null) { last.set(k, i); } });
+        seg.forEach((p, i) => { const k = identity(p); if (k === null || last.get(k) === i) { out.push(p); } else { conflated++; } });
+        seg = [];
+      };
+      patches.forEach((p) => {
+        if (p && (p.op === 'deleted' || p.op === 'restored')) { close(); out.push(p); } else { seg.push(p); }
+      });
+      close();
+      return { patches: out, conflated: conflated };
+    }
+    function identity(p) {
+      if (!p || typeof p !== 'object') { return null; }
+      if (p.op === 'strip' && Number.isInteger(p.index)) { return 's' + p.index; }
+      if (p.op === 'panel' && p.panel && typeof p.panel === 'object' && p.panel.id !== undefined) { return 'p' + String(p.panel.id); }
+      if (p.op === 'provenance') { return 'v'; }
+      return null;
+    }
     class Patcher {
       constructor(view) {
         this.view = view;
@@ -785,14 +807,46 @@
           if (last !== null && f.seq <= last) { m.dropped = (m.dropped || 0) + 1; return false; }
         }
         this.queue.push(f);
+        if (this.hidden()) {
+          if (this.queue.length > 1) { this.compact(); }
+          this.whenShown();
+          return true;
+        }
         if (!this.scheduled) {
           this.scheduled = true;
           this.view.raf(() => this.flush());
         }
         return true;
       }
+      hidden() { const d = this.view.el.ownerDocument; return !!(d && d.hidden); }
+      compact() {
+        const frames = this.queue.splice(0);
+        let seq = null;
+        const all = [];
+        frames.forEach((f) => { if (typeof f.seq === 'number') { seq = f.seq; } (Array.isArray(f.patches) ? f.patches : []).forEach((p) => all.push(p)); });
+        const c = conflate(all), m = this.view.stats;
+        m.conflated = (m.conflated || 0) + c.conflated;
+        this.queue.push(seq === null ? { patches: c.patches } : { seq: seq, patches: c.patches });
+      }
+      whenShown() {
+        if (this.waitingShow) { return; }
+        const d = this.view.el.ownerDocument;
+        this.waitingShow = () => {
+          if (d.hidden) { return; }
+          d.removeEventListener('visibilitychange', this.waitingShow);
+          this.waitingShow = null;
+          if (!this.scheduled && this.queue.length) { this.scheduled = true; this.view.raf(() => this.flush()); }
+        };
+        d.addEventListener('visibilitychange', this.waitingShow);
+      }
+      stop() {
+        if (this.waitingShow) { this.view.el.ownerDocument.removeEventListener('visibilitychange', this.waitingShow); this.waitingShow = null; }
+        this.queue.length = 0;
+      }
       flush() {
         this.scheduled = false;
+        if (this.view.disposed) { this.queue.length = 0; return 0; }
+        if (this.queue.length > 1) { this.compact(); }
         const frames = this.queue.splice(0);
         const t0 = now();
         let applied = 0;
@@ -843,7 +897,7 @@
       }
     }
     function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
-    return { "OPS": OPS, "Patcher": Patcher };
+    return { "OPS": OPS, "conflate": conflate, "Patcher": Patcher };
   })();
   /* ---- src/drishti_views-screen.js ---- */
   __m["src/drishti_views-screen.js"] = (function () {
@@ -1254,6 +1308,7 @@
         this.clear();
         if (this.panelCharts) { this.panelCharts.dispose(); }
         if (this.ro) { this.ro.disconnect(); }
+        this.patcher.stop();
         this.disposed = true;
         this.emit('dispose', {});
         this.listeners.clear();
@@ -1865,7 +1920,7 @@
   __m["src/drishti_index.js"] = (function () {
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     function registerKind(name, def) { defineKind(name, def); }
-    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable };
+    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.0.0" }, __m["src/drishti_index.js"]));
 });

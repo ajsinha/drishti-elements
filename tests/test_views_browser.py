@@ -440,3 +440,31 @@ def test_the_kinds_of_charts_load_the_chart_library_only_then(browsers):
         await pg.evaluate("window.__harness.handle.dispose()")
         assert await pg.evaluate("window.__harness.handle.panelCharts.instances().length") == 0     # disposed with the view
     run(browsers, body, "view=V002")
+
+
+def test_a_hidden_page_conflates_and_catches_up_in_one_paint_and_a_view_in_pieces_ends_as_a_one_shot_paint(browsers):
+    async def body(pg):
+        await pg.evaluate("""() => { window.__hidden = true; Object.defineProperty(document, 'hidden', { configurable: true, get: () => window.__hidden }); }""")
+        await pg.evaluate("(v) => window.__harness.paint(v)", KINDS_VIEW)
+        await frame(pg)
+        await pg.evaluate("""() => { const H = window.__harness, base = H.handle.viewModel.panels.find((x) => x.id === 'fig');
+            for (let i = 1; i <= 200; i++) { const p = JSON.parse(JSON.stringify(base)); p.data.value.text = String(i); H.handle.patch({ seq: i, patches: [{ op: 'panel', panel: p }] }); } }""")
+        await frame(pg)
+        m = await pg.evaluate("window.__harness.handle.metrics()")
+        assert await ev(pg, "R.querySelector('.dv-metric-value').textContent") == "1,204.5"        # nothing painted while hidden
+        assert m["conflated"] == 199 and m["received"] == 200
+        await pg.evaluate("() => { window.__hidden = false; document.dispatchEvent(new Event('visibilitychange')); }")
+        await frame(pg)
+        m2 = await pg.evaluate("window.__harness.handle.metrics()")
+        assert await ev(pg, "R.querySelector('.dv-metric-value').textContent") == "200" and m2["paints"] == m["paints"] + 1 and m2["patches"] == m["patches"] + 1
+        # a view in pieces: every panel computing first, then a panel patch each; the end state is a one-shot paint's
+        await pg.evaluate("""(v) => { const H = window.__harness, pieces = JSON.parse(JSON.stringify(v));
+            pieces.panels.forEach((p) => { p.compute = { state: 'computing' }; delete p.data; });
+            return H.paint(pieces).then(() => v.panels.forEach((p, i) => H.handle.patch({ seq: i + 1, patches: [{ op: 'panel', panel: p }] }))); }""", KINDS_VIEW)
+        await frame(pg)
+        pieces = await ev(pg, "[...R.querySelectorAll('.dv-grid .dv-panel')].map((p) => [p.dataset.panel, p.dataset.state, p.querySelector('.dv-panel-b').textContent])")
+        await pg.evaluate("(v) => window.__harness.paint(v)", KINDS_VIEW)
+        await frame(pg)
+        whole = await ev(pg, "[...R.querySelectorAll('.dv-grid .dv-panel')].map((p) => [p.dataset.panel, p.dataset.state, p.querySelector('.dv-panel-b').textContent])")
+        assert pieces == whole
+    run(browsers, body, "view=V002")

@@ -22,7 +22,7 @@ export { LIMITS, FORBIDDEN_KEYS, validate, formatIssue } from './drishti_views-v
 export { MESSAGES, TONES } from './drishti_views-cells.js';
 export { PANEL_STATES } from './drishti_views-panels.js';
 export { WIDTHS, arrange } from './drishti_views-layout.js';
-export { OPS } from './drishti_views-patch.js';
+export { OPS, conflate } from './drishti_views-patch.js';
 export { SPECS, ViewHandle, paint } from './drishti_views-paint.js';
 export { kinds } from './drishti_views-kinds.js';
 import { defineKind } from './drishti_views-kinds.js';

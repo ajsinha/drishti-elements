@@ -135,3 +135,12 @@ test('the arrangement as data: two columns, named areas with places, sections, f
   const bad = V.arrange(Object.assign({}, base, { layout: { areas: ['a b', 'c'] } }));
   assert.notEqual(bad.mode, 'areas');
 });
+
+test('frames conflate: the newest per strip index, panel id and provenance, never across deleted or restored', () => {
+  const p = (id, t) => ({ op: 'panel', panel: { id: id, kind: 'kv', title: t } });
+  const r = V.conflate([{ op: 'strip', index: 0, cell: { text: '1' } }, p('a', 'a1'), p('b', 'b1'), { op: 'strip', index: 0, cell: { text: '2' } }, p('a', 'a2'),
+    { op: 'deleted' }, p('a', 'a3'), { op: 'restored' }, p('a', 'a4'), { op: 'provenance', provenance: { generation: 1 } }, { op: 'provenance', provenance: { generation: 2 } }, { op: 'other' }]);
+  const show = (x) => x.op + (x.panel ? ':' + x.panel.title : x.cell ? ':' + x.cell.text : x.provenance ? ':' + x.provenance.generation : '');
+  assert.deepEqual(r.patches.map(show), ['panel:b1', 'strip:2', 'panel:a2', 'deleted', 'panel:a3', 'restored', 'panel:a4', 'provenance:2', 'other']);
+  assert.equal(r.conflated, 3);
+});

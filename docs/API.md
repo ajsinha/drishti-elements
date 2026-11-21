@@ -21241,6 +21241,16 @@ Returns `Object`.
 
 The patch ops of contract 1.
 
+#### `conflate(patches)`
+
+The patches of frames, conflated: for each identity (a strip index, a panel id, the provenance) only the newest, placed where it last arrived; deleted and restored are kept and nothing is conflated across them. Patches with no identity are kept as they are.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `patches` | `Object[]` | in arrival order |
+
+Returns `{patches: Object[], conflated: number}`.
+
 ### drishti_views-paint.js
 
 #### `SPECS`
