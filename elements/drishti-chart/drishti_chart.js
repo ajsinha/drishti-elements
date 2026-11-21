@@ -3587,14 +3587,26 @@
           };
           if (link.note) { notes.push('Nothing to open: ' + link.note); }
         }
+        const points = Array.isArray(d.points) ? d.points.filter((p) => p && isFinite(Number(p.lat)) && isFinite(Number(p.lon))) : [];
+        const bubbles = points.map((p) => ({ lon: Number(p.lon), lat: Number(p.lat), value: Number(p.value) || 0, name: p.label || '', text: p.text || '' }));
+        if (points.length) { notes.push(points.length + (points.length === 1 ? ' place' : ' places') + ' as bubbles'); }
         const chart = E.getInstanceByDom(el) || E.init(el, null, { renderer: 'svg' });
-        chart.setOption(G.option({ level: isRegion ? 'region' : 'world', geo, t, items, highlight, clickable, linked: !!(link && !link.note),
+        chart.setOption(G.option({ level: isRegion ? 'region' : 'world', geo, t, items, highlight, clickable, linked: !!(link && !link.note), bubbles,
           legend: shade && shade.label, unit: d.unit || (shade && shade.unit) || '', numText: panelCompact, width: el.clientWidth || 800, height: el.clientHeight || 400 }), true);
         if (!chartsOut.includes(chart)) { chartsOut.push(chart); }
-        el.__places = { make, clickable };
+        el.__places = { make, clickable, points };
         if (!el.__clicks) {
           el.__clicks = true;
-          chart.on('click', (p) => { const code = G.codeOf(p), pl = el.__places; if (code && pl && pl.make && (!pl.clickable || pl.clickable.includes(code))) { const l = pl.make(code); if (l) { onLink(l); } } });
+          chart.on('click', (p) => {
+            const pl = el.__places;
+            if (p && p.data && p.data.bubble) {                    // a point's bubble opens the point's link, when it has one
+              const hit = pl && pl.points && pl.points.find((x) => (x.label || '') === p.data.name && x.link);
+              if (hit) { onLink(hit.link); }
+              return;
+            }
+            const code = G.codeOf(p);
+            if (code && pl && pl.make && (!pl.clickable || pl.clickable.includes(code))) { const l = pl.make(code); if (l) { onLink(l); } }
+          });
         }
         const places = [];
         if (make) {

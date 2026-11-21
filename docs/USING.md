@@ -161,7 +161,8 @@ The gallery's Eventing pages run every example on the mock server.
 Whole screens from a **ViewModel** (contract 1, its schema in [CONTRACTS.md](CONTRACTS.md#the-viewmodel-drishti-views)): a title line, a
 strip of figures, panels of twenty-two kinds (label and value pairs, status chips, a metric, markdown, links, a timeline, tables, a
 ladder, a pivot, tabs, lines and areas, bars, a gauge, a surface, a waterfall, a histogram, a scatter, candlesticks, a graph, a map) and a
-layout. The painter computes and formats nothing: every figure is the producer's text.
+layout. In those panels the painter computes and formats nothing: every figure is the producer's text. Contract 1.1 adds **datasets**:
+rows by name, with raw values the painter formats by each field's format, read by `grid`, `tree` and `chart` panels (4 below).
 
 **1. Paint a view**
 
@@ -195,7 +196,34 @@ handle.patch({ seq: 4113, generation: 0, patches: [{ op: 'strip', index: 0, cell
 
 Frames that arrive faster than the page paints are conflated; a hidden page catches up in one paint when shown.
 
-**4. Build a view (browser or Node)**
+**4. Datasets: grids, trees and charts (contract 1.1)**
+
+```js
+paint(el, {
+  contract: '1.1', /* ref, title, strip, keys, provenance, timings as usual */
+  datasets: { trades: { key: ['id'], fields: [{ name: 'id', type: 'string' }, { name: 'desk', type: 'string', label: 'Desk' },
+                                               { name: 'notional', type: 'number', fmt: 'amount0' }],
+                        values: [['T-1', 'Rates', 2500000], ['T-2', 'FX', 700000]] },
+              positions: { pages: { url: '/api/positions', size: 500 } },          // or server: { url }, arrow: { url }, name: 'positions'
+              org: { name: 'org' } },
+  panels: [{ id: 'trades', kind: 'grid', title: 'Trades', data: { dataset: 'trades', group: ['desk'], sort: [{ field: 'notional', desc: true }] } },
+           { id: 'by-desk', kind: 'chart', title: 'By desk', data: { dataset: 'trades', type: 'bar', x: 'desk', y: [{ field: 'notional', agg: 'sum' }] } },
+           { id: 'tree', kind: 'tree', title: 'Books', data: { dataset: 'org', node: 'id', parent: 'parent', label: 'name', mode: 'grid' } }]
+}, { data: { org: rows, allow: ['https://data.example'] } });       // rows the page hands by name; origins a dataset may be read from
+handle.patch({ seq: 9, patches: [{ op: 'rows', dataset: 'trades', update: [{ id: 'T-1', notional: 2600000 }], remove: ['T-2'] }] });
+```
+
+A grid draws only the rows in view (a pages or server dataset is read a window at a time), groups, sorts and pivots in the browser
+(`pivot: {rows, columns, values: [{field, agg}]}`); a tree draws in its four modes (`grid`, `org`, `sunburst`, `icicle`); a chart (`bar`,
+`line`, `area`, `scatter`, `pie`, `donut`, `heatmap`, `histogram`) combines the rows per `x` and `by` when a measure has an `agg`
+(`sum`, `count`, `min`, `max`, `avg`, `first`, `last`, `distinct`), keeping the `limit` largest categories. Panels naming one dataset share
+it, and a `rows` patch reaches all of them. Each library is loaded, and its sheets adopted into the view's shadow root, the first time a
+view has such a panel. `handle.dataset(name)` answers a dataset (its fields and the rows it holds). A map panel's `points`
+(`{label, lat, lon, value, text, link}`) are drawn as bubbles. The builders write datasets too: `view('Desk').dataset('trades', rows,
+{ key: 'id', formats: { notional: 'amount0' } }).grid('Trades', { dataset: 'trades' })`, `frame(9).rows('trades', { update })`; a view
+is stamped `1.1` only when it uses what 1.1 adds.
+
+**5. Build a view (browser or Node)**
 
 ```js
 import { view, frame, sse } from '/elements/drishti-views/src/drishti_index.js';   // under Node: require('drishti_views.js')

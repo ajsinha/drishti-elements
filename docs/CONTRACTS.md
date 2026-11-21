@@ -96,6 +96,26 @@ protocol sends Server-Sent Events named `view` (data: a ViewModel) and `frame` (
 painter reads them through raw mode (`live: { url, raw: true }`), and every reconnect of such a stream should begin with a `view`.
 `sse(write, { topic, raw })` (drishti-views' builders, Node or the browser) writes either form.
 
+**Datasets (contract 1.1).** A view may carry `datasets: {name: Dataset}`; the panels `grid`, `tree` and `chart` read one by name, two
+panels may read the same one, and the frame op `rows` (`{op: 'rows', dataset, reset?, remove?, update?, add?}`, applied in that order, by
+key; a compound key's fields joined by U+001F) reaches every panel that reads it. A dataset's values are **raw** and printed by the
+painter with the field's `fmt` (drishti-core's named formats); a value the reader may not see is `{"$masked": true}` and prints as the
+mask. Exactly one source, and the painter reads an address only when it is the page's origin, the view's own origin or one the host
+allowed (`options.data.allow`: origins, or `'any-https'`):
+
+| Form | The rows | What the server answers |
+|---|---|---|
+| `values` with `fields` | lists in the order of the fields (what drishti-rachana writes) | |
+| `rows` | objects | |
+| `name` | the page hands them: `paint(el, vm, { data: { <name>: rows, Arrow bytes or a drishti-data source } })` | |
+| `arrow` | `{url}` (an Arrow IPC stream or file, read as it arrives) or `{base64}` | Arrow |
+| `pages` | `{url, size, mode, total}`: `GET <url>?offset=&limit=` (and `sort=field:asc,...`, `filter=<the filter model as JSON>`), a window at a time as the reader scrolls | `{rows, total}` (or `{items, total}`) |
+| `server` | `{url}`: the grid's request POSTed as it is: `{startRow, endRow, sortModel, filterModel, quickFilter, rowGroupCols, groupKeys, valueCols}` | `{rows, rowCount}`; groups and pivots answered by the server |
+
+At most 50,000 inline rows (`limits.rows`); above that, send Arrow, pages or a server source. A grid of pages or a server source holds only
+the rows in view; a tree or a chart reads such a source a page at a time up to 100,000 rows. A map panel's `points` (contract 1.1:
+`{label, lat, lon, value?, text?, tone?, link?}`) are drawn as the map helper's bubbles; a bubble with a link opens it.
+
 ## The map helper (drishti-views' `geo`, drishti-chart's geo part)
 
 A view's map panels draw with a **map helper**: drishti-chart's geo part by default (`loadPart('drishti-chart', 'geo')`, then

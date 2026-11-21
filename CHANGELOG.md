@@ -21,8 +21,28 @@ Each release lists what changed, by library. One version for every library: the 
 
 Ready, not yet tagged. drishti-views, the tenth library: whole screens from a ViewModel of contract 1 (drishti-rachana's
 `spec/1/viewmodel.schema.json`, pinned): the validator, the painter with every kind of contract 1, live frames (conflated; over
-drishti-events or a plain stream), `<elements-view>`, and the builders of views and frames with `sse()`. Datasets and the `grid`, `tree` and
-`chart` kinds wait for the specification (contract 1 has none).
+drishti-events or a plain stream), `<elements-view>`, and the builders of views and frames with `sse()`; and contract 1.1's datasets with
+the `grid`, `tree` and `chart` kinds. Still 3.1.0: nothing was tagged since, and every addition is new API (the versioning rules make an
+addition a minor, and 3.1.0 is that minor).
+
+- **Datasets, grids, trees and charts** (drishti-views, VIEWS_DESIGN step 5; ViewModel contract 1.1, the pin moved to drishti-rachana
+  `g1/integration` 52e112f): a view's `datasets` by name in six forms (`values` with `fields`, `rows`, `name` handed by the page through
+  `options.data`, `arrow` by address or base64, REST `pages` read a window at a time, a `server`-side row model), each address passing the
+  data allow-list (the page's origin, the view's origin, `options.data.allow`); raw values formatted by the field's `fmt`, the mask as the
+  mask; the kinds `grid` (drishti-grid: virtual rows, typed columns, groups, an order, a pivot in the browser, a sign tone, pinned and
+  hidden columns, group figures), `tree` (drishti-tree, four modes, measures rolled up) and `chart` (drishti-chart: bar, line, area, scatter,
+  pie, donut, heatmap, histogram over a derived read: rows combined per `x` and `by`, the largest categories kept); panels share a dataset;
+  the frame op `rows` (reset, remove, update, add by key) reaches every panel that reads it (a grid by transaction, a tree and a chart in the
+  next animation frame); each library loaded and its sheets adopted into the shadow root only when a view needs it; `handle.dataset(name)`,
+  the events `select` and `drawn`; map `points` drawn as the geo helper's bubbles (a bubble with a link opens it; listed in the map's data
+  table). Builders: `dataset(name, rows, o)`, `grid`, `tree`, `chart`, `frame().rows(...)`, `stampOf(view)`: a view is stamped `1.1` only when
+  it uses what 1.1 adds. The validator bounds inline rows (`limits.rows`, 50,000). Gallery page *Datasets: grids, trees and charts* with
+  made-up data from a seeded generator (a blotter of 10,000 trades that can tick live, a risk hierarchy of 64 books, a year of daily P&L by
+  desk with VaR, DV01 by tenor, 3,000 trades by counterparty, and a pivot of 10,000 positions); *Maps in a view* gains trading hubs as
+  points. Node tests (`views-data.test.mjs`) and browser tests (`test_views_datasets_browser.py`: 10,000 rows virtual, patches through a
+  grid and a chart, a tree and charts of derived reads, pages, a server, rows by name, a refused origin, map points, every gallery
+  example). The bundle's budget moves to 192,000 (182,651 measured, plus about 5%: the datasets, three kinds and a schema 13 definitions
+  larger).
 
 - **Maps out of the box** (drishti-chart, drishti-views): drishti-chart's **geo part** (`drishti_chart-geohelper.js`,
   `loadPart('drishti-chart', 'geo')`): the map helper of a view's map panels (`world`, `region`, `find`, `place`, `project`, `bounds`,

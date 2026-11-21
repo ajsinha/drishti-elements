@@ -28,12 +28,13 @@ import { arrange, Layout } from './drishti_views-layout.js';
 import { Screen, problemCard } from './drishti_views-screen.js';
 import { Patcher } from './drishti_views-patch.js';
 import { LiveLink } from './drishti_views-live.js';
+import { datasetsOf } from './drishti_views-data.js';
 
 /** The contract majors this painter draws. */
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'dispose'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -112,6 +113,9 @@ export class ViewHandle {
       flash: (node) => self.flash(node),
       library: (name) => self.library(name),
       charts: () => self.charts(),
+      styles: (name) => self.styles(name),
+      dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
+      density: o.density || null,
       can: (what) => (what === 'geo' ? o.geo !== false : false),
       time: (iso) => {
         const d = new Date(iso);
@@ -237,6 +241,10 @@ export class ViewHandle {
   build(vm) {
     this.clear();
     this.vm = vm;
+    const o = this.options, doc = this.el.ownerDocument, given = o.data && typeof o.data === 'object' ? o.data : {};
+    this.datasets = datasetsOf(vm, { library: (n) => this.library(n), data: given, fetch: o.fetch,
+      where: { page: (doc.defaultView && doc.defaultView.location && doc.defaultView.location.href) || doc.baseURI || 'http://localhost/', view: this.src || null,
+        allow: Array.isArray(given.allow) ? given.allow : [] } });
     const ctx = this.ctx, only = Array.isArray(this.options.panels) ? this.options.panels.map(String) : null;
     const panels = (Array.isArray(vm.panels) ? vm.panels : []).filter((p) => p && typeof p === 'object' && (!only || only.indexOf(String(p.id)) >= 0));
     ctx.label = this.options.label || (vm.title && (vm.title.pill || vm.title.id)) || (vm.ref && vm.ref.id) || '';
@@ -417,6 +425,36 @@ export class ViewHandle {
    * @returns {Object<string, number>}
    */
   metrics() { return Object.assign({}, this.stats); }
+
+  /**
+   * Adopts a library's sheets (and those of what it requires, as the manifest lists them) into the view's shadow root once; without a
+   * shadow root they go to the page.
+   * @private
+   * @param {string} name
+   * @returns {Promise<void>}
+   */
+  styles(name) {
+    const libs = manifest().libraries, css = (libs[name] && libs[name].css) || [];
+    if (this.host === this.el) { css.forEach((c) => loadStyle(staticUrl(c))); return Promise.resolve(); }
+    this.styled = this.styled || new Set();
+    const doc = this.el.ownerDocument;
+    return Promise.all(css.filter((c) => !this.styled.has(c) && !/drishti_tokens\.css$/.test(c)).map((c) => {
+      this.styled.add(c);
+      const l = doc.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = staticUrl(c);
+      const p = new Promise((r) => { l.addEventListener('load', r, { once: true }); l.addEventListener('error', r, { once: true }); });
+      this.host.insertBefore(l, this.root);
+      return p;
+    })).then(() => undefined);
+  }
+
+  /**
+   * A dataset of the painted view (contract 1.1): its fields, its rows (held, with rows patches applied) or its source.
+   * @param {string} name
+   * @returns {?import('./drishti_views-data.js').Dataset}
+   */
+  dataset(name) { return this.datasets ? this.datasets.get(String(name)) || null : null; }
 
   /**
    * A library a kind draws with: the host's own (options.libraries), one already on the page, or loaded now by drishti-core's loader.

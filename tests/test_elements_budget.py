@@ -27,7 +27,7 @@ CSS = Path(__file__).resolve().parent.parent / "css"
 # the chart again for the generic kinds (segmented scatter, matrix, lollipop, 3D trace, heatmap tracks)
 BUNDLES = {"drishti-core": 180_000, "drishti-inputs": 290_000, "drishti-grid": 610_000, "drishti-tree": 145_000, "drishti-designer": 170_000,
            "drishti-data": 42_000, "drishti-chart": 320_000, "drishti-graph": 165_000,
-           "drishti-views": 156_000,   # drishti-views: 148,693 when steps 1 to 4, 6 to 8, 12 and 13 were built, plus about 5%
+           "drishti-views": 192_000,   # drishti-views: 182,651 with contract 1.1 (datasets, grid, tree, chart, map points; the schema 13 definitions larger), plus about 5%
            "drishti-events": 200_000}  # drishti-events: 190,414 when 3.0.0 was made ready, plus about 5% (the design's 110,000 assumed far
 #                                     less JSDoc and no shared hub, metrics, recorder or badge; a part of its own is the way to grow further)
 SHEETS = {"drishti_states.css": 4_000, "drishti_command-palette.css": 5_000, "drishti_dock.css": 5_000, "drishti_chips.css": 5_000}

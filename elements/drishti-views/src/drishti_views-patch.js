@@ -16,13 +16,14 @@
 /* Frames of patches applied to a painted view: in sequence order (a frame whose seq is not above the last applied one is dropped), each
    frame whole, all frames that arrived since the last paint in ONE animation frame. A patch is routed by its identity (a strip index,
    a panel id) through a Map to the one node it changes: no validation, no deep copy and no re-layout on this path. The contract's
-   ops: strip, panel, provenance, deleted, restored; another op is ignored and counted. While the view's subject is deleted, patches
+   ops: strip, panel, provenance, deleted, restored, and rows (contract 1.1: a dataset's rows by key, handed to the dataset, which tells
+   every panel that reads it); another op is ignored and counted. While the view's subject is deleted, patches
    other than restored are ignored. Frames that arrive faster than the page paints are conflated: the newest strip cell per index,
    panel per id and provenance win, in the order of their last arrival, never across a deleted or restored. A hidden page paints
    nothing: it keeps only the conflated pending state and catches up in one paint when shown. */
 
-/** The patch ops of contract 1. */
-export const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored']);
+/** The patch ops of contract 1 (rows since 1.1). */
+export const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored', 'rows']);
 
 /**
  * The patches of frames, conflated: for each identity (a strip index, a panel id, the provenance) only the newest, placed where it last
@@ -173,6 +174,9 @@ export class Patcher {
       v.screen.setProvenance(p.provenance);
       v.vm.provenance = p.provenance;
       done = true;
+    } else if (p.op === 'rows' && typeof p.dataset === 'string') {
+      const ds = v.datasets && v.datasets.get(p.dataset);
+      done = !!ds && ds.apply(p);
     } else if (p.op === 'deleted') {
       this.frozen = true;
       v.root.classList.add('dv-frozen');

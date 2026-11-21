@@ -23,7 +23,7 @@
 import { SCHEMA, CONTRACT } from './drishti_views-schema.js';
 
 /** The bounds a view is held to whatever its schema says: panels, strip cells, nesting of tabs inside tabs. */
-export const LIMITS = Object.freeze({ panels: 200, strip: 24, depth: 4 });
+export const LIMITS = Object.freeze({ panels: 200, strip: 24, depth: 4, rows: 50000 });
 /** Keys no object of a view or a frame may carry: they would reach an object's prototype. */
 export const FORBIDDEN_KEYS = Object.freeze(['__proto__', 'constructor', 'prototype']);
 
@@ -320,6 +320,14 @@ function bounds(vm, limits, out, run) {
   }
   if (Array.isArray(vm.strip) && vm.strip.length > limits.strip) {
     run.push(out, 'limit', 'strip', 'the strip has ' + vm.strip.length + ' cells; at most ' + limits.strip + ' are drawn', 'move figures into a kv or metric panel');
+  }
+  if (vm.datasets && typeof vm.datasets === 'object' && !Array.isArray(vm.datasets)) {          // contract 1.1: inline rows are bounded
+    Object.keys(vm.datasets).forEach((name) => {
+      const d = vm.datasets[name], n = d && (Array.isArray(d.values) ? d.values.length : Array.isArray(d.rows) ? d.rows.length : 0);
+      if (n > limits.rows) {
+        run.push(out, 'limit', 'datasets.' + name, 'the dataset has ' + n + ' inline rows; at most ' + limits.rows + ' are drawn', 'send them as Arrow, pages or a server source');
+      }
+    });
   }
   const depth = depthOf(vm.panels);
   if (depth > limits.depth) {

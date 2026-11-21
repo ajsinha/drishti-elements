@@ -68,6 +68,7 @@ export function chartTable(kind, d) {
     const sh = d.shade || {};
     columns = ['', str(sh.label)];
     rows = list(sh.items).map((it) => [str(it && it.code), str(it && (it.text || it.value))]);
+    list(d.points).forEach((pt) => { if (pt) { rows.push([str(pt.label || (pt.lat + ', ' + pt.lon)), str(pt.text || pt.value)]); } });   // contract 1.1: bubbles
   }
   return { columns: columns, rows: rows.slice(0, LIMIT_ROWS) };
 }

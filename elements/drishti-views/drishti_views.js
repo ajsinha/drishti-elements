@@ -48,15 +48,15 @@
   })();
   /* ---- src/drishti_views-schema.js ---- */
   __m["src/drishti_views-schema.js"] = (function () {
-    const CONTRACT = "1.0";
-    const SCHEMA_SHA256 = "757ff5aa5fee631b496a1aa975aac5853fdd292eeae92a2bb38d556ad1e983ed";
-    const SCHEMA = Object.freeze({"$ref":"#/$defs/ViewModel","$defs":{"ViewModel":{"type":"object","properties":{"ref":{"allOf":[{"$ref":"#/$defs/Ref"}]},"mnemonic":{"type":"string"},"title":{"allOf":[{"$ref":"#/$defs/TitleView"}]},"strip":{"type":"array","items":{"$ref":"#/$defs/Cell"}},"panels":{"type":"array","items":{"$ref":"#/$defs/PanelView"}},"keys":{"type":"array","items":{"$ref":"#/$defs/KeyView"}},"provenance":{"allOf":[{"$ref":"#/$defs/Provenance"}]},"timings":{"type":"object","additionalProperties":{"anyOf":[{"type":"number"},{"type":"null"}]}},"controls":{"type":"array","items":{"$ref":"#/$defs/ControlView"}},"selects":{"type":"array","items":{"$ref":"#/$defs/SelectView"}},"layout":{"type":"object"},"contract":{"type":"string"},"phone":{"type":"object"}},"required":["ref","title","strip","panels","keys","provenance","timings","contract"],"additionalProperties":false},"Frame":{"type":"object","properties":{"seq":{"type":"integer"},"generation":{"type":"integer"},"patches":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Patch"}},{"type":"null"}]},"latencyMs":{"anyOf":[{"type":"number"},{"type":"null"}]},"p99Ms":{"anyOf":[{"type":"number"},{"type":"null"}]}},"required":["seq","generation","patches","latencyMs","p99Ms"],"additionalProperties":false},"Bar":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"tone":{"anyOf":[{"$ref":"#/$defs/Tone"},{"type":"null"}]},"ev":{"type":"string"}},"required":["label","value","text","tone"],"additionalProperties":false},"Bars":{"type":"object","properties":{"bars":{"type":"array","items":{"$ref":"#/$defs/Bar"}},"shape":{"type":"string"},"total":{"type":"string"}},"additionalProperties":false},"Bin":{"type":"object","properties":{"from":{"anyOf":[{"type":"number"},{"type":"null"}]},"to":{"anyOf":[{"type":"number"},{"type":"null"}]},"count":{"type":"integer"},"label":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["from","to","count","label"],"additionalProperties":false},"Candle":{"type":"object","properties":{"x":{"type":"string"},"open":{"anyOf":[{"type":"number"},{"type":"null"}]},"high":{"anyOf":[{"type":"number"},{"type":"null"}]},"low":{"anyOf":[{"type":"number"},{"type":"null"}]},"close":{"anyOf":[{"type":"number"},{"type":"null"}]},"volume":{"anyOf":[{"type":"number"},{"type":"null"}]},"openText":{"type":"string"},"highText":{"type":"string"},"lowText":{"type":"string"},"closeText":{"type":"string"},"volumeText":{"type":"string"}},"additionalProperties":false},"Candles":{"type":"object","properties":{"candles":{"type":"array","items":{"$ref":"#/$defs/Candle"}},"volume":{"type":"boolean"},"last":{"type":"string"},"change":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]},"fmt":{"type":"string"},"unit":{"type":"string"}},"additionalProperties":false},"Cell":{"type":"object","properties":{"label":{"type":"string"},"text":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]},"emphasis":{"type":"boolean"},"path":{"type":"string"}},"additionalProperties":false},"Chart":{"type":"object","properties":{"x":{"type":"array","items":{"type":"string"}},"series":{"type":"array","items":{"$ref":"#/$defs/Series"}},"mark":{"type":"string"},"markText":{"type":"string"},"limit":{"anyOf":[{"type":"number"},{"type":"null"}]},"limitLabel":{"type":"string"},"source":{"allOf":[{"$ref":"#/$defs/LinkView"}]},"unit":{"type":"string"},"step":{"type":"boolean"}},"additionalProperties":false},"ControlView":{"type":"object","properties":{"id":{"type":"string"},"kind":{"type":"string"},"label":{"type":"string"},"placement":{"type":"string"},"panel":{"type":"string"},"parent":{"type":"string"},"options":{"type":"array","items":{"$ref":"#/$defs/Opt"}},"value":{"type":"string"},"values":{"type":"array","items":{"type":"string"}},"required":{"type":"boolean"},"remember":{"type":"boolean"},"min":{"type":"string"},"max":{"type":"string"},"step":{"type":"string"},"range":{"type":"boolean"},"reads":{"type":"array","items":{"type":"string"}},"truncated":{"type":"boolean"}},"additionalProperties":false},"Edge":{"type":"object","properties":{"from":{"type":"string"},"to":{"type":"string"},"label":{"type":"string"}},"additionalProperties":false},"Event":{"type":"object","properties":{"date":{"type":"string"},"label":{"type":"string"},"detail":{"type":"string"},"status":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]}},"additionalProperties":false},"Fields":{"type":"object","properties":{"fields":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Cell"}},{"type":"null"}]}},"required":["fields"],"additionalProperties":false},"Gauge":{"type":"object","properties":{"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"max":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"label":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value","max","text","label"],"additionalProperties":false},"GeoLink":{"type":"object","properties":{"kind":{"type":"string"},"template":{"type":"string"},"codes":{"type":"array","items":{"type":"string"}},"note":{"type":"string"}},"additionalProperties":false},"GeoMap":{"type":"object","properties":{"mode":{"enum":["world","region"]},"highlight":{"type":"string"},"region":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/GeoLink"}]},"shade":{"allOf":[{"$ref":"#/$defs/GeoShade"}]},"unit":{"type":"string"}},"additionalProperties":false},"GeoShade":{"type":"object","properties":{"label":{"type":"string"},"unit":{"type":"string"},"items":{"type":"array","items":{"$ref":"#/$defs/ShadeItem"}},"note":{"type":"string"}},"additionalProperties":false},"Graph":{"type":"object","properties":{"nodes":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Node"}},{"type":"null"}]},"edges":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Edge"}},{"type":"null"}]},"layout":{"anyOf":[{"enum":["tree","force"]},{"type":"null"}]},"more":{"type":"integer"}},"required":["nodes","edges","layout","more"],"additionalProperties":false},"Histogram":{"type":"object","properties":{"bins":{"type":"array","items":{"$ref":"#/$defs/Bin"}},"markers":{"type":"array","items":{"$ref":"#/$defs/Marker"}},"count":{"type":"integer"},"dropped":{"type":"integer"},"fmt":{"type":"string"},"unit":{"type":"string"}},"additionalProperties":false},"KeyView":{"type":"object","properties":{"key":{"type":"string"},"label":{"type":"string"},"action":{"enum":["panel","link","raw","impact","denied"]},"panel":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]}},"additionalProperties":false},"Level":{"type":"object","properties":{"title":{"anyOf":[{"type":"string"},{"type":"null"}]},"columns":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}]},"numeric":{"anyOf":[{"type":"array","items":{"type":"boolean"}},{"type":"null"}]}},"required":["title","columns","numeric"],"additionalProperties":false},"LinkItem":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"link":{"anyOf":[{"$ref":"#/$defs/LinkView"},{"type":"null"}]},"badge":{"anyOf":[{"type":"string"},{"type":"null"}]},"status":{"anyOf":[{"enum":["resolved","pending","missing","denied","inactive"]},{"type":"null"}]}},"required":["label","text","link","badge","status"],"additionalProperties":false},"LinkView":{"type":"object","properties":{"kind":{"anyOf":[{"type":"string"},{"type":"null"}]},"id":{"anyOf":[{"type":"string"},{"type":"null"}]},"mnemonic":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["kind","id","mnemonic"],"additionalProperties":false},"Links":{"type":"object","properties":{"links":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/LinkItem"}},{"type":"null"}]}},"required":["links"],"additionalProperties":false},"Marker":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"tone":{"anyOf":[{"$ref":"#/$defs/Tone"},{"type":"null"}]}},"required":["label","value","text","tone"],"additionalProperties":false},"Metric":{"type":"object","properties":{"value":{"anyOf":[{"$ref":"#/$defs/Cell"},{"type":"null"}]},"delta":{"anyOf":[{"$ref":"#/$defs/Cell"},{"type":"null"}]},"unit":{"anyOf":[{"type":"string"},{"type":"null"}]},"caption":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value","delta","unit","caption"],"additionalProperties":false},"Node":{"type":"object","properties":{"id":{"type":"string"},"label":{"type":"string"},"group":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]},"focus":{"type":"boolean"}},"additionalProperties":false},"Opt":{"type":"object","properties":{"value":{"anyOf":[{"type":"string"},{"type":"null"}]},"label":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value","label"],"additionalProperties":false},"PanelCompute":{"type":"object","properties":{"state":{"enum":["ready","computing","stale","failed","refused"]},"requestId":{"type":"string"},"connector":{"type":"string"},"message":{"type":"string"},"progress":{"type":"object"},"hasResult":{"type":"boolean"},"stamp":{"type":"object"}},"additionalProperties":false},"PanelData":{"anyOf":[{"$ref":"#/$defs/Fields"},{"$ref":"#/$defs/Table"},{"$ref":"#/$defs/Tabs"},{"$ref":"#/$defs/Chart"},{"$ref":"#/$defs/Bars"},{"$ref":"#/$defs/Links"},{"$ref":"#/$defs/Text"},{"$ref":"#/$defs/Surface"},{"$ref":"#/$defs/Metric"},{"$ref":"#/$defs/GeoMap"},{"$ref":"#/$defs/Gauge"},{"$ref":"#/$defs/Waterfall"},{"$ref":"#/$defs/Histogram"},{"$ref":"#/$defs/Scatter"},{"$ref":"#/$defs/Candles"},{"$ref":"#/$defs/Graph"},{"$ref":"#/$defs/Timeline"},{"$ref":"#/$defs/Pivot"}]},"PanelProvenance":{"type":"object","properties":{"source":{"type":"string"},"kind":{"type":"string"},"fetchedAt":{"type":"string"},"updatedAt":{"type":"string"},"staleAfter":{"type":"string"},"stale":{"type":"boolean"}},"additionalProperties":false},"PanelView":{"type":"object","properties":{"id":{"type":"string"},"kind":{"enum":["kv","table","tabs","line","area","hbar","ladder","links","status","provenance","markdown","gauge","surface","waterfall","histogram","scatter","candlestick","graph","timeline","pivot","metric","map"]},"title":{"type":"string"},"code":{"type":"string"},"key":{"type":"string"},"area":{"type":"string"},"inferred":{"type":"boolean"},"explanation":{"type":"string"},"data":{"allOf":[{"$ref":"#/$defs/PanelData"}]},"error":{"type":"string"},"empty":{"type":"boolean"},"span":{"type":"integer"},"height":{"type":"integer"},"denied":{"type":"string"},"wire":{"allOf":[{"$ref":"#/$defs/Wire"}]},"refresh":{"allOf":[{"$ref":"#/$defs/RefreshView"}]},"form":{"type":"object"},"provenance":{"allOf":[{"$ref":"#/$defs/PanelProvenance"}]},"compute":{"allOf":[{"$ref":"#/$defs/PanelCompute"}]}},"required":["id","kind"],"additionalProperties":false,"allOf":[{"if":{"properties":{"kind":{"const":"kv"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Fields"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"table"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Table"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"tabs"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Tabs"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"line"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Chart"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"area"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Chart"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"hbar"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Bars"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"ladder"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Table"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"links"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Links"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"status"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Fields"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"provenance"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Fields"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"markdown"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Text"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"gauge"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Gauge"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"surface"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Surface"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"waterfall"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Waterfall"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"histogram"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Histogram"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"scatter"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Scatter"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"candlestick"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Candles"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"graph"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Graph"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"timeline"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Timeline"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"pivot"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Pivot"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"metric"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Metric"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"map"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/GeoMap"},{"type":"null"}]}}}}]},"Patch":{"type":"object","properties":{"op":{"enum":["strip","panel","provenance","deleted","restored"]},"index":{"type":"integer"},"cell":{"allOf":[{"$ref":"#/$defs/Cell"}]},"panel":{"allOf":[{"$ref":"#/$defs/PanelView"}]},"provenance":{"allOf":[{"$ref":"#/$defs/Provenance"}]},"at":{"type":"string","format":"date-time"}},"required":["op"],"additionalProperties":false},"Pivot":{"type":"object","properties":{"by":{"type":"string"},"columns":{"type":"array","items":{"type":"string"}},"rows":{"type":"array","items":{"$ref":"#/$defs/PivotRow"}},"totals":{"type":"array","items":{"$ref":"#/$defs/Cell"}},"agg":{"type":"string"},"heat":{"type":"boolean"},"min":{"anyOf":[{"type":"number"},{"type":"null"}]},"max":{"anyOf":[{"type":"number"},{"type":"null"}]},"more":{"type":"integer"},"levels":{"type":"array","items":{"type":"string"}},"expand":{"type":"integer"},"across":{"type":"string"}},"additionalProperties":false},"PivotRow":{"type":"object","properties":{"label":{"type":"string"},"cells":{"type":"array","items":{"$ref":"#/$defs/Cell"}},"values":{"type":"array","items":{"anyOf":[{"type":"number"},{"type":"null"}]}},"total":{"allOf":[{"$ref":"#/$defs/Cell"}]},"path":{"type":"array","items":{"type":"string"}},"group":{"type":"boolean"}},"additionalProperties":false},"Point":{"type":"object","properties":{"x":{"anyOf":[{"type":"number"},{"type":"null"}]},"y":{"anyOf":[{"type":"number"},{"type":"null"}]},"size":{"anyOf":[{"type":"number"},{"type":"null"}]},"xText":{"type":"string"},"yText":{"type":"string"},"label":{"type":"string"},"group":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]}},"additionalProperties":false},"Provenance":{"type":"object","properties":{"layout":{"anyOf":[{"type":"string"},{"type":"null"}]},"fingerprint":{"anyOf":[{"type":"string"},{"type":"null"}]},"source":{"anyOf":[{"type":"string"},{"type":"null"}]},"generation":{"type":"integer"},"fetchedAt":{"anyOf":[{"type":"string"},{"type":"null"}]},"live":{"type":"boolean"},"businessDate":{"anyOf":[{"type":"string"},{"type":"null"}]},"updatedAt":{"anyOf":[{"type":"string"},{"type":"null"}]},"staleAfter":{"anyOf":[{"type":"string"},{"type":"null"}]},"stale":{"type":"boolean"},"sutra":{"anyOf":[{"type":"string"},{"type":"null"}]},"masked":{"type":"integer"},"maskedPanels":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}]},"partial":{"type":"boolean"},"missing":{"type":"array","items":{"type":"string"}}},"required":["layout","fingerprint","source","generation","fetchedAt","live","businessDate","updatedAt","staleAfter","stale","sutra","masked","maskedPanels"],"additionalProperties":false},"Ref":{"type":"object","properties":{"kind":{"anyOf":[{"type":"string"},{"type":"null"}]},"id":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["kind","id"],"additionalProperties":false},"RefreshView":{"type":"object","properties":{"every":{"type":"integer"},"userCanPause":{"type":"boolean"}},"required":["every","userCanPause"],"additionalProperties":false},"Row":{"type":"object","properties":{"cells":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Cell"}},{"type":"null"}]},"highlight":{"type":"boolean"},"path":{"anyOf":[{"type":"string"},{"type":"null"}]},"children":{"type":"array","items":{"$ref":"#/$defs/Row"}},"pick":{"type":"string"},"crumb":{"type":"string"},"kidsTotal":{"allOf":[{"$ref":"#/$defs/Row"}]},"ev":{"type":"string"}},"required":["cells","highlight","path"],"additionalProperties":false},"Scatter":{"type":"object","properties":{"points":{"type":"array","items":{"$ref":"#/$defs/Point"}},"groups":{"type":"array","items":{"type":"string"}},"xLabel":{"type":"string"},"yLabel":{"type":"string"},"sized":{"type":"boolean"},"more":{"type":"integer"}},"additionalProperties":false},"SelectView":{"type":"object","properties":{"panel":{"anyOf":[{"type":"string"},{"type":"null"}]},"by":{"anyOf":[{"type":"string"},{"type":"null"}]},"filter":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}]}},"required":["panel","by","filter"],"additionalProperties":false},"Series":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"values":{"anyOf":[{"type":"array","items":{"anyOf":[{"type":"number"},{"type":"null"}]}},{"type":"null"}]},"tone":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["label","values","tone"],"additionalProperties":false},"ShadeItem":{"type":"object","properties":{"code":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["code","value","text"],"additionalProperties":false},"Step":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"from":{"anyOf":[{"type":"number"},{"type":"null"}]},"to":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"tone":{"anyOf":[{"$ref":"#/$defs/Tone"},{"type":"null"}]},"total":{"type":"boolean"}},"required":["label","value","from","to","text","tone","total"],"additionalProperties":false},"Surface":{"type":"object","properties":{"x":{"type":"array","items":{"type":"string"}},"y":{"type":"array","items":{"type":"string"}},"z":{"type":"array","items":{"anyOf":[{"type":"array","items":{"anyOf":[{"type":"number"},{"type":"null"}]}},{"type":"null"}]}},"min":{"anyOf":[{"type":"number"},{"type":"null"}]},"max":{"anyOf":[{"type":"number"},{"type":"null"}]},"fmt":{"type":"string"},"unit":{"type":"string"},"view":{"enum":["heatmap","3d"]}},"additionalProperties":false},"Tab":{"type":"object","properties":{"title":{"anyOf":[{"type":"string"},{"type":"null"}]},"fields":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Cell"}},{"type":"null"}]},"panels":{"type":"array","items":{"$ref":"#/$defs/PanelView"}}},"required":["title","fields"],"additionalProperties":false},"Table":{"type":"object","properties":{"columns":{"type":"array","items":{"type":"string"}},"numeric":{"type":"array","items":{"type":"boolean"}},"rows":{"type":"array","items":{"$ref":"#/$defs/Row"}},"total":{"allOf":[{"$ref":"#/$defs/Row"}]},"more":{"type":"string"},"search":{"type":"boolean"},"pivot":{"type":"object"},"expand":{"type":"integer"},"levels":{"type":"array","items":{"$ref":"#/$defs/Level"}},"root":{"type":"string"},"emptyLabel":{"type":"string"}},"additionalProperties":false},"Tabs":{"type":"object","properties":{"layout":{"anyOf":[{"enum":["tabs","columns"]},{"type":"null"}]},"tabs":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Tab"}},{"type":"null"}]}},"required":["layout","tabs"],"additionalProperties":false},"Text":{"type":"object","properties":{"text":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["text"],"additionalProperties":false},"Timeline":{"type":"object","properties":{"events":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Event"}},{"type":"null"}]},"more":{"type":"integer"}},"required":["events","more"],"additionalProperties":false},"TitleView":{"type":"object","properties":{"pill":{"anyOf":[{"type":"string"},{"type":"null"}]},"id":{"anyOf":[{"type":"string"},{"type":"null"}]},"with":{"anyOf":[{"$ref":"#/$defs/Cell"},{"type":"null"}]}},"required":["pill","id","with"],"additionalProperties":false},"Tone":{"enum":["pos","neg","link","accent","ok","warn","bad","muted","inactive"]},"Waterfall":{"type":"object","properties":{"steps":{"type":"array","items":{"$ref":"#/$defs/Step"}},"unit":{"type":"string"}},"additionalProperties":false},"Wire":{"type":"object","properties":{"emits":{"type":"array","items":{"anyOf":[{"type":"object","additionalProperties":{"type":"string"}},{"type":"null"}]}},"waits":{"type":"string"},"children":{"type":"array","items":{"anyOf":[{"type":"object","additionalProperties":{"type":"string"}},{"type":"null"}]}},"source":{"type":"object","additionalProperties":{"type":"string"}},"parent":{"type":"string"}},"additionalProperties":false}}});
+    const CONTRACT = "1.1";
+    const SCHEMA_SHA256 = "1b1ae1985e5f58045e530304d84d7fbcc484bd83d2bf98ac9b288142639d61c4";
+    const SCHEMA = Object.freeze({"$ref":"#/$defs/ViewModel","$defs":{"ViewModel":{"type":"object","properties":{"ref":{"allOf":[{"$ref":"#/$defs/Ref"}]},"mnemonic":{"type":"string"},"title":{"allOf":[{"$ref":"#/$defs/TitleView"}]},"strip":{"type":"array","items":{"$ref":"#/$defs/Cell"}},"panels":{"type":"array","items":{"$ref":"#/$defs/PanelView"}},"keys":{"type":"array","items":{"$ref":"#/$defs/KeyView"}},"provenance":{"allOf":[{"$ref":"#/$defs/Provenance"}]},"timings":{"type":"object","additionalProperties":{"anyOf":[{"type":"number"},{"type":"null"}]}},"controls":{"type":"array","items":{"$ref":"#/$defs/ControlView"}},"selects":{"type":"array","items":{"$ref":"#/$defs/SelectView"}},"layout":{"type":"object"},"contract":{"type":"string"},"phone":{"type":"object"},"datasets":{"type":"object","additionalProperties":{"$ref":"#/$defs/Dataset"}}},"required":["ref","title","strip","panels","keys","provenance","timings","contract"],"additionalProperties":false},"Frame":{"type":"object","properties":{"seq":{"type":"integer"},"generation":{"type":"integer"},"patches":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Patch"}},{"type":"null"}]},"latencyMs":{"anyOf":[{"type":"number"},{"type":"null"}]},"p99Ms":{"anyOf":[{"type":"number"},{"type":"null"}]}},"required":["seq","generation","patches","latencyMs","p99Ms"],"additionalProperties":false},"Bar":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"tone":{"anyOf":[{"$ref":"#/$defs/Tone"},{"type":"null"}]},"ev":{"type":"string"}},"required":["label","value","text","tone"],"additionalProperties":false},"Bars":{"type":"object","properties":{"bars":{"type":"array","items":{"$ref":"#/$defs/Bar"}},"shape":{"type":"string"},"total":{"type":"string"}},"additionalProperties":false},"Bin":{"type":"object","properties":{"from":{"anyOf":[{"type":"number"},{"type":"null"}]},"to":{"anyOf":[{"type":"number"},{"type":"null"}]},"count":{"type":"integer"},"label":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["from","to","count","label"],"additionalProperties":false},"Candle":{"type":"object","properties":{"x":{"type":"string"},"open":{"anyOf":[{"type":"number"},{"type":"null"}]},"high":{"anyOf":[{"type":"number"},{"type":"null"}]},"low":{"anyOf":[{"type":"number"},{"type":"null"}]},"close":{"anyOf":[{"type":"number"},{"type":"null"}]},"volume":{"anyOf":[{"type":"number"},{"type":"null"}]},"openText":{"type":"string"},"highText":{"type":"string"},"lowText":{"type":"string"},"closeText":{"type":"string"},"volumeText":{"type":"string"}},"additionalProperties":false},"Candles":{"type":"object","properties":{"candles":{"type":"array","items":{"$ref":"#/$defs/Candle"}},"volume":{"type":"boolean"},"last":{"type":"string"},"change":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]},"fmt":{"type":"string"},"unit":{"type":"string"}},"additionalProperties":false},"Cell":{"type":"object","properties":{"label":{"type":"string"},"text":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]},"emphasis":{"type":"boolean"},"path":{"type":"string"}},"additionalProperties":false},"Chart":{"type":"object","properties":{"x":{"type":"array","items":{"type":"string"}},"series":{"type":"array","items":{"$ref":"#/$defs/Series"}},"mark":{"type":"string"},"markText":{"type":"string"},"limit":{"anyOf":[{"type":"number"},{"type":"null"}]},"limitLabel":{"type":"string"},"source":{"allOf":[{"$ref":"#/$defs/LinkView"}]},"unit":{"type":"string"},"step":{"type":"boolean"}},"additionalProperties":false},"ControlView":{"type":"object","properties":{"id":{"type":"string"},"kind":{"type":"string"},"label":{"type":"string"},"placement":{"type":"string"},"panel":{"type":"string"},"parent":{"type":"string"},"options":{"type":"array","items":{"$ref":"#/$defs/Opt"}},"value":{"type":"string"},"values":{"type":"array","items":{"type":"string"}},"required":{"type":"boolean"},"remember":{"type":"boolean"},"min":{"type":"string"},"max":{"type":"string"},"step":{"type":"string"},"range":{"type":"boolean"},"reads":{"type":"array","items":{"type":"string"}},"truncated":{"type":"boolean"}},"additionalProperties":false},"Edge":{"type":"object","properties":{"from":{"type":"string"},"to":{"type":"string"},"label":{"type":"string"}},"additionalProperties":false},"Event":{"type":"object","properties":{"date":{"type":"string"},"label":{"type":"string"},"detail":{"type":"string"},"status":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]}},"additionalProperties":false},"Fields":{"type":"object","properties":{"fields":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Cell"}},{"type":"null"}]}},"required":["fields"],"additionalProperties":false},"Gauge":{"type":"object","properties":{"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"max":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"label":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value","max","text","label"],"additionalProperties":false},"GeoLink":{"type":"object","properties":{"kind":{"type":"string"},"template":{"type":"string"},"codes":{"type":"array","items":{"type":"string"}},"note":{"type":"string"}},"additionalProperties":false},"GeoMap":{"type":"object","properties":{"mode":{"enum":["world","region"]},"highlight":{"type":"string"},"region":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/GeoLink"}]},"shade":{"allOf":[{"$ref":"#/$defs/GeoShade"}]},"unit":{"type":"string"},"points":{"type":"array","items":{"$ref":"#/$defs/GeoPoint"}}},"additionalProperties":false},"GeoShade":{"type":"object","properties":{"label":{"type":"string"},"unit":{"type":"string"},"items":{"type":"array","items":{"$ref":"#/$defs/ShadeItem"}},"note":{"type":"string"}},"additionalProperties":false},"Graph":{"type":"object","properties":{"nodes":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Node"}},{"type":"null"}]},"edges":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Edge"}},{"type":"null"}]},"layout":{"anyOf":[{"enum":["tree","force"]},{"type":"null"}]},"more":{"type":"integer"}},"required":["nodes","edges","layout","more"],"additionalProperties":false},"Histogram":{"type":"object","properties":{"bins":{"type":"array","items":{"$ref":"#/$defs/Bin"}},"markers":{"type":"array","items":{"$ref":"#/$defs/Marker"}},"count":{"type":"integer"},"dropped":{"type":"integer"},"fmt":{"type":"string"},"unit":{"type":"string"}},"additionalProperties":false},"KeyView":{"type":"object","properties":{"key":{"type":"string"},"label":{"type":"string"},"action":{"enum":["panel","link","raw","impact","denied"]},"panel":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]}},"additionalProperties":false},"Level":{"type":"object","properties":{"title":{"anyOf":[{"type":"string"},{"type":"null"}]},"columns":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}]},"numeric":{"anyOf":[{"type":"array","items":{"type":"boolean"}},{"type":"null"}]}},"required":["title","columns","numeric"],"additionalProperties":false},"LinkItem":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"link":{"anyOf":[{"$ref":"#/$defs/LinkView"},{"type":"null"}]},"badge":{"anyOf":[{"type":"string"},{"type":"null"}]},"status":{"anyOf":[{"enum":["resolved","pending","missing","denied","inactive"]},{"type":"null"}]}},"required":["label","text","link","badge","status"],"additionalProperties":false},"LinkView":{"type":"object","properties":{"kind":{"anyOf":[{"type":"string"},{"type":"null"}]},"id":{"anyOf":[{"type":"string"},{"type":"null"}]},"mnemonic":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["kind","id","mnemonic"],"additionalProperties":false},"Links":{"type":"object","properties":{"links":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/LinkItem"}},{"type":"null"}]}},"required":["links"],"additionalProperties":false},"Marker":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"tone":{"anyOf":[{"$ref":"#/$defs/Tone"},{"type":"null"}]}},"required":["label","value","text","tone"],"additionalProperties":false},"Metric":{"type":"object","properties":{"value":{"anyOf":[{"$ref":"#/$defs/Cell"},{"type":"null"}]},"delta":{"anyOf":[{"$ref":"#/$defs/Cell"},{"type":"null"}]},"unit":{"anyOf":[{"type":"string"},{"type":"null"}]},"caption":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value","delta","unit","caption"],"additionalProperties":false},"Node":{"type":"object","properties":{"id":{"type":"string"},"label":{"type":"string"},"group":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]},"focus":{"type":"boolean"}},"additionalProperties":false},"Opt":{"type":"object","properties":{"value":{"anyOf":[{"type":"string"},{"type":"null"}]},"label":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value","label"],"additionalProperties":false},"PanelCompute":{"type":"object","properties":{"state":{"enum":["ready","computing","stale","failed","refused"]},"requestId":{"type":"string"},"connector":{"type":"string"},"message":{"type":"string"},"progress":{"type":"object"},"hasResult":{"type":"boolean"},"stamp":{"type":"object"}},"additionalProperties":false},"PanelData":{"anyOf":[{"$ref":"#/$defs/Fields"},{"$ref":"#/$defs/Table"},{"$ref":"#/$defs/Tabs"},{"$ref":"#/$defs/Chart"},{"$ref":"#/$defs/Bars"},{"$ref":"#/$defs/Links"},{"$ref":"#/$defs/Text"},{"$ref":"#/$defs/Surface"},{"$ref":"#/$defs/Metric"},{"$ref":"#/$defs/GeoMap"},{"$ref":"#/$defs/Gauge"},{"$ref":"#/$defs/Waterfall"},{"$ref":"#/$defs/Histogram"},{"$ref":"#/$defs/Scatter"},{"$ref":"#/$defs/Candles"},{"$ref":"#/$defs/Graph"},{"$ref":"#/$defs/Timeline"},{"$ref":"#/$defs/Pivot"},{"$ref":"#/$defs/Grid"},{"$ref":"#/$defs/Tree"},{"$ref":"#/$defs/DataChart"}]},"PanelProvenance":{"type":"object","properties":{"source":{"type":"string"},"kind":{"type":"string"},"fetchedAt":{"type":"string"},"updatedAt":{"type":"string"},"staleAfter":{"type":"string"},"stale":{"type":"boolean"}},"additionalProperties":false},"PanelView":{"type":"object","properties":{"id":{"type":"string"},"kind":{"enum":["kv","table","tabs","line","area","hbar","ladder","links","status","provenance","markdown","gauge","surface","waterfall","histogram","scatter","candlestick","graph","timeline","pivot","metric","map","grid","tree","chart"]},"title":{"type":"string"},"code":{"type":"string"},"key":{"type":"string"},"area":{"type":"string"},"inferred":{"type":"boolean"},"explanation":{"type":"string"},"data":{"allOf":[{"$ref":"#/$defs/PanelData"}]},"error":{"type":"string"},"empty":{"type":"boolean"},"span":{"type":"integer"},"height":{"type":"integer"},"denied":{"type":"string"},"wire":{"allOf":[{"$ref":"#/$defs/Wire"}]},"refresh":{"allOf":[{"$ref":"#/$defs/RefreshView"}]},"form":{"type":"object"},"provenance":{"allOf":[{"$ref":"#/$defs/PanelProvenance"}]},"compute":{"allOf":[{"$ref":"#/$defs/PanelCompute"}]}},"required":["id","kind"],"additionalProperties":false,"allOf":[{"if":{"properties":{"kind":{"const":"kv"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Fields"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"table"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Table"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"tabs"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Tabs"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"line"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Chart"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"area"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Chart"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"hbar"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Bars"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"ladder"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Table"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"links"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Links"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"status"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Fields"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"provenance"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Fields"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"markdown"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Text"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"gauge"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Gauge"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"surface"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Surface"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"waterfall"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Waterfall"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"histogram"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Histogram"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"scatter"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Scatter"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"candlestick"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Candles"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"graph"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Graph"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"timeline"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Timeline"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"pivot"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Pivot"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"metric"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Metric"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"map"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/GeoMap"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"grid"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Grid"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"tree"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/Tree"},{"type":"null"}]}}}},{"if":{"properties":{"kind":{"const":"chart"}},"required":["kind"]},"then":{"properties":{"data":{"anyOf":[{"$ref":"#/$defs/DataChart"},{"type":"null"}]}}}}]},"Patch":{"type":"object","properties":{"op":{"enum":["strip","panel","provenance","deleted","restored","rows"]},"index":{"type":"integer"},"cell":{"allOf":[{"$ref":"#/$defs/Cell"}]},"panel":{"allOf":[{"$ref":"#/$defs/PanelView"}]},"provenance":{"allOf":[{"$ref":"#/$defs/Provenance"}]},"at":{"type":"string","format":"date-time"},"dataset":{"type":"string"},"reset":{"type":"array","items":{"anyOf":[{"type":"object"},{"type":"null"}]}},"remove":{"type":"array","items":{"type":"string"}},"update":{"type":"array","items":{"anyOf":[{"type":"object"},{"type":"null"}]}},"add":{"type":"array","items":{"anyOf":[{"type":"object"},{"type":"null"}]}}},"required":["op"],"additionalProperties":false},"Pivot":{"type":"object","properties":{"by":{"type":"string"},"columns":{"type":"array","items":{"type":"string"}},"rows":{"type":"array","items":{"$ref":"#/$defs/PivotRow"}},"totals":{"type":"array","items":{"$ref":"#/$defs/Cell"}},"agg":{"type":"string"},"heat":{"type":"boolean"},"min":{"anyOf":[{"type":"number"},{"type":"null"}]},"max":{"anyOf":[{"type":"number"},{"type":"null"}]},"more":{"type":"integer"},"levels":{"type":"array","items":{"type":"string"}},"expand":{"type":"integer"},"across":{"type":"string"}},"additionalProperties":false},"PivotRow":{"type":"object","properties":{"label":{"type":"string"},"cells":{"type":"array","items":{"$ref":"#/$defs/Cell"}},"values":{"type":"array","items":{"anyOf":[{"type":"number"},{"type":"null"}]}},"total":{"allOf":[{"$ref":"#/$defs/Cell"}]},"path":{"type":"array","items":{"type":"string"}},"group":{"type":"boolean"}},"additionalProperties":false},"Point":{"type":"object","properties":{"x":{"anyOf":[{"type":"number"},{"type":"null"}]},"y":{"anyOf":[{"type":"number"},{"type":"null"}]},"size":{"anyOf":[{"type":"number"},{"type":"null"}]},"xText":{"type":"string"},"yText":{"type":"string"},"label":{"type":"string"},"group":{"type":"string"},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]}},"additionalProperties":false},"Provenance":{"type":"object","properties":{"layout":{"anyOf":[{"type":"string"},{"type":"null"}]},"fingerprint":{"anyOf":[{"type":"string"},{"type":"null"}]},"source":{"anyOf":[{"type":"string"},{"type":"null"}]},"generation":{"type":"integer"},"fetchedAt":{"anyOf":[{"type":"string"},{"type":"null"}]},"live":{"type":"boolean"},"businessDate":{"anyOf":[{"type":"string"},{"type":"null"}]},"updatedAt":{"anyOf":[{"type":"string"},{"type":"null"}]},"staleAfter":{"anyOf":[{"type":"string"},{"type":"null"}]},"stale":{"type":"boolean"},"sutra":{"anyOf":[{"type":"string"},{"type":"null"}]},"masked":{"type":"integer"},"maskedPanels":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}]},"partial":{"type":"boolean"},"missing":{"type":"array","items":{"type":"string"}}},"required":["layout","fingerprint","source","generation","fetchedAt","live","businessDate","updatedAt","staleAfter","stale","sutra","masked","maskedPanels"],"additionalProperties":false},"Ref":{"type":"object","properties":{"kind":{"anyOf":[{"type":"string"},{"type":"null"}]},"id":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["kind","id"],"additionalProperties":false},"RefreshView":{"type":"object","properties":{"every":{"type":"integer"},"userCanPause":{"type":"boolean"}},"required":["every","userCanPause"],"additionalProperties":false},"Row":{"type":"object","properties":{"cells":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Cell"}},{"type":"null"}]},"highlight":{"type":"boolean"},"path":{"anyOf":[{"type":"string"},{"type":"null"}]},"children":{"type":"array","items":{"$ref":"#/$defs/Row"}},"pick":{"type":"string"},"crumb":{"type":"string"},"kidsTotal":{"allOf":[{"$ref":"#/$defs/Row"}]},"ev":{"type":"string"}},"required":["cells","highlight","path"],"additionalProperties":false},"Scatter":{"type":"object","properties":{"points":{"type":"array","items":{"$ref":"#/$defs/Point"}},"groups":{"type":"array","items":{"type":"string"}},"xLabel":{"type":"string"},"yLabel":{"type":"string"},"sized":{"type":"boolean"},"more":{"type":"integer"}},"additionalProperties":false},"SelectView":{"type":"object","properties":{"panel":{"anyOf":[{"type":"string"},{"type":"null"}]},"by":{"anyOf":[{"type":"string"},{"type":"null"}]},"filter":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}]}},"required":["panel","by","filter"],"additionalProperties":false},"Series":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"values":{"anyOf":[{"type":"array","items":{"anyOf":[{"type":"number"},{"type":"null"}]}},{"type":"null"}]},"tone":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["label","values","tone"],"additionalProperties":false},"ShadeItem":{"type":"object","properties":{"code":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["code","value","text"],"additionalProperties":false},"Step":{"type":"object","properties":{"label":{"anyOf":[{"type":"string"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"from":{"anyOf":[{"type":"number"},{"type":"null"}]},"to":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"anyOf":[{"type":"string"},{"type":"null"}]},"tone":{"anyOf":[{"$ref":"#/$defs/Tone"},{"type":"null"}]},"total":{"type":"boolean"}},"required":["label","value","from","to","text","tone","total"],"additionalProperties":false},"Surface":{"type":"object","properties":{"x":{"type":"array","items":{"type":"string"}},"y":{"type":"array","items":{"type":"string"}},"z":{"type":"array","items":{"anyOf":[{"type":"array","items":{"anyOf":[{"type":"number"},{"type":"null"}]}},{"type":"null"}]}},"min":{"anyOf":[{"type":"number"},{"type":"null"}]},"max":{"anyOf":[{"type":"number"},{"type":"null"}]},"fmt":{"type":"string"},"unit":{"type":"string"},"view":{"enum":["heatmap","3d"]}},"additionalProperties":false},"Tab":{"type":"object","properties":{"title":{"anyOf":[{"type":"string"},{"type":"null"}]},"fields":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Cell"}},{"type":"null"}]},"panels":{"type":"array","items":{"$ref":"#/$defs/PanelView"}}},"required":["title","fields"],"additionalProperties":false},"Table":{"type":"object","properties":{"columns":{"type":"array","items":{"type":"string"}},"numeric":{"type":"array","items":{"type":"boolean"}},"rows":{"type":"array","items":{"$ref":"#/$defs/Row"}},"total":{"allOf":[{"$ref":"#/$defs/Row"}]},"more":{"type":"string"},"search":{"type":"boolean"},"pivot":{"type":"object"},"expand":{"type":"integer"},"levels":{"type":"array","items":{"$ref":"#/$defs/Level"}},"root":{"type":"string"},"emptyLabel":{"type":"string"}},"additionalProperties":false},"Tabs":{"type":"object","properties":{"layout":{"anyOf":[{"enum":["tabs","columns"]},{"type":"null"}]},"tabs":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Tab"}},{"type":"null"}]}},"required":["layout","tabs"],"additionalProperties":false},"Text":{"type":"object","properties":{"text":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["text"],"additionalProperties":false},"Timeline":{"type":"object","properties":{"events":{"anyOf":[{"type":"array","items":{"$ref":"#/$defs/Event"}},{"type":"null"}]},"more":{"type":"integer"}},"required":["events","more"],"additionalProperties":false},"TitleView":{"type":"object","properties":{"pill":{"anyOf":[{"type":"string"},{"type":"null"}]},"id":{"anyOf":[{"type":"string"},{"type":"null"}]},"with":{"anyOf":[{"$ref":"#/$defs/Cell"},{"type":"null"}]}},"required":["pill","id","with"],"additionalProperties":false},"Tone":{"enum":["pos","neg","link","accent","ok","warn","bad","muted","inactive"]},"Waterfall":{"type":"object","properties":{"steps":{"type":"array","items":{"$ref":"#/$defs/Step"}},"unit":{"type":"string"}},"additionalProperties":false},"Wire":{"type":"object","properties":{"emits":{"type":"array","items":{"anyOf":[{"type":"object","additionalProperties":{"type":"string"}},{"type":"null"}]}},"waits":{"type":"string"},"children":{"type":"array","items":{"anyOf":[{"type":"object","additionalProperties":{"type":"string"}},{"type":"null"}]}},"source":{"type":"object","additionalProperties":{"type":"string"}},"parent":{"type":"string"}},"additionalProperties":false},"Dataset":{"type":"object","properties":{"key":{"type":"array","items":{"type":"string"}},"fields":{"type":"array","items":{"$ref":"#/$defs/DataField"}},"values":{"type":"array","items":{"anyOf":[{"type":"array","items":{}},{"type":"null"}]}},"rows":{"type":"array","items":{"anyOf":[{"type":"object"},{"type":"null"}]}},"more":{"type":"integer"},"name":{"type":"string"},"arrow":{"allOf":[{"$ref":"#/$defs/ArrowRef"}]},"pages":{"allOf":[{"$ref":"#/$defs/PagesRef"}]},"server":{"allOf":[{"$ref":"#/$defs/ServerRef"}]}},"additionalProperties":false},"DataField":{"type":"object","properties":{"name":{"type":"string"},"type":{"enum":["string","number","boolean","date","datetime"]},"label":{"type":"string"},"fmt":{"type":"string"}},"required":["name"],"additionalProperties":false},"ArrowRef":{"type":"object","properties":{"url":{"type":"string"},"base64":{"type":"string"}},"additionalProperties":false},"PagesRef":{"type":"object","properties":{"url":{"type":"string"},"size":{"type":"integer"},"mode":{"enum":["offset","cursor"]},"total":{"type":"integer"},"sort":{"enum":["client","server"]},"filter":{"enum":["client","server"]}},"additionalProperties":false},"ServerRef":{"type":"object","properties":{"url":{"type":"string"}},"additionalProperties":false},"Grid":{"type":"object","properties":{"dataset":{"type":"string"},"columns":{"type":"array","items":{"$ref":"#/$defs/GridColumn"}},"group":{"type":"array","items":{"type":"string"}},"sort":{"type":"array","items":{"$ref":"#/$defs/SortKey"}},"pivot":{"allOf":[{"$ref":"#/$defs/GridPivot"}]},"search":{"type":"boolean"},"emptyLabel":{"type":"string"}},"required":["dataset"],"additionalProperties":false},"GridColumn":{"type":"object","properties":{"field":{"type":"string"},"label":{"type":"string"},"fmt":{"type":"string"},"tone":{"type":"string"},"width":{"type":"integer"},"pinned":{"enum":["left","right"]},"agg":{"enum":["sum","count","min","max","avg","first","last","distinct"]},"hidden":{"type":"boolean"}},"required":["field"],"additionalProperties":false},"SortKey":{"type":"object","properties":{"field":{"type":"string"},"desc":{"type":"boolean"}},"required":["field"],"additionalProperties":false},"GridPivot":{"type":"object","properties":{"rows":{"type":"array","items":{"type":"string"}},"columns":{"type":"array","items":{"type":"string"}},"values":{"type":"array","items":{"$ref":"#/$defs/Measure"}}},"additionalProperties":false},"Measure":{"type":"object","properties":{"field":{"type":"string"},"agg":{"enum":["sum","count","min","max","avg","first","last","distinct"]},"label":{"type":"string"},"fmt":{"type":"string"}},"required":["field"],"additionalProperties":false},"Tree":{"type":"object","properties":{"dataset":{"type":"string"},"node":{"type":"string"},"parent":{"type":"string"},"path":{"type":"string"},"label":{"type":"string"},"measures":{"type":"array","items":{"$ref":"#/$defs/Measure"}},"mode":{"enum":["grid","org","sunburst","icicle"]},"open":{"type":"integer"}},"required":["dataset","node"],"additionalProperties":false},"DataChart":{"type":"object","properties":{"dataset":{"type":"string"},"type":{"enum":["bar","line","area","scatter","pie","donut","heatmap","histogram"]},"x":{"type":"string"},"y":{"type":"array","items":{"$ref":"#/$defs/Measure"}},"by":{"type":"string"},"stack":{"enum":["sum","percent"]},"horizontal":{"type":"boolean"},"xLabel":{"type":"string"},"yLabel":{"type":"string"},"bins":{"type":"integer"},"limit":{"type":"integer"}},"required":["dataset","type"],"additionalProperties":false},"GeoPoint":{"type":"object","properties":{"label":{"type":"string"},"lat":{"anyOf":[{"type":"number"},{"type":"null"}]},"lon":{"anyOf":[{"type":"number"},{"type":"null"}]},"value":{"anyOf":[{"type":"number"},{"type":"null"}]},"text":{"type":"string"},"tone":{"allOf":[{"$ref":"#/$defs/Tone"}]},"link":{"allOf":[{"$ref":"#/$defs/LinkView"}]}},"required":["lat","lon"],"additionalProperties":false}}});
     return { "CONTRACT": CONTRACT, "SCHEMA_SHA256": SCHEMA_SHA256, "SCHEMA": SCHEMA };
   })();
   /* ---- src/drishti_views-validate.js ---- */
   __m["src/drishti_views-validate.js"] = (function () {
     var SCHEMA = __m["src/drishti_views-schema.js"].SCHEMA, CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
-    const LIMITS = Object.freeze({ panels: 200, strip: 24, depth: 4 });
+    const LIMITS = Object.freeze({ panels: 200, strip: 24, depth: 4, rows: 50000 });
     const FORBIDDEN_KEYS = Object.freeze(['__proto__', 'constructor', 'prototype']);
     const FORBIDDEN = new Set(FORBIDDEN_KEYS);
     const DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[Zz]|[+-]\d{2}:?\d{2})?$/;
@@ -301,6 +301,14 @@
       if (Array.isArray(vm.strip) && vm.strip.length > limits.strip) {
         run.push(out, 'limit', 'strip', 'the strip has ' + vm.strip.length + ' cells; at most ' + limits.strip + ' are drawn', 'move figures into a kv or metric panel');
       }
+      if (vm.datasets && typeof vm.datasets === 'object' && !Array.isArray(vm.datasets)) {          // contract 1.1: inline rows are bounded
+        Object.keys(vm.datasets).forEach((name) => {
+          const d = vm.datasets[name], n = d && (Array.isArray(d.values) ? d.values.length : Array.isArray(d.rows) ? d.rows.length : 0);
+          if (n > limits.rows) {
+            run.push(out, 'limit', 'datasets.' + name, 'the dataset has ' + n + ' inline rows; at most ' + limits.rows + ' are drawn', 'send them as Arrow, pages or a server source');
+          }
+        });
+      }
       const depth = depthOf(vm.panels);
       if (depth > limits.depth) {
         run.push(out, 'limit', 'panels', 'tabs are nested ' + depth + ' deep; at most ' + limits.depth + ' levels are drawn', 'flatten the inner tabs');
@@ -373,6 +381,9 @@
       total: 'Total',
       tooDeep: 'Panels nest at most four deep',
       dataTable: 'Data table',
+      noDataset: 'The dataset "{name}" is not in this view',
+      dataFailed: 'The rows could not be read',
+      rowsLeft: '{count} more rows were not sent',
       noCharts: 'Charts are not available on this page',
       noMaps: 'Maps are turned off on this page',
       linkConnecting: 'connecting',
@@ -889,7 +900,7 @@
   })();
   /* ---- src/drishti_views-patch.js ---- */
   __m["src/drishti_views-patch.js"] = (function () {
-    const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored']);
+    const OPS = Object.freeze(['strip', 'panel', 'provenance', 'deleted', 'restored', 'rows']);
     function conflate(patches) {
       const out = [];
       let seg = [], conflated = 0;
@@ -1004,6 +1015,9 @@
           v.screen.setProvenance(p.provenance);
           v.vm.provenance = p.provenance;
           done = true;
+        } else if (p.op === 'rows' && typeof p.dataset === 'string') {
+          const ds = v.datasets && v.datasets.get(p.dataset);
+          done = !!ds && ds.apply(p);
         } else if (p.op === 'deleted') {
           this.frozen = true;
           v.root.classList.add('dv-frozen');
@@ -1086,6 +1100,210 @@
     }
     return { "LIVE_KINDS": LIVE_KINDS, "LiveLink": LiveLink };
   })();
+  /* ---- src/drishti_views-data.js ---- */
+  __m["src/drishti_views-data.js"] = (function () {
+    var hasFormat = __lib("drishti-core").hasFormat, formatNamed = __lib("drishti-core").formatNamed, formatNumber = __lib("drishti-core").formatNumber, MASK = __lib("drishti-core").MASK;
+    const AGGS = Object.freeze(['sum', 'count', 'min', 'max', 'avg', 'first', 'last', 'distinct']);
+    const DATASET_FORMS = Object.freeze(['values', 'rows', 'name', 'arrow', 'pages', 'server']);
+    const READ_LIMIT = 100000;
+    const SEP = '\u001f';
+    const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+    function isMasked(v) { return v !== null && typeof v === 'object' && v.$masked === true; }
+    function valueText(v, fmt, type) {
+      if (isMasked(v)) { return MASK; }
+      if (v === null || v === undefined || v === '') { return ''; }
+      if (fmt && hasFormat(fmt)) { return formatNamed(fmt, v); }
+      if (typeof v === 'number') { return formatNumber(v, { decimals: 0, maxDecimals: Number.isInteger(v) ? 0 : 2 }); }
+      if (typeof v === 'boolean') { return v ? 'yes' : 'no'; }
+      return typeof v === 'object' ? JSON.stringify(v) : String(v);
+    }
+    function rowKey(row, key, index) {
+      if (!key || !key.length) { return row && row.$i !== undefined ? String(row.$i) : String(index); }
+      return key.map((k) => (row[k] === null || row[k] === undefined ? '' : String(row[k]))).join(SEP);
+    }
+    function inferFields(rows) {
+      const names = [];
+      (rows || []).slice(0, 50).forEach((r) => { if (r && typeof r === 'object') { Object.keys(r).forEach((k) => { if (k !== '$i' && !FORBIDDEN.has(k) && names.indexOf(k) < 0) { names.push(k); } }); } });
+      return names.map((n) => ({ name: n, type: typeOf((rows || []).map((r) => r && r[n])) }));
+    }
+    function typeOf(values) {
+      let t = null;
+      for (const v of values) {
+        if (v === null || v === undefined || isMasked(v)) { continue; }
+        const vt = typeof v === 'number' ? 'number' : typeof v === 'boolean' ? 'boolean' : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? 'date'
+          : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? 'datetime' : 'string';
+        if (t === null) { t = vt; } else if (t !== vt) { return 'string'; }
+      }
+      return t || 'string';
+    }
+    function aggregate(values, agg) {
+      if (agg === 'count') { return values.filter((v) => v !== null && v !== undefined).length; }
+      if (agg === 'distinct') { return new Set(values.filter((v) => v !== null && v !== undefined).map((v) => (isMasked(v) ? MASK : String(v)))).size; }
+      if (agg === 'first') { return values.length ? values[0] : null; }
+      if (agg === 'last') { return values.length ? values[values.length - 1] : null; }
+      if (values.some(isMasked)) { return { $masked: true }; }
+      const nums = values.filter((v) => typeof v === 'number' && isFinite(v));
+      if (!nums.length) { return null; }
+      if (agg === 'min') { return Math.min.apply(null, nums); }
+      if (agg === 'max') { return Math.max.apply(null, nums); }
+      const sum = nums.reduce((a, b) => a + b, 0);
+      return agg === 'avg' ? sum / nums.length : sum;
+    }
+    function derive(rows, q) {
+      const y = q.y || [];
+      let out = rows;
+      if (y.some((m) => m && m.agg)) {
+        const groups = new Map();
+        rows.forEach((r) => {
+          const k = (q.x ? String(r[q.x]) : '') + SEP + (q.by ? String(r[q.by]) : '');
+          let g = groups.get(k);
+          if (!g) { g = { row: {}, members: [] }; if (q.x) { g.row[q.x] = r[q.x]; } if (q.by) { g.row[q.by] = r[q.by]; } groups.set(k, g); }
+          g.members.push(r);
+        });
+        out = Array.from(groups.values()).map((g) => {
+          y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), m.agg || 'sum'); });
+          return g.row;
+        });
+      }
+      if (q.limit > 0 && q.x && y.length) {
+        const first = y[0].field, size = new Map();
+        out.forEach((r) => { const k = String(r[q.x]); size.set(k, (size.get(k) || 0) + Math.abs(typeof r[first] === 'number' ? r[first] : 0)); });
+        const keep = new Set(Array.from(size.entries()).sort((a, b) => b[1] - a[1]).slice(0, q.limit).map((e) => e[0]));
+        out = out.filter((r) => keep.has(String(r[q.x])));
+      }
+      return out;
+    }
+    function allowedAddress(url, where) {
+      if (typeof url !== 'string' || !url || /[\u0000-\u001f]/.test(url)) { return null; }
+      let u;
+      try { u = new URL(url, where.view || where.page); } catch (e) { return null; }
+      const page = new URL(where.page);
+      if (!/^https?:$/.test(u.protocol) && u.protocol !== page.protocol) { return null; }
+      if (u.protocol !== 'http:' && u.protocol !== 'https:' && u.protocol !== page.protocol) { return null; }
+      const origins = [page.origin];
+      if (where.view) { try { origins.push(new URL(where.view, where.page).origin); } catch (e) { /* not an address */ } }
+      const allow = where.allow || [];
+      if (u.protocol === 'file:' && page.protocol === 'file:') { return u.href; }
+      if (origins.indexOf(u.origin) >= 0 || allow.indexOf(u.origin) >= 0 || (allow.indexOf('any-https') >= 0 && u.protocol === 'https:')) { return u.href; }
+      return null;
+    }
+    class Dataset {
+      constructor(name, def, env) {
+        this.name = name;
+        this.def = def || {};
+        this.env = env;
+        this.key = Array.isArray(this.def.key) ? this.def.key.map(String) : [];
+        this.listeners = new Set();
+        this.form = DATASET_FORMS.find((f) => this.def[f] !== undefined && this.def[f] !== null) || 'values';
+        this.held = null;                                   // inline rows as objects, made once
+        this.fields = Array.isArray(this.def.fields) && this.def.fields.length ? this.def.fields.map((f) => Object.assign({}, f)) : null;
+        if (this.form === 'values' || this.form === 'rows') { this.hold(); }
+      }
+      hold() {
+        const d = this.def;
+        let rows;
+        if (this.form === 'values') {
+          const names = (this.fields || []).map((f) => f.name);
+          rows = (Array.isArray(d.values) ? d.values : []).map((v, i) => { const r = { $i: i }; names.forEach((n, k) => { if (!FORBIDDEN.has(n)) { r[n] = Array.isArray(v) ? v[k] : undefined; } }); return r; });
+        } else {
+          rows = (Array.isArray(d.rows) ? d.rows : []).map((x, i) => { const r = { $i: i }; if (x && typeof x === 'object') { Object.keys(x).forEach((k) => { if (!FORBIDDEN.has(k)) { r[k] = x[k]; } }); } return r; });
+        }
+        if (!this.fields) { this.fields = inferFields(rows); }
+        this.held = rows;
+        this.index = new Map(rows.map((r, i) => [rowKey(r, this.key, i), r]));
+        this.next = rows.length;
+      }
+      get windowed() { return this.form === 'pages' || this.form === 'server' || (this.form === 'arrow' && !!(this.def.arrow && this.def.arrow.paged)); }
+      get more() { return Number(this.def.more) || 0; }
+      field(name) { return (this.fields || []).find((f) => f.name === name) || null; }
+      rows() {
+        if (this.held) { return Promise.resolve(this.held); }
+        return this.source().then((src) => {
+          if (Array.isArray(src)) { return src; }
+          return this.env.library('drishti-data').then((D) => D.readAll(src, {}, { limit: READ_LIMIT })).then((a) => {
+            if (!this.fields) { this.fields = inferFields(a.rows); }
+            return a.rows;
+          });
+        });
+      }
+      source() {
+        if (this.held) { return Promise.resolve(this.held); }
+        if (this.sourceP) { return this.sourceP; }
+        const d = this.def, env = this.env;
+        const addr = (u) => { const a = allowedAddress(u, env.where); if (!a) { throw new Error('the address ' + u + ' is not an allowed data origin (options.data.allow)'); } return a; };
+        this.sourceP = Promise.resolve().then(() => {
+          if (this.form === 'name') {
+            const given = env.data && Object.prototype.hasOwnProperty.call(env.data, d.name) ? env.data[d.name] : undefined;
+            if (given === undefined) { throw new Error('the page handed no data named ' + d.name + ' (options.data.' + d.name + ')'); }
+            if (Array.isArray(given)) { this.def = Object.assign({}, d, { rows: given }); this.form = 'rows'; this.hold(); return this.held; }
+            if (given && typeof given.getRows === 'function') { return given; }
+            return env.library('drishti-data').then((D) => D.arrowSource(D.fromArrow(given)));
+          }
+          if (this.form === 'arrow') {
+            const a = d.arrow || {};
+            if (a.base64) {
+              return env.library('drishti-data').then((D) => D.arrowSource(D.fromArrow(base64Bytes(a.base64))));
+            }
+            const url = addr(a.url);
+            return env.library('drishti-data').then((D) => D.arrowSource(url, { paged: !!a.paged, fetch: env.fetch }));
+          }
+          if (this.form === 'pages') {
+            const p = d.pages || {}, url = addr(p.url);
+            return env.library('drishti-data').then((D) => D.restSource(url, { method: 'GET', fetch: env.fetch,
+              map: (b) => ({ rows: b.rows || b.items || [], rowCount: b.total !== undefined ? b.total : (b.rowCount !== undefined ? b.rowCount : p.total || undefined) }) }));
+          }
+          if (this.form === 'server') {
+            const url = addr((d.server || {}).url);
+            return env.library('drishti-data').then((D) => D.serverSideSource(url, { fetch: env.fetch }));
+          }
+          return [];
+        });
+        return this.sourceP;
+      }
+      on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
+      apply(p) {
+        if (!this.held) { return false; }
+        const change = { reset: false, add: [], update: [], remove: [] };
+        const clean = (x) => { const r = {}; if (x && typeof x === 'object') { Object.keys(x).forEach((k) => { if (!FORBIDDEN.has(k) && k !== '$i') { r[k] = x[k]; } }); } return r; };
+        if (Array.isArray(p.reset)) {
+          this.held = p.reset.map((x, i) => Object.assign(clean(x), { $i: i }));
+          this.index = new Map(this.held.map((r, i) => [rowKey(r, this.key, i), r]));
+          this.next = this.held.length;
+          change.reset = true;
+        }
+        (Array.isArray(p.remove) ? p.remove : []).forEach((k) => {
+          const r = this.index.get(String(k));
+          if (r) { this.index.delete(String(k)); const at = this.held.indexOf(r); if (at >= 0) { this.held.splice(at, 1); } change.remove.push(rowKey(r, this.key)); }
+        });
+        const put = (x) => {
+          const c = clean(x), k = rowKey(c, this.key, this.next);
+          const r = this.key.length ? this.index.get(k) : null;
+          if (r) { Object.assign(r, c); change.update.push(r); return; }
+          const row = Object.assign(c, { $i: this.next++ });
+          this.held.push(row);
+          this.index.set(rowKey(row, this.key, row.$i), row);
+          change.add.push(row);
+        };
+        (Array.isArray(p.update) ? p.update : []).forEach(put);
+        (Array.isArray(p.add) ? p.add : []).forEach(put);
+        this.listeners.forEach((fn) => { try { fn(change); } catch (e) { /* one panel never stops the others */ } });
+        return true;
+      }
+    }
+    function base64Bytes(b64) {
+      const s = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+      const out = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) { out[i] = s.charCodeAt(i); }
+      return out;
+    }
+    function datasetsOf(vm, env) {
+      const out = new Map();
+      const d = vm && vm.datasets && typeof vm.datasets === 'object' && !Array.isArray(vm.datasets) ? vm.datasets : {};
+      Object.keys(d).forEach((name) => { if (!FORBIDDEN.has(name)) { out.set(name, new Dataset(name, d[name], env)); } });
+      return out;
+    }
+    return { "AGGS": AGGS, "DATASET_FORMS": DATASET_FORMS, "READ_LIMIT": READ_LIMIT, "isMasked": isMasked, "valueText": valueText, "rowKey": rowKey, "inferFields": inferFields, "aggregate": aggregate, "derive": derive, "allowedAddress": allowedAddress, "Dataset": Dataset, "datasetsOf": datasetsOf };
+  })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
     var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart;
@@ -1097,9 +1315,10 @@
     var Screen = __m["src/drishti_views-screen.js"].Screen, problemCard = __m["src/drishti_views-screen.js"].problemCard;
     var Patcher = __m["src/drishti_views-patch.js"].Patcher;
     var LiveLink = __m["src/drishti_views-live.js"].LiveLink;
+    var datasetsOf = __m["src/drishti_views-data.js"].datasetsOf;
     const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
     const HANDLES = new WeakMap();
-    const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'dispose'];
+    const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose'];
     const CANCELABLE = { link: true, key: true };
     let counter = 0;
     function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
@@ -1144,6 +1363,9 @@
           flash: (node) => self.flash(node),
           library: (name) => self.library(name),
           charts: () => self.charts(),
+          styles: (name) => self.styles(name),
+          dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
+          density: o.density || null,
           can: (what) => (what === 'geo' ? o.geo !== false : false),
           time: (iso) => {
             const d = new Date(iso);
@@ -1253,6 +1475,10 @@
       build(vm) {
         this.clear();
         this.vm = vm;
+        const o = this.options, doc = this.el.ownerDocument, given = o.data && typeof o.data === 'object' ? o.data : {};
+        this.datasets = datasetsOf(vm, { library: (n) => this.library(n), data: given, fetch: o.fetch,
+          where: { page: (doc.defaultView && doc.defaultView.location && doc.defaultView.location.href) || doc.baseURI || 'http://localhost/', view: this.src || null,
+            allow: Array.isArray(given.allow) ? given.allow : [] } });
         const ctx = this.ctx, only = Array.isArray(this.options.panels) ? this.options.panels.map(String) : null;
         const panels = (Array.isArray(vm.panels) ? vm.panels : []).filter((p) => p && typeof p === 'object' && (!only || only.indexOf(String(p.id)) >= 0));
         ctx.label = this.options.label || (vm.title && (vm.title.pill || vm.title.id)) || (vm.ref && vm.ref.id) || '';
@@ -1368,6 +1594,22 @@
         node.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 450, easing: 'ease-out' });
       }
       metrics() { return Object.assign({}, this.stats); }
+      styles(name) {
+        const libs = manifest().libraries, css = (libs[name] && libs[name].css) || [];
+        if (this.host === this.el) { css.forEach((c) => loadStyle(staticUrl(c))); return Promise.resolve(); }
+        this.styled = this.styled || new Set();
+        const doc = this.el.ownerDocument;
+        return Promise.all(css.filter((c) => !this.styled.has(c) && !/drishti_tokens\.css$/.test(c)).map((c) => {
+          this.styled.add(c);
+          const l = doc.createElement('link');
+          l.rel = 'stylesheet';
+          l.href = staticUrl(c);
+          const p = new Promise((r) => { l.addEventListener('load', r, { once: true }); l.addEventListener('error', r, { once: true }); });
+          this.host.insertBefore(l, this.root);
+          return p;
+        })).then(() => undefined);
+      }
+      dataset(name) { return this.datasets ? this.datasets.get(String(name)) || null : null; }
       library(name) {
         const given = this.options.libraries && this.options.libraries[name];
         if (given) { return Promise.resolve(given); }
@@ -1973,6 +2215,7 @@
         const sh = d.shade || {};
         columns = ['', str(sh.label)];
         rows = list(sh.items).map((it) => [str(it && it.code), str(it && (it.text || it.value))]);
+        list(d.points).forEach((pt) => { if (pt) { rows.push([str(pt.label || (pt.lat + ', ' + pt.lon)), str(pt.text || pt.value)]); } });   // contract 1.1: bubbles
       }
       return { columns: columns, rows: rows.slice(0, LIMIT_ROWS) };
     }
@@ -2055,13 +2298,168 @@
     defineKind('gauge', gauge);
     return { "CHART_KINDS": CHART_KINDS, "chartTable": chartTable };
   })();
+  /* ---- src/drishti_views-datakinds.js ---- */
+  __m["src/drishti_views-datakinds.js"] = (function () {
+    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock;
+    var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
+    var say = __m["src/drishti_views-cells.js"].say, toneClass = __m["src/drishti_views-cells.js"].toneClass;
+    var valueText = __m["src/drishti_views-data.js"].valueText, rowKey = __m["src/drishti_views-data.js"].rowKey, derive = __m["src/drishti_views-data.js"].derive, isMasked = __m["src/drishti_views-data.js"].isMasked;
+    const DATASET_KINDS = Object.freeze(['grid', 'tree', 'chart']);
+    const list = (x) => (Array.isArray(x) ? x : []);
+    const GRID_TYPES = { number: 'number', boolean: 'boolean', date: 'date', datetime: 'date' };
+    function gridColumns(d, ds) {
+      const cols = list(d.columns).length ? list(d.columns) : list(ds.fields).map((f) => ({ field: f.name }));
+      return cols.filter((c) => c && typeof c.field === 'string').map((c) => {
+        const f = ds.field(c.field) || { name: c.field, type: 'string' }, fmt = c.fmt || f.fmt || null;
+        const col = { field: c.field, header: c.label || f.label || c.field, type: GRID_TYPES[f.type] || 'text', format: (v) => valueText(v, fmt, f.type) };
+        if (c.width > 0) { col.width = c.width; }
+        if (c.pinned === 'left' || c.pinned === 'right') { col.pinned = c.pinned; }
+        if (c.hidden === true) { col.hidden = true; }
+        if (c.agg) { col.aggFunc = c.agg; col.enableValue = true; }
+        if (c.tone === 'sign') { col.cellClass = (v) => (typeof v === 'number' ? (v > 0 ? 'dv-t-pos' : v < 0 ? 'dv-t-neg' : '') : ''); } else if (c.tone) { const t = toneClass(c.tone); col.cellClass = () => t; }
+        if (col.type !== 'number') { col.enableRowGroup = true; col.enablePivot = true; }
+        return col;
+      });
+    }
+    function chartSpec(d, ds, rows) {
+      const y = list(d.y).filter((m) => m && m.field), m0 = y[0] || { field: '' };
+      const label = (n) => { const f = ds.field(n); return (f && f.label) || n; };
+      const fmt = m0.fmt || (ds.field(m0.field) || {}).fmt || 'number';
+      const clean = rows.map((r) => { const o = {}; Object.keys(r).forEach((k) => { o[k] = isMasked(r[k]) ? null : r[k]; }); return o; });
+      const base = { title: '', data: { rows: clean } };
+      const type = d.type || 'bar';
+      if (type === 'bar' || type === 'line' || type === 'area') {
+        const s = Object.assign(base, { kind: type, x: { field: d.x, title: d.xLabel || label(d.x) }, y: { format: fmt, title: d.yLabel || '' } });
+        if (d.by) { s.y.field = m0.field; s.series = { by: d.by }; } else { s.series = y.map((m) => ({ field: m.field, name: m.label || label(m.field) })); }
+        if (d.stack === 'percent') { s.stack = 'percent'; } else if (d.stack === 'sum') { s.stack = true; }
+        if (d.horizontal === true) { s.orient = 'horizontal'; }
+        return s;
+      }
+      if (type === 'scatter') { return Object.assign(base, { kind: 'scatter', x: { field: d.x, title: d.xLabel || label(d.x) }, y: { field: m0.field, format: fmt, title: d.yLabel || label(m0.field) }, colour: d.by || undefined }); }
+      if (type === 'pie' || type === 'donut') { return Object.assign(base, { kind: type, category: d.x, value: { field: m0.field, format: fmt } }); }
+      if (type === 'heatmap') { return Object.assign(base, { kind: 'heatmap', x: { field: d.x, title: d.xLabel || label(d.x) }, y: d.by, value: { field: m0.field, format: fmt } }); }
+      if (type === 'histogram') { return Object.assign(base, { kind: 'histogram', value: { field: m0.field, format: fmt }, bins: d.bins > 0 ? d.bins : 20 }); }
+      return Object.assign(base, { kind: type, x: d.x, y: { field: m0.field, format: fmt } });
+    }
+    function words(body, ctx, key, vars, detail) {
+      const b = stateBlock(ctx.doc, key === 'noDataset' || key === 'dataFailed' ? 'error' : 'empty', { text: say(ctx.messages, key, vars), detail: detail || null });
+      body.appendChild(b);
+      return { dispose() { b.remove(); } };
+    }
+    function datasetKind(lib, make) {
+      return {
+        paint(body, panel, ctx) {
+          const d = panel.data || {}, ds = ctx.dataset(d.dataset);
+          if (!ds) { return words(body, ctx, 'noDataset', { name: String(d.dataset) }); }
+          const doc = ctx.doc;
+          const box = h(doc, 'div', { cls: 'dv-ds dv-ds-' + panel.kind, attrs: { 'data-dataset': ds.name, 'aria-label': panel.title || panel.id } });
+          const host = h(doc, 'div', { cls: 'dv-ds-host' });          // the library's own element (a grid makes its host .dg, height 100%)
+          box.appendChild(host);
+          body.appendChild(box);
+          const note = ds.more > 0 ? h(doc, 'p', { cls: 'dv-more', text: say(ctx.messages, 'rowsLeft', { count: ds.more.toLocaleString() }) }) : null;
+          if (note) { body.appendChild(note); }
+          let drawn = null, gone = false, off = null;
+          Promise.all([ctx.library(lib), ctx.styles(lib)]).then(([L]) => {
+            if (gone) { return null; }
+            return Promise.resolve(make(L, host, panel, ds, ctx)).then((inst) => {
+              if (gone) { if (inst && inst.destroy) { inst.destroy(); } return; }
+              drawn = inst;
+              off = ds.on((c) => { if (drawn && drawn.change) { drawn.change(c); } });
+              box.setAttribute('data-drawn', '');
+              ctx.emit('drawn', { panel: panel.id, kind: panel.kind });
+            });
+          }).catch((e) => { if (!gone) { host.textContent = ''; words(host, ctx, 'dataFailed', null, String(e && e.message || e)); } });
+          return {
+            component() { return drawn && drawn.component; },
+            dispose() {
+              gone = true;
+              if (off) { off(); }
+              if (drawn && drawn.destroy) { try { drawn.destroy(); } catch (e) { /* a library's teardown never stops the view's */ } }
+              box.remove();
+              if (note) { note.remove(); }
+            }
+          };
+        }
+      };
+    }
+    function later(ctx, fn) {
+      let asked = false;
+      return () => {
+        if (asked) { return; }
+        asked = true;
+        const win = ctx.doc.defaultView, run = () => { asked = false; fn(); };
+        if (win && win.requestAnimationFrame) { win.requestAnimationFrame(run); } else { setTimeout(run, 0); }
+      };
+    }
+    const grid = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => ds.source().then((src) => {
+      const d = panel.data;
+      const o = { columns: gridColumns(d, ds), layout: 'wells', density: ctx.density || 'compact', rowSelection: 'single',
+        getRowId: (r, i) => rowKey(r, ds.key, i) };
+      if (Array.isArray(src)) { o.rows = src; } else { o.datasource = src; if (ds.def.pages && ds.def.pages.size > 0) { o.blockSize = ds.def.pages.size; } }
+      if (d.pivot && list(d.pivot.values).length) {
+        o.pivot = { rows: list(d.pivot.rows), columns: list(d.pivot.columns), filters: [],
+          values: list(d.pivot.values).map((m) => Object.assign({ colId: m.field, aggFunc: m.agg || 'sum' }, m.label ? { as: m.label } : {})) };
+      }
+      const g = new G.Grid(box, o);
+      if (list(d.group).length) { g.model.setRowGroups(list(d.group)); }
+      if (list(d.sort).length) { g.model.setSortModel(list(d.sort).map((s) => ({ colId: s.field, sort: s.desc ? 'desc' : 'asc' }))); }
+      g.refresh();
+      g.on('selectionChanged', () => {
+        const ids = g.model.selection && g.model.selection.selectedIds ? g.model.selection.selectedIds() : [];
+        ctx.emit('select', { panel: panel.id, dataset: ds.name, keys: ids });
+      });
+      return {
+        component: g,
+        change(c) { if (c.reset) { g.setRows(ds.held); } else { g.applyTransaction({ add: c.add, update: c.update, remove: c.remove }); } },
+        destroy() { g.destroy(); }
+      };
+    }));
+    function pathOf(v) {
+      if (Array.isArray(v)) { return v.map(String); }
+      return v === null || v === undefined ? [] : String(v).split('/').filter(Boolean);
+    }
+    const tree = datasetKind('drishti-tree', (T, box, panel, ds, ctx) => ds.rows().then((rows) => {
+      const d = panel.data;
+      const measures = list(d.measures).filter((m) => m && m.field).map((m) => {
+        const f = ds.field(m.field) || {}, fmt = m.fmt || f.fmt;
+        return { field: m.field, label: m.label || f.label || m.field, format: (v) => valueText(v, fmt, 'number'), additive: m.agg !== 'min' && m.agg !== 'max' && m.agg !== 'avg' };
+      });
+      const options = () => ({ data: { rows: ds.held || rows, idField: d.node, parentField: d.parent || 'parent', labelField: d.label || d.node,
+        getPath: d.path ? (r) => pathOf(r[d.path]) : undefined, measures: measures }, mode: d.mode || 'grid', density: ctx.density || 'compact',
+      title: panel.title || '', label: panel.title || panel.id, openDepth: d.open === -1 ? -1 : d.open > 0 ? d.open : 1 });
+      let t = new T.Tree(box, options());
+      const redraw = later(ctx, () => { const mode = t.mode; t.destroy(); box.textContent = ''; t = new T.Tree(box, Object.assign(options(), mode ? { mode: mode } : {})); });
+      return { get component() { return t; }, change: redraw, destroy() { t.destroy(); } };
+    }));
+    const chart = datasetKind('drishti-chart', (C, box, panel, ds, ctx) => ds.rows().then((rows) => {
+      const d = panel.data, q = { x: d.x, by: d.by, y: list(d.y), limit: d.limit || 0 };
+      const win = ctx.doc.defaultView;
+      if (!win.echarts) { throw new Error('no chart engine'); }
+      const c = new C.Chart(box, chartSpec(d, ds, derive(ds.held || rows, q)), { density: ctx.density || 'compact', height: (panel.height || 0) > 0 ? Math.max(160, panel.height * 32) : 280 });
+      const redraw = later(ctx, () => { c.setSpec(chartSpec(d, ds, derive(ds.held || rows, q))); });
+      return { component: c, change: redraw, destroy() { c.destroy(); } };
+    }));
+    defineKind('grid', grid);
+    defineKind('tree', tree);
+    defineKind('chart', chart);
+    return { "DATASET_KINDS": DATASET_KINDS, "gridColumns": gridColumns, "chartSpec": chartSpec };
+  })();
   /* ---- src/drishti_views-build.js ---- */
   __m["src/drishti_views-build.js"] = (function () {
     var SCHEMA = __m["src/drishti_views-schema.js"].SCHEMA, CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
     var validate = __m["src/drishti_views-validate.js"].validate, formatIssue = __m["src/drishti_views-validate.js"].formatIssue;
     const KIND_DATA = Object.freeze({ kv: 'Fields', status: 'Fields', provenance: 'Fields', table: 'Table', ladder: 'Table', tabs: 'Tabs', line: 'Chart',
       area: 'Chart', hbar: 'Bars', links: 'Links', markdown: 'Text', gauge: 'Gauge', surface: 'Surface', waterfall: 'Waterfall', histogram: 'Histogram',
-      scatter: 'Scatter', candlestick: 'Candles', graph: 'Graph', timeline: 'Timeline', pivot: 'Pivot', metric: 'Metric', map: 'GeoMap' });
+      scatter: 'Scatter', candlestick: 'Candles', graph: 'Graph', timeline: 'Timeline', pivot: 'Pivot', metric: 'Metric', map: 'GeoMap',
+      grid: 'Grid', tree: 'Tree', chart: 'DataChart' });
+    const KINDS_1_1 = ['grid', 'tree', 'chart'];
+    function stampOf(vm) {
+      const uses = (panels) => (panels || []).some((p) => p && (KINDS_1_1.indexOf(p.kind) >= 0 || (p.kind === 'map' && p.data && Array.isArray(p.data.points) && p.data.points.length)
+        || (p.kind === 'tabs' && p.data && Array.isArray(p.data.tabs) && p.data.tabs.some((t) => t && uses(t.panels)))));
+      return (vm.datasets && Object.keys(vm.datasets).length) || uses(vm.panels) ? '1.1' : '1.0';
+    }
+    const TYPE = (v) => (typeof v === 'number' ? 'number' : typeof v === 'boolean' ? 'boolean' : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? 'date'
+      : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? 'datetime' : 'string');
     class ViewError extends Error {
       constructor(message, issues) {
         super(message);
@@ -2111,7 +2509,7 @@
     function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'panel'; }
     class ViewBuilder {
       constructor(title) {
-        this.vm = { contract: CONTRACT, ref: { kind: null, id: null }, title: { pill: null, id: title ? String(title) : null, with: null }, strip: [], panels: [], keys: [],
+        this.vm = { contract: '1.0', ref: { kind: null, id: null }, title: { pill: null, id: title ? String(title) : null, with: null }, strip: [], panels: [], keys: [],
           provenance: {}, timings: {} };
         this.ids = new Set();
       }
@@ -2122,12 +2520,39 @@
       key(k) { this.vm.keys.push(copy(k)); return this; }
       provenance(p) { this.vm.provenance = Object.assign({}, this.vm.provenance, copy(p)); return this; }
       layout(l) { this.vm.layout = copy(l); return this; }
+      dataset(name, rows, o) {
+        o = o || {};
+        const d = {};
+        if (o.key) { d.key = [].concat(o.key).map(String); }
+        if (Array.isArray(rows)) {
+          let fields = o.fields ? copy(o.fields) : null;
+          if (!fields) {
+            const names = [];
+            rows.slice(0, 50).forEach((r) => Object.keys(r || {}).forEach((k) => { if (names.indexOf(k) < 0) { names.push(k); } }));
+            fields = names.map((n) => {
+              const v = rows.map((r) => r && r[n]).find((x) => x !== null && x !== undefined);
+              const f = { name: n, type: v === undefined ? 'string' : TYPE(v) };
+              if (o.labels && o.labels[n]) { f.label = o.labels[n]; }
+              if (o.formats && o.formats[n]) { f.fmt = o.formats[n]; }
+              return f;
+            });
+          }
+          d.fields = fields;
+          d.values = rows.map((r) => fields.map((f) => (r && r[f.name] !== undefined ? r[f.name] : null)));
+          if (o.more > 0) { d.more = o.more; }
+        } else {
+          ['name', 'arrow', 'pages', 'server'].forEach((k) => { if (o[k] !== undefined) { d[k] = copy(o[k]); } });
+          if (o.fields) { d.fields = copy(o.fields); }
+        }
+        this.vm.datasets = Object.assign(this.vm.datasets || {}, { [String(name)]: d });
+        return this;
+      }
       panel(p) {
         const panel = copy(p) || {};
         if (!panel.id) { let id = slug(panel.title || panel.kind), n = 2; while (this.ids.has(id)) { id = slug(panel.title || panel.kind) + '-' + n++; } panel.id = id; }
         if (this.ids.has(String(panel.id))) { throw new ViewError('panel ' + panel.id + ': another panel has this id; ids are unique in a view', []); }
         complete(panel, 'PanelView');
-        const probe = complete({ contract: CONTRACT, ref: this.vm.ref, title: this.vm.title, strip: [], panels: [panel], keys: [], provenance: {}, timings: {} }, 'ViewModel');
+        const probe = complete({ contract: CONTRACT, datasets: this.vm.datasets, ref: this.vm.ref, title: this.vm.title, strip: [], panels: [panel], keys: [], provenance: {}, timings: {} }, 'ViewModel');
         const at = 'panels[' + this.vm.panels.length + ']';
         refuse('panel ' + panel.id, validate(probe).issues.filter((i) => String(i.path).indexOf('panels[0]') === 0)
           .map((i) => Object.assign({}, i, { path: at + String(i.path).slice('panels[0]'.length) })));
@@ -2137,6 +2562,7 @@
       }
       toJSON() {
         const vm = complete(copy(this.vm), 'ViewModel');
+        vm.contract = stampOf(vm);
         refuse('the view', validate(vm).issues);
         return vm;
       }
@@ -2153,6 +2579,12 @@
       provenance(p) { this.f.patches.push({ op: 'provenance', provenance: complete(copy(p), 'Provenance') }); return this; }
       deleted(at) { this.f.patches.push(at ? { op: 'deleted', at: at } : { op: 'deleted' }); return this; }
       restored() { this.f.patches.push({ op: 'restored' }); return this; }
+      rows(dataset, o) {
+        const p = { op: 'rows', dataset: String(dataset) };
+        ['reset', 'remove', 'update', 'add'].forEach((k) => { if (o && Array.isArray(o[k]) && o[k].length) { p[k] = copy(o[k]); } });
+        this.f.patches.push(p);
+        return this;
+      }
       toJSON() {
         const f = copy(this.f);
         refuse('the frame', validate(f, { as: 'frame' }).issues);
@@ -2180,7 +2612,7 @@
         beat: () => write(': hb\n\n')
       };
     }
-    return { "KIND_DATA": KIND_DATA, "ViewError": ViewError, "complete": complete, "ViewBuilder": ViewBuilder, "view": view, "FrameBuilder": FrameBuilder, "frame": frame, "sse": sse };
+    return { "KIND_DATA": KIND_DATA, "stampOf": stampOf, "ViewError": ViewError, "complete": complete, "ViewBuilder": ViewBuilder, "view": view, "FrameBuilder": FrameBuilder, "frame": frame, "sse": sse };
   })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
@@ -2188,7 +2620,7 @@
     var defineElement = __m["src/drishti_views-element.js"].define;
     function registerKind(name, def) { defineKind(name, def); }
     function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }
-    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
+    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "isMasked": __m["src/drishti_views-data.js"].isMasked, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "aggregate": __m["src/drishti_views-data.js"].aggregate, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.1.0" }, __m["src/drishti_index.js"]));
 });

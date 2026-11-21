@@ -194,3 +194,10 @@ th[aria-sort="ascending"] .dv-sort::after { content: " ▲"; } th[aria-sort="des
 .dv-gauge-fill { display: block; height: 100%; width: calc(var(--dv-share, 0) * 100%); background: currentColor; }
 .dv-link-state[hidden] { display: none; }
 .dv-link-down .dv-grid { opacity: .8; }
+
+/* contract 1.1: the panels that read a dataset (grid, tree, chart); each library draws in its own box, sized by the panel's height */
+.dv-ds { position: relative; width: 100%; min-width: 0; }
+.dv-ds-grid, .dv-ds-tree { height: calc(var(--dv-rows, 12) * var(--dv-row)); min-height: 220px; display: flex; flex-direction: column; }
+.dv-ds-grid > .dv-ds-host, .dv-ds-tree > .dv-ds-host { flex: 1 1 auto; min-height: 0; height: 100%; }
+.dv-ds-chart { min-height: 200px; }
+.dv-ds .drishti-state { min-height: 120px; }

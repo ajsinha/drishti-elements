@@ -17110,7 +17110,7 @@ Draws a map panel with a map helper; resolves with its clickable places and its 
 | `E` | `Object` | the engine (echarts) |
 | `G` | `Object` | the map helper (world, region, find, option, codeOf): drishti-chart's geo part (createGeoHelper) or a host's own |
 | `el` | `HTMLElement` | the chart's container |
-| `d` | `Object` | the map panel's data (mode, region, highlight, shade, link, unit) |
+| `d` | `Object` | the map panel's data (mode, region, highlight, shade, link, unit; contract 1.1: points, drawn as the helper's bubbles) |
 | `t` | `Object&lt;string, string&gt;` | panelTokens of the view |
 | `onLink` | `function(Object): void` | a clicked place that names an entity ({kind, id}) |
 | `chartsOut` | `Object[]` | the engine instances drawn (the map's is added) |
@@ -21328,7 +21328,7 @@ Returns `Object`.
 
 #### `OPS`
 
-The patch ops of contract 1.
+The patch ops of contract 1 (rows since 1.1).
 
 #### `conflate(patches)`
 
@@ -21430,6 +21430,16 @@ Paint times and counts: firstPaintMs, readyMs, paints, patches applied, ignored 
 
 Returns `Object&lt;string, number&gt;`.
 
+##### `ViewHandle.dataset(name)`
+
+A dataset of the painted view (contract 1.1): its fields, its rows (held, with rows patches applied) or its source.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `?import('./drishti_views-data.js').Dataset`.
+
 ##### `ViewHandle.dispose()`
 
 Stops everything, disposes every panel's drawing and empties the container.
@@ -21527,6 +21537,191 @@ The rows of a chart's data table: its column heads and rows of text (at most 500
 
 Returns `{columns: string[], rows: string[][]}`.
 
+### drishti_views-data.js
+
+#### `AGGS`
+
+The aggregations a measure may name.
+
+#### `DATASET_FORMS`
+
+The forms a dataset's rows come in.
+
+#### `READ_LIMIT`
+
+How many rows a chart or a tree reads from a source by address at most.
+
+#### `isMasked(v)`
+
+Whether a value is the Data Protocol's mask ({"$masked": true}).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+
+Returns `boolean`.
+
+#### `valueText(v, fmt, type)`
+
+A raw value as text, by a format name (drishti-core's named formats) and the field's type; the mask as the mask, nothing as ''.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `*` |  |
+| `fmt` | `?string` |  |
+| `[type]` | `string` |  |
+
+Returns `string`.
+
+#### `rowKey(row, key, index)`
+
+A row's key: its key fields' values as text, joined by U+001F (VIEWS_DESIGN 5.3); the row's place when the dataset has no key.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `row` | `Object` |  |
+| `key` | `string[]` |  |
+| `[index]` | `number` |  |
+
+Returns `string`.
+
+#### `inferFields(rows)`
+
+The fields of rows given without any: every own key of the first 50 rows, in order, typed from their values.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rows` | `Object[]` |  |
+
+Returns `Array&lt;{name: string, type: string}&gt;`.
+
+#### `aggregate(values, agg)`
+
+Combines numbers by an aggregation; the mask and nothing are left out (a masked member masks a sum: the figure is not shown).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `values` | `Array&lt;*&gt;` |  |
+| `agg` | `string` |  |
+
+Returns `*`.
+
+#### `derive(rows, q)`
+
+A derived read (VIEWS_DESIGN 4.5): the rows grouped by x (and by), each measure combined by its aggregation; without any aggregation the rows as they are. limit keeps the categories with the largest first figure (the others are left out).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rows` | `Object[]` |  |
+| `q` | `{x: ?string, by: ?string, y: Array&lt;{field: string, agg: ?string}&gt;, limit: number}` |  |
+
+Returns `Object[]`.
+
+#### `allowedAddress(url, where)`
+
+Whether an address may be read: http(s) (or the page's own scheme) at the page's origin, the view's origin or an origin the host allowed (options.data.allow: origins, or 'any-https').
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `url` | `string` |  |
+| `where` | `{page: string, view: ?string, allow: string[]}` |  |
+
+Returns `?string`: the address resolved, or null when it is refused.
+
+#### class `Dataset`
+
+One dataset of a view: its fields, its rows (inline) or its source (by address or handed by the page), and the panels that read it.
+
+##### `new Dataset(name, def, env)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `def` | `Object` | the specification's Dataset |
+| `env` | `Object` | {library(name), data: options.data, where: {page, view, allow}, fetch} |
+
+##### `Dataset.field(name)`
+
+A field by name.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `?Object`.
+
+##### `Dataset.rows()`
+
+Every row held or read (a source by address is read up to READ_LIMIT rows, a page at a time).
+
+Returns `Promise&lt;Object[]&gt;`.
+
+##### `Dataset.source()`
+
+The rows as a source: an array (rows held) or a drishti-data DataSource (by address, or one the page handed).
+
+Returns `Promise&lt;(Object[]\|Object)&gt;`.
+
+##### `Dataset.on(fn)`
+
+Listens to the dataset's changes: fn({reset, add, update, remove}) with whole rows (update) and keys (remove).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `fn` | `function(Object): void` |  |
+
+Returns `function(): void`.
+
+##### `Dataset.apply(p)`
+
+A rows patch (contract 1.1): reset first, then remove, update (merged by key; an unknown key added), add (appended; an existing key updated). Only rows the dataset holds can change: a windowed source is told by its own server.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `p` | `{reset: Object[], remove: string[], update: Object[], add: Object[]}` |  |
+
+Returns `boolean`: whether the dataset holds rows that a patch can change.
+
+#### `datasetsOf(vm, env)`
+
+The datasets of a view, by name (made when the view is drawn; nothing is read until a panel asks).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `vm` | `Object` | the ViewModel |
+| `env` | `Object` | see Dataset |
+
+Returns `Map&lt;string, Dataset&gt;`.
+
+### drishti_views-datakinds.js
+
+#### `DATASET_KINDS`
+
+The kinds drawn from a dataset (contract 1.1).
+
+#### `gridColumns(d, ds)`
+
+drishti-grid's columns of a grid panel: its columns, or every field of its dataset; each formats its raw values with the field's fmt.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `d` | `Object` | the panel's data (Grid) |
+| `ds` | `Object` | the dataset |
+
+Returns `Object[]`.
+
+#### `chartSpec(d, ds, rows)`
+
+drishti-chart's spec of a chart panel over rows already derived (grouped and combined).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `d` | `Object` | the panel's data (DataChart) |
+| `ds` | `Object` | the dataset |
+| `rows` | `Object[]` |  |
+
+Returns `Object`.
+
 ### drishti_views-live.js
 
 #### `LIVE_KINDS`
@@ -21581,6 +21776,16 @@ Returns `boolean`: whether it was registered now.
 #### `KIND_DATA`
 
 The record each kind's data is (contract 1).
+
+#### `stampOf(vm)`
+
+The stamp of a ViewModel: 1.1 when it has datasets, a grid, tree or chart panel (in tabs too) or a map with points; else 1.0.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `vm` | `Object` |  |
+
+Returns `string`.
 
 #### class `ViewError`
 
@@ -21687,6 +21892,18 @@ The layout (areas, tabs, sections, the split).
 
 Returns `ViewBuilder`.
 
+##### `ViewBuilder.dataset(name, rows, o)`
+
+A dataset (contract 1.1): rows (objects) written as values in the order of their fields; the fields guessed from the first rows (name and type) unless given. o: {key, fields: [{name, type, label, fmt}], formats: {field: fmt}, labels: {field: label}}; or o.name, o.arrow, o.pages, o.server (rows null) for a dataset read from elsewhere.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `rows` | `?Object[]` |  |
+| `[o]` | `Object` |  |
+
+Returns `ViewBuilder`.
+
 ##### `ViewBuilder.panel(p)`
 
 A panel of any kind, checked now: {id?, kind, title?, data, span?, height?, ...}. The id is guessed from the title when missing.
@@ -21783,6 +22000,17 @@ Returns `FrameBuilder`.
 ##### `FrameBuilder.restored()`
 
 The view's subject is back.
+
+Returns `FrameBuilder`.
+
+##### `FrameBuilder.rows(dataset, o)`
+
+A dataset's row changes by key (contract 1.1): o = {reset, remove, update, add}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `dataset` | `string` |  |
+| `o` | `{reset: Object[], remove: string[], update: Object[], add: Object[]}` |  |
 
 Returns `FrameBuilder`.
 

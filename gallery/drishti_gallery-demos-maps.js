@@ -26,19 +26,23 @@
     link: { kind: 'country', template: 'country/{iso3}', codes: ['USA', 'GBR', 'DEU', 'FRA', 'JPN'] } };
   const US = { mode: 'region', region: 'USA', shade: { label: 'Orders', items: items([['US-CA', 910], ['US-TX', 720], ['US-NY', 650], ['US-FL', 400], ['US-IL', 380], ['US-WA', 260], ['US-MA', 240], ['US-GA', 200], ['US-AK', 40], ['US-HI', 35]]) } };
   const CA = { mode: 'region', region: 'CAN', shade: { label: 'Orders', items: items([['CA-ON', 500], ['CA-QC', 350], ['CA-BC', 300], ['CA-AB', 220], ['CA-MB', 60], ['CA-NS', 45]]) } };
+  const HUBS = { mode: 'world', unit: 'USD bn', shade: WORLD.shade,                          // contract 1.1: points drawn as bubbles
+    points: [['New York', 40.71, -74.01, 610], ['London', 51.51, -0.13, 420], ['Tokyo', 35.68, 139.69, 230], ['Hong Kong', 22.32, 114.17, 210], ['Singapore', 1.35, 103.82, 180],
+      ['Frankfurt', 50.11, 8.68, 120], ['Zurich', 47.37, 8.54, 95], ['Toronto', 43.65, -79.38, 80], ['Sydney', -33.87, 151.21, 60], ['Sao Paulo', -23.55, -46.63, 45], ['Mumbai', 19.08, 72.88, 40]]
+      .map((x) => ({ label: x[0], lat: x[1], lon: x[2], value: x[3], text: x[3] + ' bn', link: { kind: 'hub', id: x[0], mnemonic: null } })) };
   const view = (which) => ({
-    contract: '1.0', ref: { kind: 'book', id: 'GLOBAL-1' }, title: { pill: 'Book · Exposure', id: 'GLOBAL-1' },
+    contract: which === 'hubs' ? '1.1' : '1.0', ref: { kind: 'book', id: 'GLOBAL-1' }, title: { pill: 'Book · Exposure', id: 'GLOBAL-1' },
     panels: (which === 'all' ? ['world', 'us', 'ca'] : [which]).map((id) => ({ id: id, kind: 'map', inferred: false, empty: false,
-      title: { world: 'Exposure by country', us: 'Orders by state', ca: 'Orders by province' }[id], data: { world: WORLD, us: US, ca: CA }[id] })),
+      title: { world: 'Exposure by country', us: 'Orders by state', ca: 'Orders by province', hubs: 'Trading hubs, sized by daily volume' }[id], data: { world: WORLD, us: US, ca: CA, hubs: HUBS }[id] })),
     keys: [{ key: 'F9', label: 'Raw JSON', action: 'raw' }] });
 
   demos.push({
     id: 'view-maps', library: 'drishti-views', kind: 'function', title: 'Maps in a view', about: 'drishti_views-charts.js', types: ['PaintOptions'],
     events: ['link', 'key'], keys: [], ag: false, sutra: () => null,
     summary: 'A map panel draws out of the box: drishti-views loads drishti-chart\'s geo part and the vendored Natural Earth shapes (public domain) the first time a view has a map, and only the files that map needs. The world by country, a country by its first-level regions (states, provinces); a click on a place opens its link.',
-    extra: [{ name: 'map', control: { kind: 'select', values: ['all', 'world', 'us', 'ca'] }, desc: 'Which map panels the view has: the world, the United States, Canada, or all three.' }],
+    extra: [{ name: 'map', control: { kind: 'select', values: ['all', 'world', 'us', 'ca', 'hubs'] }, desc: 'Which map panels the view has: the world, the United States, Canada, all three, or trading hubs as points (contract 1.1).' }],
     values: { map: 'all' },
-    examples: [{ title: 'The world', values: { map: 'world' } }, { title: 'United States', values: { map: 'us' } }, { title: 'Canada', values: { map: 'ca' } }],
+    examples: [{ title: 'The world', values: { map: 'world' } }, { title: 'United States', values: { map: 'us' } }, { title: 'Canada', values: { map: 'ca' } }, { title: 'Points as bubbles', values: { map: 'hubs' } }],
     mount: function (host, values, ctx) {
       const doc = host.ownerDocument, box = ctx.h(doc, 'div', { cls: 'gx-fn' });
       host.appendChild(box);
