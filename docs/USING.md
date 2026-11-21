@@ -91,6 +91,60 @@ totals the browser never recomputes. A host that keeps its own libraries beside 
 them with `python3 tools/elements/build.py --root <dir> --manifest <file> --header <file> --elements <this tree's elements/>`, and the loader refuses or
 loads them by the same rules.
 
+## drishti-events
+
+One event model for the page, its tabs and a server: topics with wildcards (`*` one segment, `>` the rest), publish and subscribe, request and
+reply, streams, typed topics, and routes that decide whether a message stays in the page, goes to the other tabs or goes to a server. The
+library's own happenings are topics too (`$events.state`, `$events.error`, ...), so there is nothing else to learn.
+
+Load it with the bundle, or import it:
+
+```js
+await Drishti.elements.load('drishti-events');
+const events = Drishti.elements.events.connect();            // no server: the page and its tabs
+// or: import { connect } from '/elements/drishti-events/src/drishti_index.js';
+```
+
+**1. Publish and subscribe in the page**
+
+```js
+const events = connect();
+const off = events.on('prices.*.USDCAD', (m) => console.log(m.topic, m.data));   // `prices.>` hears every depth
+events.publish('prices.fx.USDCAD', { bid: 1.36, ask: 1.37 });
+off();
+```
+
+**2. A server over Server-Sent Events, with a status badge**
+
+```js
+const events = connect('/events');                           // ws: or wss: gives a WebSocket
+events.on('$events.state', (m) => { badge.textContent = m.data.state; });   // connecting, open, reconnecting, ...
+events.subscribe('prices.>', (m) => grid.applyTransaction({ update: [m.data] }));
+```
+
+Subscriptions made before the connection opens are sent when it does; a reconnect restores them and asks for what was missed.
+
+**3. One connection for all tabs**
+
+```js
+const events = connect('/events', { share: true });          // a SharedWorker holds the one connection
+```
+
+A subscription held by several tabs is one subscription to the server (it matters for SSE over HTTP/1.1, six connections per site). Where there
+is no `SharedWorker`, the tab holding a Web Lock relays to the others. Tabs of one signed-in person only: set `namespace` for different people.
+
+**4. The inspector**
+
+```js
+events.inspect();                                            // in the dock; or events.inspect(element)
+```
+
+Messages (filter by topic, kind, direction and outcome; pause), subscriptions, the connection timeline, the queue, and "why didn't I get it?".
+Keys: `/` to filter, `Space` to pause, `Esc` to close.
+
+Reference: [API.md](API.md#drishti-events) (every call and option) and [CONTRACTS.md](CONTRACTS.md). The design is in
+[EVENTING_DESIGN.md](EVENTING_DESIGN.md).
+
 ## Versions and integrity
 
 One semantic version for every library, `elements` in `elements/drishti_elements.json`; what changed is in [../CHANGELOG.md](../CHANGELOG.md). The
