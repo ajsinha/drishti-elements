@@ -198,6 +198,11 @@ th[aria-sort="ascending"] .dv-sort::after { content: " ▲"; } th[aria-sort="des
 .dv-gauge-text { font-size: var(--d-fs-20, 20px); font-weight: 700; font-variant-numeric: tabular-nums; }
 .dv-gauge { height: .9em; border: 1px solid var(--d-border); border-radius: var(--d-radius-pill); overflow: hidden; }
 .dv-gauge-fill { display: block; height: 100%; width: calc(var(--dv-share, 0) * 100%); background: currentColor; }
+.dv-bullet { position: relative; height: 1.1em; background: var(--d-bg-2); border: 1px solid var(--d-border); border-radius: 2px; }
+.dv-bullet-band { position: absolute; top: 0; bottom: 0; left: calc(var(--dv-from, 0) * 100%); width: calc((var(--dv-to, 0) - var(--dv-from, 0)) * 100%); background: currentColor; opacity: .18; }
+.dv-bullet-bound { position: absolute; top: -2px; bottom: -2px; left: calc(var(--dv-at, 0) * 100%); width: 2px; background: var(--d-bad); }
+.dv-bullet-mark { position: absolute; top: 25%; bottom: 25%; left: calc(var(--dv-at, 0) * 100% - 4px); width: 8px; border-radius: 1px; background: currentColor; }
+.dv-bullet-scale { display: flex; justify-content: space-between; color: var(--d-muted); font-size: var(--d-fs-12); font-variant-numeric: tabular-nums; }
 .dv-link-state[hidden] { display: none; }
 .dv-link-down .dv-grid { opacity: .8; }
 

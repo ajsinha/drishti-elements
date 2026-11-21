@@ -22,7 +22,7 @@
 import { formatCompact } from '../../drishti-core/src/drishti_index.js';
 
 /** The panel kinds drawn with the engine. */
-export const PANEL_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'graph', 'donut', 'surface', 'map']);
+export const PANEL_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'graph', 'donut', 'surface', 'map', 'treemap']);
 
 const ENT = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 /**
@@ -250,7 +250,27 @@ function surfaceOption(d, t, view) {
     series: [{ type: 'heatmap', data: cells, label: { show: x.length * y.length <= 72, color: t.ink, fontFamily: t.mono, fontSize: 10, formatter: (p) => Math.round(p.value[2] * 100) / 100 } }] };
 }
 
-const BUILD = { line: (d, t) => line(d, t, 'line'), area: (d, t) => line(d, t, 'area'), waterfall, histogram, scatter, candlestick, donut,
+// ---- treemap (contract 1.2) ------------------------------------------------------------------------------------------------------
+function treemap(d, t) {
+  const cells = (d && d.cells) || [], pal = palette(t), groups = new Map();
+  const item = (c) => ({ name: String(c.label), value: c.value, text: c.text, cell: c.ev !== undefined || c.set ? { ev: c.ev, set: c.set } : undefined,
+    itemStyle: c.tone ? { color: tone(t, c.tone === 'pos' ? 'ok' : 'neg') } : undefined });
+  const top = [];
+  cells.forEach((c) => {
+    if (c.group === undefined || c.group === null) { top.push(item(c)); return; }
+    let g = groups.get(c.group);
+    if (!g) { g = { name: String(c.group), children: [], itemStyle: { color: pal[groups.size % pal.length] } }; groups.set(c.group, g); top.push(g); }
+    g.children.push(item(c));
+  });
+  return { tooltip: { formatter: (p) => esc(p.name) + (p.data && p.data.text ? ': ' + esc(p.data.text) : '') },
+    series: [{ type: 'treemap', data: top, roam: false, nodeClick: false, breadcrumb: { show: false }, width: '100%', height: '100%', top: 0, left: 0,
+      label: { show: true, color: t.ink, fontFamily: t.mono, fontSize: 10, formatter: (p) => p.name + (p.data && p.data.text ? '\n' + p.data.text : '') },
+      upperLabel: { show: groups.size > 0, height: 16, color: t.muted, fontFamily: t.mono, fontSize: 10 },
+      itemStyle: { borderColor: t.surface, borderWidth: 1, gapWidth: 1 },
+      levels: [{ itemStyle: { borderColor: t.border, borderWidth: 1, gapWidth: 2 } }, { itemStyle: { gapWidth: 1 }, colorSaturation: [0.35, 0.6] }] }] };
+}
+
+const BUILD = { line: (d, t) => line(d, t, 'line'), area: (d, t) => line(d, t, 'area'), waterfall, histogram, scatter, candlestick, donut, treemap,
   surface: (d, t, s, view) => surfaceOption(d, t, view || 'heatmap') };
 
 /**

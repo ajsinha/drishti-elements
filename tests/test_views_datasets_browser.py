@@ -367,3 +367,34 @@ def test_a_line_of_several_series_draws_marks_on_two_axes_and_a_click_hands_back
         pts = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
         assert pts and pts[-1]["panel"] == "cc" and pts[-1]["ev"] == "3" and pts[-1]["series"] == "Yesterday", pts
     run_with(browsers, body)
+
+
+def test_a_treemap_and_bullets_draw_and_a_cell_hands_back_its_row(browsers):
+    vm = view([{"id": "tm", "kind": "treemap", "span": 8, "height": 10,
+                "data": {"cells": [{"label": "Alpha Bank", "group": "Banks", "value": 4200000, "text": "4,200,000", "tone": "pos", "ev": "0"},
+                                   {"label": "Beta Bank", "group": "Banks", "value": 2100000, "text": "2,100,000", "tone": "neg", "ev": "1"},
+                                   {"label": "Gamma Oil", "group": "Energy", "value": 3300000, "text": "3,300,000", "ev": "2"}], "total": "9,600,000"}},
+               {"id": "band", "kind": "bullet", "span": 4,
+                "data": {"value": -720000, "text": "−720,000", "label": "Net delta", "min": -1200000, "max": 1200000,
+                         "bands": [{"from": -1000000, "to": -800000, "tone": "warn"}, {"from": -800000, "to": 800000, "tone": "ok"}, {"from": 800000, "to": 1000000, "tone": "warn"}],
+                         "lower": -1000000, "lowerText": "−1,000,000", "upper": 1000000, "upperText": "+1,000,000", "tone": "ok"}}], {})
+    vm["contract"] = "1.2"
+    del vm["datasets"]
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", vm)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=tm] .dv-chart'); return e && window.echarts && window.echarts.getInstanceByDom(e); }", timeout=30000)
+        await frame(pg)
+        got = await ev(pg, """(() => { const o = window.echarts.getInstanceByDom(R.querySelector('[data-panel=tm] .dv-chart')).getOption();
+            return { groups: o.series[0].data.map((g) => g.name), bands: R.querySelectorAll('[data-panel=band] .dv-bullet-band').length,
+              bounds: R.querySelectorAll('[data-panel=band] .dv-bullet-bound').length, mark: R.querySelector('[data-panel=band] .dv-bullet-mark').style.getPropertyValue('--dv-at'),
+              text: R.querySelector('[data-panel=band] .dv-gauge-text').textContent, issues: window.__harness.events.filter((e) => e.type === 'issues').length }; })()""")
+        assert got == {"groups": ["Banks", "Energy"], "bands": 3, "bounds": 2, "mark": "0.2", "text": "−720,000", "issues": 0}, got
+        await shot(pg, "views-treemap-bullet.png")
+        xy = await ev(pg, """(() => { const el = R.querySelector('[data-panel=tm] .dv-chart'), c = window.echarts.getInstanceByDom(el); c.setOption({ tooltip: { show: false } });
+            const b = el.getBoundingClientRect(); return [b.left + b.width * 0.25, b.top + b.height * 0.6]; })()""")
+        await pg.mouse.click(xy[0], xy[1])
+        await frame(pg)
+        pts = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
+        assert pts and pts[-1]["panel"] == "tm" and pts[-1]["ev"] in ("0", "1", "2"), pts   # a cell, not a group
+    run_with(browsers, body)

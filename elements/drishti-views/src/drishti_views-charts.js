@@ -23,7 +23,7 @@ import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';
 
 /** The kinds drawn by drishti-chart's panel charts (hbar only in its donut shape). */
-export const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'surface', 'graph', 'map']);
+export const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'surface', 'graph', 'map', 'treemap']);
 
 const list = (x) => (Array.isArray(x) ? x : []);
 const str = (v) => (v === null || v === undefined ? '' : String(v));
@@ -42,6 +42,9 @@ export function chartTable(kind, d) {
     const s = list(d.series);
     columns = [''].concat(s.map((x) => str(x && x.label)));
     rows = list(d.x).map((x, i) => [str(x)].concat(s.map((y) => str(list(y && y.values)[i]))));
+  } else if (kind === 'treemap') {
+    columns = ['', '', ''];
+    rows = list(d.cells).map((c) => [str(c && c.group), str(c && c.label), str(c && (c.text || c.value))]);
   } else if (kind === 'hbar') {
     columns = ['', ''];
     rows = list(d.bars).map((b) => [str(b && b.label), str(b && (b.text || b.value))]);
@@ -171,6 +174,25 @@ const gauge = {
   }
 };
 
+/* ---- bullet (contract 1.2): one figure on a band with its bounds and warning zones, as elements ---- */
+const bullet = {
+  paint(body, panel, ctx) {
+    const doc = ctx.doc, d = panel.data, min = Number(d.min) || 0, max = Number(d.max), span = max > min ? max - min : 1;
+    const at = (v) => String(Math.round(Math.max(0, Math.min(1, (Number(v) - min) / span)) * 1000) / 1000);
+    const track = h(doc, 'div', { cls: 'dv-bullet', attrs: { role: 'meter', 'aria-valuemin': str(min), 'aria-valuemax': str(max),
+      'aria-valuenow': d.value === null || d.value === undefined ? null : str(d.value), 'aria-valuetext': str(d.text), 'aria-label': str(d.label || panel.title || panel.id) } },
+    list(d.bands).map((b) => h(doc, 'span', { cls: 'dv-bullet-band ' + (toneClass(b && b.tone) || ''), style: { '--dv-from': at(Math.min(b.from, b.to)), '--dv-to': at(Math.max(b.from, b.to)) } }))
+      .concat([d.lower, d.upper].filter((v) => v !== null && v !== undefined).map((v) => h(doc, 'span', { cls: 'dv-bullet-bound', style: { '--dv-at': at(v) } })))
+      .concat(d.value === null || d.value === undefined ? [] : [h(doc, 'span', { cls: 'dv-bullet-mark ' + (toneClass(d.tone) || 'dv-t-accent'), style: { '--dv-at': at(d.value) } })]));
+    const scale = h(doc, 'div', { cls: 'dv-bullet-scale' }, [h(doc, 'span', { text: str(d.lowerText) }), h(doc, 'span', { text: str(d.upperText) })]);
+    const box = h(doc, 'div', { cls: 'dv-gauge-box dv-bullet-box' }, [h(doc, 'div', { cls: 'dv-gauge-text ' + (toneClass(d.tone) || ''), text: str(d.text) }), track, scale,
+      d.label || d.caption ? h(doc, 'div', { cls: 'dv-metric-caption', text: str(d.caption || d.label) }) : null]);
+    body.appendChild(box);
+    return { dispose() { box.remove(); } };
+  }
+};
+
 CHART_KINDS.forEach((k) => defineKind(k, engineKind(k)));
+defineKind('bullet', bullet);
 defineKind('hbar', bars);
 defineKind('gauge', gauge);

@@ -19,6 +19,9 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Treemap and bullet panels** (contract 1.2): `treemap` drawn by drishti-chart's panel charts (cells nested by group, toned by sign,
+  the groups' labels on top, no zoom; a cell that carries its row is a `point` event) with its data table; `bullet` drawn by drishti-views
+  as elements (the zones, the bounds, the figure's mark toned by its zone, the bounds' words, a meter for assistive technology).
 - **Several series on a line panel** (drishti-chart's panel charts, drishti-views; contract 1.2 `Series.mark`, `axis`, `ev`): a series'
   mark (bar, area, point; a line by default), a right-hand axis when a series asks for it, the palette's colours past the first, and a
   legend drawn by drishti-views as elements (the engine's legend writes inline styles); a click on a mark that carries its row (a series'
