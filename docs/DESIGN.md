@@ -423,6 +423,6 @@ reference are generated from it. A released version never changes; a fault is fi
 - **The gallery** (`gallery/drishti_gallery.html`) shows every component live with its options, its events and the code to use it, in a playground and a
   documentation mode. It is static: it runs from the file system and needs no server; its stand-in data is made up. It ships in the release tree.
 - **The checks** (the gate): `python3 tools/elements/build.py --check`, `python3 tools/docs/elements_api.py --check`, `python3 tools/license_headers.py`,
-  `node --test tests/elements/*.test.mjs` and `python3 -m pytest -q tests -n 8`. They include the byte budget of each bundle, the guard that the generic
+  `python3 tools/run_tests.py` (the Node tests and `pytest -n 8`, then the `budget` tests alone, serially). They include the byte budget of each bundle, the guard that the generic
   libraries hold no domain vocabulary, the guard that nothing loads from a CDN, one version everywhere, the licence guard of `vendor/`, and a real browser
   for every library (Chromium, under a strict Content-Security-Policy).

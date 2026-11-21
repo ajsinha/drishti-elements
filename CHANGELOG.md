@@ -19,6 +19,11 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **G2 golden: budgets alone, browsers required, the pack's own version** (tests, tools): the performance-budget tests (pytest marker `budget`,
+  Node tests named `budget: ...`) run serially after the parallel run, in the standard command `python3 tools/run_tests.py`, so load cannot fail
+  them; Playwright is pinned (1.64.0) and a missing Playwright or Chromium fails the run with the install command (no silent skips); the run
+  fails on any skipped test. `tools/elements/cli.py pack --label <version>` makes the pack say the version of the folder a host pins it in
+  (`3.2.0-dev+<commit>`), in its record and headers. The fire fixture is regenerated against Rachana's latest `g2/integration`.
 - **A surface's point clicked in Chromium, heatmap and 3D** (tests): the 3D view drawn by the vendored ECharts GL, each point clicked
   where the camera shows it, fires `point-click` on that mark and hands `{panel, ev, set}` to the host; on the heatmap an empty point is
   no mark. Fix found by it (drishti-chart): the surface heatmap's tooltip no longer asks for ECharts' arrow (`position: 'top'`), whose

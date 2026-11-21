@@ -90,9 +90,13 @@ The current and previous major versions of Chrome, Edge, Firefox and Safari. No 
 
 ```bash
 python3 tools/elements/build.py --check && python3 tools/docs/elements_api.py --check && python3 tools/license_headers.py
-node tools/node_tests.mjs tests/elements        # node --test over every tests/elements/*.test.mjs, no shell glob
-python3 -m pytest -q tests -n 8          # needs: pip install -r tests/requirements.txt && playwright install chromium
+python3 tools/run_tests.py               # the standard test command: parallel run, then the budget tests alone, serially; fails on any skip
+                                         # needs: pip install -r tests/requirements.txt && python3 -m playwright install chromium (pinned: Playwright 1.64.0)
 ```
+
+The performance-budget tests (a rate or a time limit: pytest marker `budget`, Node tests named `budget: ...`) never run beside other work:
+`tools/run_tests.py` runs everything else in parallel (`node tools/node_tests.mjs tests/elements`, then `pytest -n 8 -m "not budget"`), then the
+budget tests one at a time. The browsers are required: a missing Playwright or Chromium fails the run with the install command, and so does any skipped test.
 
 `python3 tools/elements/build.py` rewrites the bundles after a change to a module (offline, Python only).
 

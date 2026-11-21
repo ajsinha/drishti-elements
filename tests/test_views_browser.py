@@ -284,6 +284,7 @@ def test_cards_links_navigation_in_place_and_the_function_keys(browsers):
     run(browsers, body, "view=V001")
 
 
+@pytest.mark.budget
 def test_speed_first_paint_ready_and_patch_to_pixel_within_their_budgets(browsers):
     async def body(pg):
         r = await pg.evaluate("""async () => {

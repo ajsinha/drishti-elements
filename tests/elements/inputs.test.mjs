@@ -214,7 +214,7 @@ test('the filter bar\'s model: chips in words, members, conditions read loosely,
   assert.equal(C.filterTopic(), 'ui.filter.default');
 });
 
-test('code: the Rachana and YAML modes, completion from a catalogue, the text put in, the line diff side by side', () => {
+test('budget: code: the Rachana and YAML modes, completion from a catalogue, the text put in, the line diff side by side', () => {
   const line = I.tokens('rachana', 'if(var(99, 1d) > 1.5m, "breach", [Desk]) // note')[0];
   const style = (t) => (line.find((x) => x.text.trim() === t) || {}).style;
   assert.equal(style('if'), 'builtin');

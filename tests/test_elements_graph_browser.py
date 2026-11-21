@@ -390,6 +390,7 @@ def test_a_grid_and_the_graph_linked_through_the_bus_the_lineage_and_a_view_pane
     run(browsers, panel, "view=panel")
 
 
+@pytest.mark.budget
 def test_five_thousand_nodes_and_twenty_thousand_edges(browsers):
     async def body(pg):
         big = await pg.evaluate("() => { const g = window.__harness.graphs.big, t0 = performance.now(); g.zoomBy(1.1); g.drawNow(); return Object.assign({}, window.__harness.big, { redrawMs: Math.round(performance.now() - t0), stats: g.stats() }); }")

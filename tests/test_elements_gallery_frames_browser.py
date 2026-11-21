@@ -27,6 +27,7 @@ WORST_MS = 250        # the slowest of 30 frames
 OVERRIDES = {"chart-map": {"worst": 600}, "map": {"worst": 600}, "graph": {"worst": 500}, "pivot": {"worst": 500}}   # a map and a layout draw in one long task
 
 
+@pytest.mark.budget
 def test_every_gallery_page_stays_within_the_frame_budget(browsers):
     async def body(pg):
         demos = await pg.evaluate("() => window.__gallery.demos.map((d) => d.id)")

@@ -103,7 +103,7 @@ test('every layout: finite, deterministic, pins kept; the force layout by its se
   assert.deepEqual(G.presetLayout({ nodes: [{ id: 'a', x: 1, y: 2 }, { id: 'b' }], edges: [] }).get('b'), { x: 0, y: 122 });
 });
 
-test('5,000 nodes and 20,000 edges: every layout in time', () => {
+test('budget: 5,000 nodes and 20,000 edges: every layout in time', () => {
   const N = 5000, E = 20000, nodes = [], edges = [];
   let s = 1; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < N; i++) { nodes.push({ id: 'n' + i, label: 'n' + i, type: 't' + (i % 5), group: 'g' + (i % 12) }); }

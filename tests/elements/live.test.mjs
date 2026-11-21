@@ -94,7 +94,7 @@ test('editing a cell is a transaction by id with cellValueChanged; a read-only c
   assert.equal(g.setCellValue(0, 1, 'X'), false);
 });
 
-test('batching: many transactions within the wait are one refresh, a row\'s last update wins, the waiters get the result; thousands a second', async () => {
+test('budget: batching: many transactions within the wait are one refresh, a row\'s last update wins, the waiters get the result; thousands a second', async () => {
   const rows = trades(20000);
   const g = G.createGridModel({ columns: COLS, rows: rows, live: { asyncWaitMs: 5 } });
   g.setSortModel([{ colId: 'PX', sort: 'desc' }]);

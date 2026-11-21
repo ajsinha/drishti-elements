@@ -94,7 +94,7 @@ test('a bound can be set by the caller; the forbidden keys are refused wherever 
 
 const cpuMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };   // CPU time, not wall time: a busy machine (a parallel run) does not fail a budget
 
-test('a 200 KB view is validated within its budget, and the validator is not run per patch (it holds no state)', () => {
+test('budget: a 200 KB view is validated within its budget, and the validator is not run per patch (it holds no state)', () => {
   const vm = JSON.parse(JSON.stringify(VECTORS.views.find((v) => v.id === 'V001').view));
   const rows = vm.panels[2].data.rows;
   while (JSON.stringify(vm).length < 200_000) { rows.push(JSON.parse(JSON.stringify(rows[rows.length % 2]))); }

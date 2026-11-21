@@ -26,13 +26,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 @pytest.fixture(scope="session")
 def browsers():
-    pytest.importorskip("playwright.async_api", reason="needs Playwright (pip install playwright)")
+    # The browsers are REQUIRED: a missing Playwright or Chromium fails the run with the command that fixes it, never skips the browser tests
+    # (a run that skipped 105 of them used to be green). The pinned version is in tests/requirements.txt.
+    install = "pip install -r tests/requirements.txt && python3 -m playwright install chromium"
+    try:
+        import playwright.async_api  # noqa: F401
+    except ImportError as e:
+        pytest.fail(f"Playwright is not installed ({e}); the browser tests are required. Install: {install}", pytrace=False)
     from browser_harness import Browsers
     b = Browsers()
     try:
         b.start()
-    except Exception as e:  # noqa: BLE001 - no browser installed: skip
+    except Exception as e:  # noqa: BLE001 - the pinned Chromium is missing: fail, with the command
         b.close()
-        pytest.skip(f"needs Playwright's Chromium: {str(e).splitlines()[0]}")
+        pytest.fail(f"the pinned Chromium is not installed or does not start ({str(e).splitlines()[0]}); the browser tests are required. Install: {install}", pytrace=False)
     yield b
     b.close()

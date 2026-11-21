@@ -55,16 +55,19 @@ PRELUDE = ("(function (root) {\n"
 
 
 def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = True,
-         maps: bool = False, train: dist.Train | None = None, data: bool = False) -> dict:
+         maps: bool = False, train: dist.Train | None = None, data: bool = False, label: str | None = None) -> dict:
     """Writes the packed JavaScript and style sheet (and what they read at run time) into ``out``; returns the record of what is inside.
     With ``data`` the shared tables a server reads too (``data/formats.yaml``, ``data/world-regions.yaml``) ride along under ``data/``,
-    listed with their hashes like every other file: one pinned folder holds both the painter and the tables its host formats with."""
+    listed with their hashes like every other file: one pinned folder holds both the painter and the tables its host formats with.
+    ``label`` is the version the pack says of itself (headers and record) when a host pins an untagged build, e.g. ``3.2.0-dev+<commit>``:
+    it must be the version of the folder the pack is vendored in; default the train's own."""
     train = train or dist.Train()
+    version = label or train.version
     names = train.resolve(libs)
     table = dist.themes()
     chosen = dist.theme_alias(theme, table) if theme else None
-    inside = ", ".join(f"{n} {train.version}" for n in names)
-    words = (f"Drishti Elements {train.version}, packed by tools/elements/cli.py pack: {inside}.")
+    inside = ", ".join(f"{n} {version}" for n in names)
+    words = (f"Drishti Elements {version}, packed by tools/elements/cli.py pack: {inside}.")
     js = [dist.HEADER_CSS, f"/* {words}\n   Engines inside: " + ("none (the page brings its own)" if not engines else "{engines}") + ". */\n", PRELUDE]
     engine_names, css_parts, extra = [], [], {}
     for n in names:
@@ -81,11 +84,11 @@ def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = T
             extra.update(dist.folder_files(a.rstrip("/")))          # a vendored folder carries its own LICENSE
     js[1] = js[1].replace("{engines}", ", ".join(engine_names) or "none needed")
     for n in names:
-        js.append(f"/* ---- {n} {train.version} ---- */\n")
+        js.append(f"/* ---- {n} {version} ---- */\n")
         js.append(body((dist.ELEMENTS / n / dist.bundle_name(n)).read_text(encoding="utf-8")))
     if maps and "drishti-chart" in names:                               # the maps' helper (view map panels) rides with the shapes it reads
         geo = train.libs["drishti-chart"]["parts"]["geo"]["file"]
-        js.append(f"/* ---- drishti-chart:geo {train.version} ---- */\n")
+        js.append(f"/* ---- drishti-chart:geo {version} ---- */\n")
         js.append(body((dist.ELEMENTS / "drishti-chart" / geo).read_text(encoding="utf-8")))
     tokens = dist.theme_css(chosen, table) if chosen else (dist.ROOT / dist.TOKENS).read_text(encoding="utf-8")
     css_parts.append(f"/* {words}\n   Theme: " + (f"{chosen} only, on :root" if chosen else "every theme (data-theme on <html>; the default without one)")
@@ -104,7 +107,7 @@ def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = T
             files[t] = (dist.ROOT / t).read_bytes()
     out.mkdir(parents=True, exist_ok=True)
     dist.write_tree(files, out)
-    record = {"elements": train.version, "libraries": {n: train.version for n in names},
+    record = {"elements": version, "libraries": {n: version for n in names},
               "requested": libs, "theme": chosen or "all", "engines": engine_names,
               "files": dist.integrity(files)}
     (out / RECORD).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")

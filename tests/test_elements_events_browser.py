@@ -272,6 +272,7 @@ def test_the_badge_follows_the_connection(browsers, site):
     in_context(browsers, body)
 
 
+@pytest.mark.budget
 def test_ten_thousand_a_second_into_a_grid_once_a_frame(browsers, site):
     origin, _ = site
 
