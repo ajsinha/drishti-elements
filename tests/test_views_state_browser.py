@@ -58,7 +58,7 @@ def run_case(pg, case):
     return pg.evaluate(RUN, case)
 
 
-def with_page(browsers, body, view="V001", csp=True):
+def with_page(browsers, body, view="V001"):
     async def go():
         async with browsers.page(1280, 900, route=router()) as pg:
             await pg.goto(ORIGIN + PAGE + "?view=" + view)
@@ -66,8 +66,7 @@ def with_page(browsers, body, view="V001", csp=True):
             await frame(pg)
             await body(pg)
             assert pg.errors == [], pg.errors
-            if csp:                                                       # a chart's tooltip under a real pointer sets style attributes: not a rule of this test
-                assert await pg.evaluate("window.__csp") == []
+            assert await pg.evaluate("window.__csp") == []
     browsers.run(go(), timeout=180)
 
 
@@ -155,6 +154,43 @@ def test_notify_and_host_effects_reach_the_hooks_and_are_never_run_by_elements(b
     with_page(browsers, body)
 
 
+SLICE = """([id, i]) => {
+  const R = document.getElementById('hx-view').shadowRoot, el = R.querySelector('[data-panel=' + id + '] [data-r-chart]');
+  const c = window.echarts.getInstanceByDom(el), r = el.getBoundingClientRect(), l = c.getModel().getSeriesByIndex(0).getData().getItemLayout(i);
+  const a = (l.startAngle + l.endAngle) / 2, d = (l.r0 + l.r) / 2;
+  return { x: r.left + l.cx + Math.cos(a) * d, y: r.top + l.cy - Math.sin(a) * d, done: c.getZr().animation.isFinished() };
+}"""
+
+
+def test_a_click_on_a_donut_slice_fires_bar_click_on_that_bar(browsers):
+    async def body(pg):
+        case = json.loads(json.dumps(BY_ID["fire/clicks/a-bar-click-writes-state"]))
+        case["viewModel"]["panels"][0]["data"]["shape"] = "donut"
+        case["viewModel"]["panels"][0]["data"]["bars"][1]["value"] = 2          # both slices drawn
+        await pg.evaluate(PAINT, [case, 0])
+        await pg.wait_for_function(DRAWN, arg="by-desk", timeout=20000)
+        pos = None
+        for _ in range(40):
+            await frame(pg)
+            now = await pg.evaluate(SLICE, ["by-desk", 1])
+            if pos == now and now["done"]:
+                break
+            pos = now
+        for attempt in range(4):
+            await pg.mouse.click(pos["x"], pos["y"])
+            try:
+                await pg.wait_for_function(BOUND, timeout=2500)
+                break
+            except Exception:                                                   # noqa: BLE001 - Playwright's timeout
+                await frame(pg)
+                pos = await pg.evaluate(SLICE, ["by-desk", 1])
+        await pg.wait_for_function(BOUND, timeout=5000)
+        assert await pg.evaluate("window.__w.states[0].trigger") == "bar-click"
+        assert await pg.evaluate("window.__w.states[0].mark") == 1
+        assert await pg.evaluate("window.__harness.handle.stateValues") == {"desk": "Rates"}
+    with_page(browsers, body)
+
+
 POINT = """([id, kind, series, data]) => {
   const R = document.getElementById('hx-view').shadowRoot, el = R.querySelector('[data-panel=' + id + '] [data-r-chart]');
   const c = window.echarts.getInstanceByDom(el), r = el.getBoundingClientRect(), p = c.convertToPixel({ seriesIndex: series }, data);
@@ -193,4 +229,4 @@ def test_a_click_on_a_chart_point_fires_point_click_on_that_mark(browsers):
             await pg.wait_for_function(BOUND, timeout=5000)
             assert await pg.evaluate("window.__w.states[0].mark") == want, case_id            # the mark clicked, by its own object or its place
             assert await pg.evaluate("window.__w.states[0].trigger") == "point-click"
-    with_page(browsers, body, csp=False)
+    with_page(browsers, body)

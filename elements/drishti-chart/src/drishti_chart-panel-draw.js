@@ -19,7 +19,7 @@
    heatmap and 3D, draws a map with a map helper (the option geo: drishti-chart's geo part, or a host's own) and hands a graph panel to drishti-graph (loaded
    by the host's graph hook: drishti-chart does not import it). One chart that cannot be drawn says so in words and leaves the others.
    Every engine call of a panel chart is in this module. */
-import { panelOption, panelTokens, panelCompact } from './drishti_chart-panels.js';
+import { panelOption, panelTokens, panelCompact, elementTooltips } from './drishti_chart-panels.js';
 
 const TOKEN = /\{(iso3|iso2|code)\}/;
 const upper = (v) => String(v == null ? '' : v).trim().toUpperCase();
@@ -90,8 +90,8 @@ export function drawMap(E, G, el, d, t, onLink, chartsOut) {
     const bubbles = points.map((p) => ({ lon: Number(p.lon), lat: Number(p.lat), value: Number(p.value) || 0, name: p.label || '', text: p.text || '' }));
     if (points.length) { notes.push(points.length + (points.length === 1 ? ' place' : ' places') + ' as bubbles'); }
     const chart = E.getInstanceByDom(el) || E.init(el, null, { renderer: 'svg' });
-    chart.setOption(G.option({ level: isRegion ? 'region' : 'world', geo, t, items, highlight, clickable, linked: !!(link && !link.note), bubbles,
-      legend: shade && shade.label, unit: d.unit || (shade && shade.unit) || '', numText: panelCompact, width: el.clientWidth || 800, height: el.clientHeight || 400 }), true);
+    chart.setOption(elementTooltips(G.option({ level: isRegion ? 'region' : 'world', geo, t, items, highlight, clickable, linked: !!(link && !link.note), bubbles,
+      legend: shade && shade.label, unit: d.unit || (shade && shade.unit) || '', numText: panelCompact, width: el.clientWidth || 800, height: el.clientHeight || 400 })), true);
     if (!chartsOut.includes(chart)) { chartsOut.push(chart); }
     el.__places = { make, clickable, points };
     if (!el.__clicks) {

@@ -126,16 +126,17 @@ function engineKind(kind) {
       let cur = panel;
       const wire = () => {
         const win = doc.defaultView, E = win && win.echarts, chart = E && E.getInstanceByDom && E.getInstanceByDom(el);
-        if (!chart || el.__dvMarks || kind === 'hbar' || !POINT_CHARTS[kind]) { return; }
+        if (!chart || el.__dvMarks || !(POINT_CHARTS[kind] || kind === 'hbar')) { return; }
         el.__dvMarks = true;
         chart.on('click', (e) => {
           const marks = marksOf(cur);
           if (!marks.some(hasEffects)) { return; }
           const d = e && e.data ? e.data : null;
           const find = (m) => { let i = marks.indexOf(m); if (i < 0 && m) { const t = JSON.stringify(m); i = marks.findIndex((x) => JSON.stringify(x) === t); } return i; };   // the engine may hold a copy
-          let ix = kind === 'scatter' ? find(d && d.point) : kind === 'waterfall' ? find(d && d.step) : kind === 'treemap' ? find(d && d.cell) : e.dataIndex;
+          const trig = kind === 'hbar' ? 'bar-click' : 'point-click';                // the donut's slices are the bars (contract 1.2)
+          let ix = kind === 'hbar' ? find(d && d.bar) : kind === 'scatter' ? find(d && d.point) : kind === 'waterfall' ? find(d && d.step) : kind === 'treemap' ? find(d && d.cell) : e.dataIndex;
           if (kind === 'candlestick' && e.seriesIndex > 0) { ix = -1; }
-          if (Number.isInteger(ix) && ix >= 0) { ctx.fire(String(cur.id), 'point-click', ix); }
+          if (Number.isInteger(ix) && ix >= 0) { ctx.fire(String(cur.id), trig, ix); }
         });
         if (marksOf(cur).some(hasEffects)) { el.classList.add('dv-pick'); }
       };

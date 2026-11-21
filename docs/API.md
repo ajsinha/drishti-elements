@@ -17413,6 +17413,16 @@ Returns `void`.
 
 The panel kinds drawn with the engine.
 
+#### `elementTooltips(option)`
+
+Makes every tooltip of a chart option an element built with the DOM: the engine writes a markup string with style attributes, which a strict content security policy (no 'unsafe-inline' for styles) blocks. A formatter's markup string is parsed inertly with its style attributes dropped; with no formatter, a heading and one line per series with its swatch (set through the DOM's style object).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `option` | `Object` | the engine's option (changed and returned) |
+
+Returns `Object`.
+
 #### `escapeTip(s)`
 
 Text made safe for a tooltip (the engine writes tooltips as markup).
