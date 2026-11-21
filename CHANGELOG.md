@@ -17,7 +17,7 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
-## Unreleased
+## 3.2.0 (2026-11-21)
 
 - **The painter in a shadow root takes a pack's stylesheet** (drishti-views): when the page links `drishti-elements.css` (a pack), the view's shadow root links it once
   instead of asking for one file per library (404s in a pack, an unstyled grid); the loader adds no per-library sheet to a page that links the pack's.

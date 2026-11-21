@@ -74,12 +74,12 @@ build the release tree and serve it:
 
 ```bash
 python3 tools/elements/cli.py dist --out dist
-cd dist/drishti-elements-3.1.0 && python3 -m http.server 8765      # then open /gallery/drishti_gallery.html
+cd dist/drishti-elements-3.2.0 && python3 -m http.server 8765      # then open /gallery/drishti_gallery.html
 ```
 
 ## Versioning
 
-One version for every library, semantic versioning, today **3.1.0** (`elements` in [elements/drishti_elements.json](elements/drishti_elements.json)). What
+One version for every library, semantic versioning, today **3.2.0** (`elements` in [elements/drishti_elements.json](elements/drishti_elements.json)). What
 changed is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Browser support

@@ -72,6 +72,25 @@ def test_the_pin_is_the_hash_of_the_specification_at_the_pinned_commit():
         "the pin is not the schema at its commit " + pin["commit"] + ": python3 tools/views/gen.py --sync " + "<drishti-rachana checkout>" + " --commit <hash>")
 
 
+def test_the_copy_has_every_field_the_painters_read_of_a_live_reference():
+    """A copy equal to its (old) pin is green; this fails when the copy is older than what the grid edit UI reads (LiveRef.edit)."""
+    schema = json.loads((SPEC / "drishti_viewmodel.schema.json").read_text(encoding="utf-8"))
+    found = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            props = node.get("properties")
+            if isinstance(props, dict) and {"edit", "top", "filter"} <= set(props):
+                found.append(props["edit"])
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+    walk(schema)
+    assert found, "no live reference in the copied ViewModel schema carries `edit`: python3 tools/views/gen.py --sync <drishti-rachana checkout> --commit <hash>"
+
+
 def test_the_fire_cases_fixture_names_the_rachana_commit_and_the_hash_it_was_made_from():
     fx = json.loads(FIRE.read_text(encoding="utf-8"))
     assert fx.get("commit") and len(fx.get("sha256", "")) == 64 and fx["cases"], (
