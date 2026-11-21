@@ -30,12 +30,13 @@ import { Screen, problemCard } from './drishti_views-screen.js';
 import { Patcher } from './drishti_views-patch.js';
 import { LiveLink } from './drishti_views-live.js';
 import { datasetsOf } from './drishti_views-data.js';
+import { StateStore, resolveFire } from './drishti_views-state.js';
 
 /** The contract majors this painter draws. */
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'drawn', 'dispose', 'point'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'bound', 'drawn', 'dispose', 'point'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -63,6 +64,11 @@ let counter = 0;
  *   overrides it; false: no maps (a map panel says so in words)
  * @property {string} [mapsBase] the folder of the map shapes for the default helper (default: the static root's vendor/echarts/maps/)
  * @property {function(): Promise<void>} [gl] loads the 3D engine for a surface's 3D view
+ * @property {{notify: ?function(Object, Object): void, run: ?function(Object, Object): void, bind: ?function(Object): *}} [host] the host's hooks for the screen's
+ *   state and effects (contract 1.2). notify(effect, where) shows a notify effect {do, text, tone}; run(effect, where) runs a host effect {do, action, with}
+ *   (Elements never runs one); bind({state, params}) is the next bind after a click wrote state: state is every value as text (null: cleared, its default
+ *   stands), params the same as state.<id> request parameters; it answers the new ViewModel (or a promise of one), of which only the panels the changed
+ *   states' reads name are drawn again. Without bind the values are kept and nothing is drawn again. where is {panel, trigger, mark}.
  * @property {import('./drishti_views-live.js').LiveOptions} [live] the view's live stream over drishti-events (subscribed after the first paint)
  */
 
@@ -83,6 +89,8 @@ export class ViewHandle {
     this.history = [];
     this.frames = new Map();
     this.vm = null;
+    this.state = new StateStore();
+    this.firing = Promise.resolve();
     this.disposed = false;
     this.prefix = 'dv' + (++counter) + '-';
     this.ctx = this.context();
@@ -118,6 +126,7 @@ export class ViewHandle {
       library: (name) => self.library(name),
       charts: () => self.charts(),
       styles: (name) => self.styles(name),
+      fire: (id, trigger, mark) => self.fire(id, trigger, mark).catch(() => null),
       dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
       tables: (ref) => (typeof o.tables === 'function' ? o.tables(ref) || null : null),
       density: o.density || null,
@@ -247,6 +256,7 @@ export class ViewHandle {
   build(vm) {
     this.clear();
     this.vm = vm;
+    this.state.load(vm.state);
     const o = this.options, doc = this.el.ownerDocument, given = o.data && typeof o.data === 'object' ? o.data : {};
     this.datasets = datasetsOf(vm, { library: (n) => this.library(n), data: given, fetch: o.fetch,
       where: { page: (doc.defaultView && doc.defaultView.location && doc.defaultView.location.href) || doc.baseURI || 'http://localhost/', view: this.src || null,
@@ -424,6 +434,82 @@ export class ViewHandle {
     const win = this.el.ownerDocument.defaultView;
     if (!node.animate || (win && win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches)) { return; }
     node.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 450, easing: 'ease-out' });
+  }
+
+  /**
+   * The screen's state values now (contract 1.2), id to value, the empty ones left out.
+   * @returns {Object<string, *>}
+   */
+  get stateValues() { return this.state.values(); }
+
+  /**
+   * Fires a trigger on a mark of a panel as a click does (a row, a bar, a point, a step, an event, a candle, a figure): the mark's effect
+   * list runs in order (set, toggle, clear on the state; notify and host go to the host's hooks), the state goes back to the host's bind, and the
+   * panels the changed states' reads name are drawn again from the ViewModel it answers. Triggers run one after the other.
+   * @param {string} panel the panel's id
+   * @param {string} trigger row-click, bar-click or point-click
+   * @param {number} [mark=0] the mark's place, in the order the specification counts them
+   * @returns {Promise<{effects: Object[], problems: Object[], state: Object<string, *>}>} effects as run; problems: RCH-5001 for a panel, trigger or mark the screen does not have (nothing runs)
+   */
+  fire(panel, trigger, mark) {
+    const job = this.firing.then(() => this.runFire(panel, trigger, mark));
+    this.firing = job.catch(() => null);
+    return job;
+  }
+
+  /** @private */
+  async runFire(id, trigger, mark) {
+    const frame = this.frames.get(String(id));
+    const found = resolveFire(frame ? frame.panel : null, String(id), trigger, mark);
+    if (found.problems.length) { return { effects: [], problems: found.problems, state: this.state.values() }; }
+    const where = { panel: String(id), trigger: trigger, mark: mark || 0 }, host = this.options.host || {};
+    const done = this.state.run(found.effects);
+    done.ran.forEach((e) => {
+      const hook = e.do === 'notify' ? host.notify : e.do === 'host' ? host.run : null;
+      if (e.do === 'notify' || e.do === 'host') {
+        this.emit(e.do, Object.assign({}, e, where));
+        if (typeof hook === 'function') { try { hook(e, where); } catch (x) { this.emit('error', { code: 'view.host', error: x }); } }
+      }
+    });
+    if (done.changed.length) {
+      this.emit('state-change', { changed: done.changed, values: this.state.values(), panel: where.panel, trigger: trigger, mark: where.mark });
+      await this.rebind(done.changed);
+    }
+    return { effects: done.ran, problems: [], state: this.state.values() };
+  }
+
+  /** @private sends the state back to the host and draws what the changed states' reads name */
+  async rebind(changed) {
+    const bind = this.options.host && this.options.host.bind;
+    if (typeof bind !== 'function') { return; }
+    const readers = this.state.readers(changed), state = this.state.request(), params = {};
+    changed.forEach((id) => { if (this.state.get(id) === null) { state[id] = null; } });
+    Object.keys(state).forEach((id) => { if (state[id] !== null) { params['state.' + id] = state[id]; } });
+    let next;
+    try { next = await bind({ state: state, params: params, changed: changed.slice() }); } catch (e) { this.emit('error', { code: 'view.bind', error: e }); return; }
+    if (this.disposed || !isView(next)) { return; }
+    if (this.options.complete) { next = complete(JSON.parse(JSON.stringify(next)), 'ViewModel'); }
+    this.adopt(next, readers);
+  }
+
+  /** @private the ViewModel a bind answered: the named panels (and the strip) drawn again, else the whole view */
+  adopt(next, readers) {
+    const vm = this.vm, ids = (v) => (Array.isArray(v.panels) ? v.panels.map((p) => String(p && p.id)) : []);
+    const same = vm && ids(vm).join('\u0001') === ids(next).join('\u0001');
+    const partial = same && readers && readers.every((r) => r === 'strip' || this.frames.has(String(r))) && readers.indexOf('title') < 0 && !Array.isArray(this.options.panels);
+    if (!partial) { this.show(next, now()); this.emit('bound', { panels: ids(next), full: true }); return; }
+    const drawn = [];
+    readers.forEach((r) => {
+      if (r === 'strip') {
+        (Array.isArray(next.strip) ? next.strip : []).forEach((cell, i) => { if (this.screen && this.screen.setCell(i, cell) && Array.isArray(vm.strip)) { vm.strip[i] = cell; } });
+        return;
+      }
+      const i = next.panels.findIndex((x) => x && String(x.id) === String(r)), frame = this.frames.get(String(r));
+      if (i >= 0 && frame) { frame.draw(next.panels[i]); vm.panels[vm.panels.findIndex((x) => x && String(x.id) === String(r))] = next.panels[i]; drawn.push(String(r)); }
+    });
+    vm.state = next.state;
+    this.state.load(next.state);
+    this.emit('bound', { panels: drawn, full: false });
   }
 
   /**

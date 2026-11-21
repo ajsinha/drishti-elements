@@ -25,6 +25,7 @@ export { WIDTHS, arrange } from './drishti_views-layout.js';
 export { OPS, conflate } from './drishti_views-patch.js';
 export { SPECS, ViewHandle, paint } from './drishti_views-paint.js';
 export { kinds } from './drishti_views-kinds.js';
+export { StateStore, marksOf, effectsOf, hasEffects, triggerFor, requestText, resolveFire } from './drishti_views-state.js';
 import { defineKind } from './drishti_views-kinds.js';
 export { inlineNodes, markupNodes, LINK_STATUS } from './drishti_views-words.js';
 export { PAGE_ROWS, numberOfText } from './drishti_views-tables.js';

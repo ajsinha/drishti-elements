@@ -3556,7 +3556,7 @@
     }
     function treemap(d, t) {
       const cells = (d && d.cells) || [], pal = palette(t), groups = new Map();
-      const item = (c) => ({ name: String(c.label), value: c.value, text: c.text, cell: c.ev !== undefined || c.set ? { ev: c.ev, set: c.set } : undefined,
+      const item = (c) => ({ name: String(c.label), value: c.value, text: c.text, cell: c,   // the ViewModel's own cell: its ev, set and on (a click finds the mark by it)
         itemStyle: c.tone ? { color: tone(t, c.tone === 'pos' ? 'ok' : 'neg') } : undefined });
       const top = [];
       cells.forEach((c) => {

@@ -33,6 +33,15 @@ Each release lists what changed, by library. One version for every library: the 
   `top` inserts first, the total), rows past the window leave from the bottom and the window follows, a gap reads the page again; "n of N
   rows, live" under the grid; without `options.tables` the panel says so. Cell bars: a column's `bar` (grid and live) draws drishti-grid's
   `barCell` against the column's largest magnitude. Browser tests with an in-page live table.
+- **State and effects** (drishti-views, ViewModel contract 1.2, the pin moved to drishti-rachana `g2/integration` c89e068; the painter's side of
+  Rachana's I1): the painter keeps `state[]`; a click on a table or tree row (depth first through `children`), an hbar bar, a timeline event, a
+  figure (metric, gauge, kv, status) or a chart point (scatter, waterfall, candlestick, a line or area's x position) runs the mark's `set` or `on`
+  list exactly as the `fire` conformance cases say: `set`, `toggle` and `clear` on the state, `notify` and `host` handed to `options.host` (never run
+  by Elements), the state sent back through `options.host.bind` for the next bind, and only the panels the changed states' `reads` name drawn again.
+  `handle.fire(panel, trigger, mark)`, `handle.stateValues`, the events `state-change`, `notify`, `host` and `bound`; a trigger the screen does not
+  have answers `RCH-5001`. Evaluation stays with Rachana: nothing is evaluated here. The bundle's budget moves to 209,000 (198,954 measured, plus
+  about 5%). Tests: the 13 `fire` cases through the painter in Chromium and on the store under Node (`tests/support/fire_cases.json`, made by
+  `tools/views/fire_fixture.mjs`).
 - **Studio widgets** (drishti-inputs, for Rachana Studio's screens; no bespoke UI): `SplitPane` (horizontal or vertical, minimum and maximum sizes,
   sizes kept as shares, the separator by pointer and by keyboard: arrows, Shift, Home, End, Enter; remembered with `persistKey`; `<drishti-split>`);
   `Tabs` (tablist, roving arrows, disabled tabs skipped, badge, closable, a panel made when first opened; `<drishti-tabs>`); `NavList` (a searchable

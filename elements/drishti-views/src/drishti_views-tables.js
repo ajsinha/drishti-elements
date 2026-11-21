@@ -21,6 +21,7 @@
 import { h } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { drawCell, say } from './drishti_views-cells.js';
+import { marksOf, hasEffects } from './drishti_views-state.js';
 
 /** Rows drawn at first, and added by each "Show more". */
 export const PAGE_ROWS = 100;
@@ -79,6 +80,8 @@ class TableView {
     this.panel = panel;
     const d = panel.data || {};
     this.d = d;
+    this.marks = new Map();                                      // a row that carries effects (contract 1.2) to its place among the marks
+    marksOf(panel).forEach((m, i) => { if (hasEffects(m)) { this.marks.set(m, i); } });
     this.columns = list(d.columns).length ? list(d.columns).map(String) : (list(d.levels)[0] && list(list(d.levels)[0].columns)) || [];
     this.numeric = list(d.numeric);
     this.expandDepth = Number.isInteger(d.expand) ? d.expand : 0;
@@ -162,9 +165,10 @@ class TableView {
 
   row(r, depth, cls, tag, tree) {
     const doc = this.ctx.doc, cells = list(r.cells);
-    const tr = h(doc, 'tr', { cls: [cls, r.highlight ? 'dv-hl' : '', typeof r.pick === 'string' && r.pick ? 'dv-pick' : ''].filter(Boolean).join(' ') || null,
-      attrs: { 'aria-current': r.highlight && this.o.ladder ? 'true' : null, tabindex: typeof r.pick === 'string' && r.pick ? '0' : null, title: typeof r.crumb === 'string' ? r.crumb : null },
-      data: Object.assign({ depth: String(depth) }, typeof r.pick === 'string' && r.pick ? { pick: r.pick } : {}, typeof r.ev === 'string' && r.ev ? { ev: r.ev } : {}),
+    const picks = typeof r.pick === 'string' && r.pick, mark = this.marks.get(r);
+    const tr = h(doc, 'tr', { cls: [cls, r.highlight ? 'dv-hl' : '', picks || mark !== undefined ? 'dv-pick' : ''].filter(Boolean).join(' ') || null,
+      attrs: { 'aria-current': r.highlight && this.o.ladder ? 'true' : null, tabindex: picks || mark !== undefined ? '0' : null, title: typeof r.crumb === 'string' ? r.crumb : null },
+      data: Object.assign({ depth: String(depth) }, picks ? { pick: r.pick } : {}, typeof r.ev === 'string' && r.ev ? { ev: r.ev } : {}, mark !== undefined ? { mark: String(mark) } : {}),
       style: { '--dv-depth': String(depth) } });
     const n = Math.max(cells.length, this.columns.length);
     for (let i = 0; i < n; i++) {
@@ -182,9 +186,10 @@ class TableView {
   }
 
   onPick(e) {
-    const tr = e.target && e.target.closest ? e.target.closest('tr[data-pick]') : null;
+    const tr = e.target && e.target.closest ? e.target.closest('tr[data-pick], tr[data-mark]') : null;
     if (!tr || (e.target.closest('button, a') && e.type === 'click')) { return; }
-    this.ctx.emit('pick', { panel: this.panel.id, pick: tr.getAttribute('data-pick'), ev: tr.getAttribute('data-ev') || null });
+    if (tr.hasAttribute('data-pick')) { this.ctx.emit('pick', { panel: this.panel.id, pick: tr.getAttribute('data-pick'), ev: tr.getAttribute('data-ev') || null }); }
+    if (tr.hasAttribute('data-mark')) { this.ctx.fire(String(this.panel.id), 'row-click', Number(tr.getAttribute('data-mark'))); }
   }
 
   dispose() { this.box.remove(); }
