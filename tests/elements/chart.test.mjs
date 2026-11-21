@@ -326,3 +326,23 @@ test('the segmented scatter and the matrix: thresholds and segments; category ce
   const t = build({ kind: 'trace3d', data: { rows: [{ X: 0, Y: 0, Z: 0 }] }, x: 'X', y: 'Y', z: 'Z', fallback: 'table' });
   assert.ok(t.flat && t.preferTable);
 });
+
+test('a line panel of several series (contract 1.2): bars, points and areas by mark, a right axis, a legend; a click hands back the row', () => {
+  const T = { link: '#1', accent: '#2', ok: '#3', neg: '#4', warn: '#5', bad: '#6', muted: '#7', ink: '#8', border: '#9', surface: '#a', mono: 'm' };
+  const d = { x: ['a', 'b'], series: [{ label: 'P&L', values: [1, -2], tone: 'accent', mark: 'bar' }, { label: 'VaR', values: [3, 3], tone: 'warn', axis: 'right' },
+    { label: 'Limit', values: [4, 4], mark: 'point', axis: 'right' }], ev: ['0', '1'] };
+  const o = C.panelOption('line', d, T, { width: 600, height: 300 });
+  assert.deepEqual(o.series.map((s) => s.type), ['bar', 'line', 'scatter']);
+  assert.deepEqual(o.series.map((s) => s.yAxisIndex || 0), [0, 1, 1]);
+  assert.equal(o.yAxis.length, 2);
+  assert.deepEqual(o.legend, { show: false, data: ["P&L", "VaR", "Limit"] });
+  assert.equal(o.xAxis.boundaryGap, true);
+  assert.deepEqual(C.pointOf('line', d, { seriesIndex: 1, dataIndex: 1 }), { ev: '1', series: 'VaR' });
+  const split = { x: ['1Y', '5Y'], series: [{ label: 'Today', values: [1, 2], ev: ['0', '1'] }, { label: 'Yesterday', values: [1, null], ev: ['2', null] }] };
+  assert.deepEqual(C.pointOf('line', split, { seriesIndex: 1, dataIndex: 0 }), { ev: '2', series: 'Yesterday' });
+  assert.equal(C.pointOf('line', split, { seriesIndex: 1, dataIndex: 1 }), null);
+  assert.equal(C.pointOf('line', { x: ['a'], series: [{ values: [1] }] }, { seriesIndex: 0, dataIndex: 0 }), null);
+  const one = C.panelOption('line', { x: ['a'], series: [{ label: 'x', values: [1], tone: 'link' }] }, T, {});
+  assert.equal(one.legend, undefined);
+  assert.equal(one.yAxis.type, 'value');
+});

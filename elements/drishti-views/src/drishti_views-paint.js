@@ -36,7 +36,7 @@ import { StateStore, resolveFire } from './drishti_views-state.js';
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'bound', 'drawn', 'dispose'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'bound', 'drawn', 'dispose', 'point'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -128,6 +128,7 @@ export class ViewHandle {
       styles: (name) => self.styles(name),
       fire: (id, trigger, mark) => self.fire(id, trigger, mark).catch(() => null),
       dataset: (name) => (self.datasets && typeof name === 'string' ? self.datasets.get(name) || null : null),
+      tables: (ref) => (typeof o.tables === 'function' ? o.tables(ref) || null : null),
       density: o.density || null,
       can: (what) => (what === 'geo' ? o.geo !== false : false),
       time: (iso) => {
@@ -571,7 +572,8 @@ export class ViewHandle {
       this.chartsP = this.library('drishti-chart').then((C) => {
         if (this.disposed) { throw new Error('disposed'); }
         this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
-          tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
+          tokensFrom: () => this.root, onLink: (l) => this.openLink(l),
+          onPoint: (m, el) => { const pn = el.closest('[data-panel]'); this.emit('point', Object.assign({ panel: pn ? pn.getAttribute('data-panel') : null }, m)); }, geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
         return this.panelCharts;
       });
     }

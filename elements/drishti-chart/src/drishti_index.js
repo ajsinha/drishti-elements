@@ -58,7 +58,7 @@ export { linkCrosshair, facets } from './drishti_chart-multiples.js';
 import { buildCalendar } from './drishti_chart-calendar.js';
 export { selectionTopic, filterTopic, linkGrid, publishSelection } from '../../drishti-core/src/drishti_index.js';
 export { PANEL_KINDS, elementTooltips, escapeTip, panelCompact, panelLineCompact, panelTokens, labelFit, panelOption } from './drishti_chart-panels.js';
-export { drawMap, PanelCharts } from './drishti_chart-panel-draw.js';
+export { drawMap, PanelCharts, pointOf } from './drishti_chart-panel-draw.js';
 export { CHART_ELEMENT, defineChartElement, chartIn } from './drishti_chart-element.js';
 
 registerAxisKinds();

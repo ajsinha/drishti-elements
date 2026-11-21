@@ -17565,6 +17565,18 @@ Stops listening and disposes of every chart.
 
 Returns `void`.
 
+#### `pointOf(kind, d, p)`
+
+The mark a click on a panel chart chose, when it carries its row (contract 1.2 ev): a line's or an area's point (the series' ev beside x, else the chart's), a surface's cell (its ev), else the record the option item holds (a point, a step, a candle, an event).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` |  |
+| `d` | `Object` | the panel's data |
+| `p` | `Object` | the engine's click (seriesIndex, dataIndex, data) |
+
+Returns `?{ev: string, series: (string\|undefined), set: (Object\|undefined)}`.
+
 ### drishti_chart-element.js
 
 #### `CHART_ELEMENT`
@@ -17706,6 +17718,7 @@ A chart's frames.
 | `[geo]` | `function(): Promise&lt;Object&gt;` | resolves with the map helper (loadPart('drishti-chart', 'geo').then((P) =&gt; P.geoHelper()), or a host's own of the same shape); without it a map says it did not load |
 | `[graph]` | `function(): Promise&lt;Object&gt;` | loads drishti-graph and resolves with its API (drawGraphPanel draws a graph panel); without it a graph panel says it did not load |
 | `[onLink]` | `function(Object, HTMLElement): void` | a point, a node or a place that names an entity was clicked ({kind, id}, the container) |
+| `[onPoint]` | `function(Object, HTMLElement): void` | a mark that carries its row was clicked ({ev, series?, set?}, the container; contract 1.2) |
 | `[onPlaces]` | `function(HTMLElement, Array&lt;{name: string, link: Object, text: string}&gt;, string): void` | a map's clickable places and its note, for the host to list |
 | `[selector='[data-r-chart]` | `string` | '] the chart containers |
 | `[specOf]` | `function(HTMLElement): ?{kind: string, data: Object}` | a container's kind and data (default el.__drishti) |
@@ -21879,7 +21892,7 @@ The screen's state values as the ViewModel's state[] gave them and as the effect
 
 ##### `new StateStore()`
 
-Makes an empty store: no states until load.
+An empty store (load fills it from the ViewModel's state[]).
 
 ##### `StateStore.load(states)`
 
@@ -21897,31 +21910,31 @@ A state's value.
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `id` | `string` | the state's id |
+| `id` | `string` |  |
 
-Returns `*`: the value (null when empty or unknown).
+Returns `*`: its value (null when empty or unknown).
 
 ##### `StateStore.values()`
 
-The values held now.
+Every state's value.
 
 Returns `Object&lt;string, *&gt;`: id to value, the empty ones left out.
 
 ##### `StateStore.request()`
 
-The values as the next bind carries them.
+The state.&lt;id&gt; parameters of the next bind.
 
-Returns `Object&lt;string, ?string&gt;`: the state.&lt;id&gt; parameters of the next bind, without the prefix (an empty value is not carried).
+Returns `Object&lt;string, ?string&gt;`: without the prefix (an empty value is not carried).
 
 ##### `StateStore.readers(ids)`
 
-The panels that read the given states.
+The panels (and strip or title) that read any of the states, each once.
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `ids` | `string[]` | the states' ids |
+| `ids` | `string[]` |  |
 
-Returns `string[]`: the panels (and strip or title) that read any of the states, each once, or null when one of them does not say.
+Returns `?string[]`: null when one of them does not say.
 
 ##### `StateStore.run(effects)`
 
@@ -21960,29 +21973,29 @@ Whether a mark carries any effect (set or on) at all, for the cursor and the key
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `mark` | `*` | the mark as the ViewModel gave it |
+| `mark` | `Object` |  |
 
 Returns `boolean`.
 
 #### `triggerFor(kind)`
 
-The trigger a kind's marks fire, or null when it fires none.
+The trigger a kind's marks fire.
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `kind` | `string` | the panel's kind |
+| `kind` | `string` |  |
 
-Returns `?string`.
+Returns `?string`: null when it fires none.
 
 #### `requestText(v)`
 
-A value as a bind request carries it: text, a list's items joined by commas; null when there is none.
+A value as a bind request carries it: text, a list's items joined by commas.
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `v` | `*` | the state's value |
+| `v` | `*` |  |
 
-Returns `?string`.
+Returns `?string`: null when there is none.
 
 #### `resolveFire(panel, id, trigger, mark)`
 
@@ -22224,7 +22237,7 @@ Returns `Map&lt;string, Dataset&gt;`.
 
 #### `DATASET_KINDS`
 
-The kinds drawn from a dataset (contract 1.1).
+The kinds drawn from a dataset (contract 1.1; live 1.2).
 
 #### `gridColumns(d, ds)`
 

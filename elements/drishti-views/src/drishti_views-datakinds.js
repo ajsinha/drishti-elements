@@ -23,8 +23,10 @@ import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';
 import { valueText, rowKey, derive, isMasked } from './drishti_views-data.js';
 
-/** The kinds drawn from a dataset (contract 1.1). */
-export const DATASET_KINDS = Object.freeze(['grid', 'tree', 'chart']);
+const SEP = '\u001f';
+
+/** The kinds drawn from a dataset (contract 1.1; live 1.2). */
+export const DATASET_KINDS = Object.freeze(['grid', 'tree', 'chart', 'live']);
 
 const list = (x) => (Array.isArray(x) ? x : []);
 const GRID_TYPES = { number: 'number', boolean: 'boolean', date: 'date', datetime: 'date' };
@@ -140,9 +142,27 @@ function later(ctx, fn) {
   };
 }
 
+/**
+ * Bars in the cells of the columns that ask for one (contract 1.2 GridColumn.bar): drishti-grid's barCell against the column's largest
+ * magnitude among the rows now held.
+ * @param {Object} G drishti-grid
+ * @param {Object[]} cols the grid's columns
+ * @param {Object} d the panel's data
+ * @param {function(): Object[]} rows the rows now held
+ */
+function withBars(G, cols, d, rows) {
+  const barred = new Set(list(d.columns).filter((c) => c && c.bar === true).map((c) => c.field));
+  if (!barred.size || typeof G.barCell !== 'function') { return cols; }
+  return cols.map((c) => {
+    if (!barred.has(c.field)) { return c; }
+    const max = () => rows().reduce((m, r) => { const v = r && typeof r[c.field] === 'number' ? Math.abs(r[c.field]) : 0; return v > m ? v : m; }, 0) || 1;
+    return Object.assign({}, c, { cellRenderer: G.barCell({ max: max }), cellClass: c.cellClass, bar: true });
+  });
+}
+
 const grid = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => ds.source().then((src) => {
   const d = panel.data;
-  const o = { columns: gridColumns(d, ds), layout: 'wells', density: ctx.density || 'compact', rowSelection: 'single',
+  const o = { columns: withBars(G, gridColumns(d, ds), d, () => (Array.isArray(src) ? ds.held || src : [])), layout: 'wells', density: ctx.density || 'compact', rowSelection: 'single',
     getRowId: (r, i) => rowKey(r, ds.key, i) };
   if (Array.isArray(src)) { o.rows = src; } else { o.datasource = src; if (ds.def.pages && ds.def.pages.size > 0) { o.blockSize = ds.def.pages.size; } }
   if (d.pivot && list(d.pivot.values).length) {
@@ -192,6 +212,76 @@ const chart = datasetKind('drishti-chart', (C, box, panel, ds, ctx) => ds.rows()
   return { component: c, change: redraw, destroy() { c.destroy(); } };
 }));
 
+/**
+ * The live kind (contract 1.2): a grid over a live table of the Data Protocol. The dataset's live reference names the table, the window,
+ * top and the filter; options.tables(ref) (the page's: drishti-rachana's liveTables over its DataClient) answers page(query) and
+ * follow(after, keys, top, onPatch, onGap). The first window is read in the panel's order, the grid subscribes with its keys, each patch
+ * (PROTOCOL 8.1, 16: reset, remove by key lists, update, add, total, top) is applied as one transaction (changed cells tick), rows past
+ * the window leave from the bottom and the window follows the rows shown; a gap reads the page again. Nothing here decides rights.
+ */
+const live = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => {
+  const d = panel.data, ref = ds.def.live || {}, t = ctx.tables(ref);
+  if (!t) { throw new Error(say(ctx.messages, 'noTables', { name: String(ref.table) })); }
+  const size = ref.window > 0 ? ref.window : 200, key = ds.key;
+  const sort = list(d.sort).map((s) => ({ col: s.field, dir: s.desc ? 'desc' : 'asc' }));
+  const query = Object.assign({ limit: size }, sort.length ? { sort: sort } : {}, ref.filter ? { filter: ref.filter } : {});
+  const held = new Map();
+  const idOf = (r) => rowKey(r, key, -1);
+  const keysOf = () => Array.from(held.values()).map((r) => key.map((k) => r[k]));
+  const note = h(ctx.doc, 'p', { cls: 'dv-more dv-live-count', attrs: { 'aria-live': 'polite' } });
+  box.parentNode.insertBefore(note, box.nextSibling);
+  let g = null, f = null, total = null, gone = false;
+  const count = () => { note.textContent = say(ctx.messages, 'liveRows', { shown: held.size.toLocaleString(), total: (total === null ? held.size : total).toLocaleString() }); };
+  const apply = (p) => {
+    if (!p || gone) { return; }
+    let moved = false;
+    if (Array.isArray(p.reset)) { held.clear(); p.reset.forEach((r) => held.set(idOf(r), Object.assign({}, r))); moved = true; }
+    list(p.remove).forEach((k) => { if (held.delete(Array.isArray(k) ? k.map((x) => (x === null || x === undefined ? '' : String(x))).join(SEP) : String(k))) { moved = true; } });
+    const update = [], top = new Set(list(p.top).map((k) => (Array.isArray(k) ? k.map(String).join(SEP) : String(k)))), first = [];
+    list(p.update).concat(list(p.add)).forEach((r) => {
+      const id = idOf(r), was = held.get(id);
+      if (was) { const n = Object.assign({}, was, r); held.set(id, n); update.push(n); if (top.has(id)) { first.push(id); } } else { held.set(id, Object.assign({}, r)); if (top.has(id)) { first.push(id); } moved = true; }
+    });
+    if (first.length) {                                             // a newest-first order: listed rows go on top, in the patch's order
+      const rest = Array.from(held.entries()).filter((e) => first.indexOf(e[0]) < 0);
+      const order = first.map((id) => [id, held.get(id)]).concat(rest);
+      held.clear();
+      order.forEach((e) => held.set(e[0], e[1]));
+      moved = true;
+    }
+    if (typeof p.total === 'number') { total = p.total; }
+    while (held.size > size) { held.delete(Array.from(held.keys())[held.size - 1]); }   // past the window: the bottom rows leave
+    if (moved) { g.setRows(Array.from(held.values())); } else if (update.length) { g.applyTransaction({ update: update }); }   // ticks flash
+    if (moved && f) { f.window(keysOf(), !!ref.top); }
+    count();
+  };
+  const read = () => t.page(query).then((page) => {
+    if (gone) { return; }
+    held.clear();
+    list(page.rows).slice(0, size).forEach((r) => held.set(idOf(r), Object.assign({}, r)));
+    total = typeof page.total === 'number' ? page.total : null;
+    if (g) { g.setRows(Array.from(held.values())); } else {
+      g = new G.Grid(box, { columns: withBars(G, gridColumns(d, ds), d, () => Array.from(held.values())), layout: 'wells', density: ctx.density || 'compact',
+        rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()) });
+      if (list(d.group).length) { g.model.setRowGroups(list(d.group)); }   // the rows keep the host's order (the query's sort)
+      g.refresh();
+      g.on('selectionChanged', () => {
+        const ids = g.model.selection && g.model.selection.selectedIds ? g.model.selection.selectedIds() : [];
+        ctx.emit('select', { panel: panel.id, dataset: ds.name, keys: ids });
+      });
+    }
+    count();
+    if (f) { f.stop(); }
+    f = page.version ? t.follow(page.version, keysOf(), !!ref.top, apply, () => { f = null; if (!gone) { read(); } }) : null;
+  });
+  return read().then(() => ({
+    get component() { return g; },
+    change() { /* a live dataset is changed by its table's patches, never by the view's rows op */ },
+    destroy() { gone = true; if (f) { f.stop(); } if (g) { g.destroy(); } note.remove(); }
+  }));
+});
+
 defineKind('grid', grid);
+defineKind('live', live);
 defineKind('tree', tree);
 defineKind('chart', chart);

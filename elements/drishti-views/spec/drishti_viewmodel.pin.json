@@ -1,7 +1,7 @@
 {
   "about": "The ViewModel specification is drishti-rachana's spec/1/viewmodel.schema.json (decision N3: one contract, one home). drishti_viewmodel.schema.json beside this file is a byte-for-byte copy; sha256 is its hash. python3 tools/views/gen.py --sync DIR copies it again from a drishti-rachana checkout and rewrites this file; a static test refuses a copy whose hash differs from this pin, and, when a drishti-rachana checkout sits beside this project, a pin that differs from its file.",
   "source": "drishti-rachana/spec/1/viewmodel.schema.json",
-  "commit": "c89e068",
-  "contract": "1.1",
-  "sha256": "ffabed690b70063156f1c27db5662fd98afc28c9b01a4fc68fe430511386739c"
+  "commit": "0351bb3",
+  "contract": "1.2",
+  "sha256": "8403955ce0ef1a8b46b9f81fc15bfd6ca47df14a269548319196cd29c0af0222"
 }

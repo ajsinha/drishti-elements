@@ -28,12 +28,12 @@ export function triggerOf(kind) {
 }
 
 /** The kinds whose marks fire point-click (a chart's points, steps, events or candles, a line or area's x positions, a figure or record). */
-export const POINT_KINDS = Object.freeze(['line', 'area', 'scatter', 'waterfall', 'timeline', 'candlestick', 'metric', 'gauge', 'kv', 'status']);
+export const POINT_KINDS = Object.freeze(['line', 'area', 'scatter', 'waterfall', 'timeline', 'candlestick', 'metric', 'gauge', 'kv', 'status', 'treemap']);
 
 /**
- * The trigger a kind's marks fire, or null when it fires none.
- * @param {string} kind the panel's kind
- * @returns {?string}
+ * The trigger a kind's marks fire.
+ * @param {string} kind
+ * @returns {?string} null when it fires none
  */
 export function triggerFor(kind) { return triggerOf(kind) || (POINT_KINDS.indexOf(kind) >= 0 ? 'point-click' : null); }
 
@@ -57,6 +57,7 @@ export function marksOf(panel) {
   if (k === 'scatter') { return list(d.points).filter(isObj); }
   if (k === 'timeline') { return list(d.events).filter(isObj); }
   if (k === 'candlestick') { return list(d.candles).filter(isObj); }
+  if (k === 'treemap') { return list(d.cells).filter(isObj); }
   if (k === 'line' || k === 'area') {
     return list(d.x).map((x, i) => ({ set: list(d.set)[i] || null, on: list(d.on)[i] || null, ev: list(d.ev)[i] }));
   }
@@ -79,15 +80,15 @@ export function effectsOf(mark, trigger) {
 
 /**
  * Whether a mark carries any effect (set or on) at all, for the cursor and the keyboard.
- * @param {*} mark the mark as the ViewModel gave it
+ * @param {Object} mark
  * @returns {boolean}
  */
 export function hasEffects(mark) { return isObj(mark) && (isObj(mark.set) || isObj(mark.on)); }
 
 /**
- * A value as a bind request carries it: text, a list's items joined by commas; null when there is none.
- * @param {*} v the state's value
- * @returns {?string}
+ * A value as a bind request carries it: text, a list's items joined by commas.
+ * @param {*} v
+ * @returns {?string} null when there is none
  */
 export function requestText(v) {
   if (v === null || v === undefined) { return null; }
@@ -96,7 +97,7 @@ export function requestText(v) {
 
 /** The screen's state values as the ViewModel's state[] gave them and as the effects changed them. */
 export class StateStore {
-  /** Makes an empty store: no states until load. */
+  /** An empty store (load fills it from the ViewModel's state[]). */
   constructor() { this.entries = new Map(); }
 
   /**
@@ -111,13 +112,13 @@ export class StateStore {
 
   /**
    * A state's value.
-   * @param {string} id the state's id
-   * @returns {*} the value (null when empty or unknown)
+   * @param {string} id
+   * @returns {*} its value (null when empty or unknown)
    */
   get(id) { const e = this.entries.get(id); return e ? e.value : null; }
 
   /**
-   * The values held now.
+   * Every state's value.
    * @returns {Object<string, *>} id to value, the empty ones left out
    */
   values() {
@@ -127,8 +128,8 @@ export class StateStore {
   }
 
   /**
-   * The values as the next bind carries them.
-   * @returns {Object<string, ?string>} the state.<id> parameters of the next bind, without the prefix (an empty value is not carried)
+   * The state.<id> parameters of the next bind.
+   * @returns {Object<string, ?string>} without the prefix (an empty value is not carried)
    */
   request() {
     const out = {};
@@ -137,9 +138,9 @@ export class StateStore {
   }
 
   /**
-   * The panels that read the given states.
-   * @param {string[]} ids the states' ids
-   * @returns {string[]} the panels (and strip or title) that read any of the states, each once, or null when one of them does not say
+   * The panels (and strip or title) that read any of the states, each once.
+   * @param {string[]} ids
+   * @returns {?string[]} null when one of them does not say
    */
   readers(ids) {
     const out = [];

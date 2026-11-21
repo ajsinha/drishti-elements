@@ -24,13 +24,13 @@ import { say, toneClass } from './drishti_views-cells.js';
 import { marksOf, hasEffects, clickable } from './drishti_views-state.js';
 
 /** The kinds drawn by drishti-chart's panel charts (hbar only in its donut shape). */
-export const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'surface', 'graph', 'map']);
+export const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'surface', 'graph', 'map', 'treemap']);
 
 const list = (x) => (Array.isArray(x) ? x : []);
 const str = (v) => (v === null || v === undefined ? '' : String(v));
 const LIMIT_ROWS = 500;
 /** The chart kinds whose marks fire point-click (a point, a step, a candle, an x position). */
-const POINT_CHARTS = { line: true, area: true, scatter: true, waterfall: true, candlestick: true };
+const POINT_CHARTS = { line: true, area: true, scatter: true, waterfall: true, candlestick: true, treemap: true };
 
 /**
  * The rows of a chart's data table: its column heads and rows of text (at most 500 rows).
@@ -45,6 +45,9 @@ export function chartTable(kind, d) {
     const s = list(d.series);
     columns = [''].concat(s.map((x) => str(x && x.label)));
     rows = list(d.x).map((x, i) => [str(x)].concat(s.map((y) => str(list(y && y.values)[i]))));
+  } else if (kind === 'treemap') {
+    columns = ['', '', ''];
+    rows = list(d.cells).map((c) => [str(c && c.group), str(c && c.label), str(c && (c.text || c.value))]);
   } else if (kind === 'hbar') {
     columns = ['', ''];
     rows = list(d.bars).map((b) => [str(b && b.label), str(b && (b.text || b.value))]);
@@ -83,6 +86,22 @@ function dataTable(ctx, kind, d) {
   return h(doc, 'details', { cls: 'dv-data' }, [h(doc, 'summary', { text: say(ctx.messages, 'dataTable') }), h(doc, 'div', { cls: 'dv-tbl-scroll' }, [table])]);
 }
 
+const SWATCHES = ['link', 'accent', 'ok', 'neg', 'warn', 'bad', 'muted', 'ink'];
+const TONES = new Set(SWATCHES.concat(['pos']));
+/**
+ * The legend of a line or an area of several series (contract 1.2 layers or by), as elements: each series' name and its colour (the
+ * series' tone, else the palette's place, as drishti-chart draws it); a bar, an area or a point says so in its swatch's shape.
+ */
+function legendOf(ctx, kind, d) {
+  const s = (kind === 'line' || kind === 'area') ? list(d && d.series) : [];
+  if (s.length < 2) { return null; }
+  return h(ctx.doc, 'ul', { cls: 'dv-legend', attrs: { 'aria-label': say(ctx.messages, 'legend') } }, s.map((x, i) => {
+    const tone = x && TONES.has(x.tone) ? x.tone : i > 0 ? SWATCHES[i % SWATCHES.length] : 'link';
+    return h(ctx.doc, 'li', {}, [h(ctx.doc, 'span', { cls: 'dv-sw dv-sw-' + ((x && x.mark) || 'line'), style: { '--dv-sw': 'var(--d-' + tone + ')' } }),
+      str(x && x.label) + (x && x.axis === 'right' ? ' (right)' : '')]);
+  }));
+}
+
 /** A chart drawn by drishti-chart's panel charts. */
 function engineKind(kind) {
   return {
@@ -93,7 +112,8 @@ function engineKind(kind) {
       const el = h(doc, 'div', { cls: 'dv-chart dv-chart-' + k, attrs: { 'data-r-chart': '', role: 'img', 'aria-label': panel.title || panel.id, 'data-view': panel.data.view || null } });
       el.__drishti = { kind: k, data: panel.data };
       let table = dataTable(ctx, kind, panel.data);
-      const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, table]);
+      const legend = legendOf(ctx, kind, panel.data);
+      const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, legend, table]);
       body.appendChild(box);
       let gone = false;
       const words = (w) => { el.removeAttribute('data-r-chart'); el.className = 'dv-chart-off'; el.textContent = w; };
@@ -114,7 +134,7 @@ function engineKind(kind) {
           const d = e && e.data ? e.data : null;
           const find = (m) => { let i = marks.indexOf(m); if (i < 0 && m) { const t = JSON.stringify(m); i = marks.findIndex((x) => JSON.stringify(x) === t); } return i; };   // the engine may hold a copy
           const trig = kind === 'hbar' ? 'bar-click' : 'point-click';                // the donut's slices are the bars (contract 1.2)
-          let ix = kind === 'hbar' ? find(d && d.bar) : kind === 'scatter' ? find(d && d.point) : kind === 'waterfall' ? find(d && d.step) : e.dataIndex;
+          let ix = kind === 'hbar' ? find(d && d.bar) : kind === 'scatter' ? find(d && d.point) : kind === 'waterfall' ? find(d && d.step) : kind === 'treemap' ? find(d && d.cell) : e.dataIndex;
           if (kind === 'candlestick' && e.seriesIndex > 0) { ix = -1; }
           if (Number.isInteger(ix) && ix >= 0) { ctx.fire(String(cur.id), trig, ix); }
         });
@@ -181,6 +201,25 @@ const gauge = {
   }
 };
 
+/* ---- bullet (contract 1.2): one figure on a band with its bounds and warning zones, as elements ---- */
+const bullet = {
+  paint(body, panel, ctx) {
+    const doc = ctx.doc, d = panel.data, min = Number(d.min) || 0, max = Number(d.max), span = max > min ? max - min : 1;
+    const at = (v) => String(Math.round(Math.max(0, Math.min(1, (Number(v) - min) / span)) * 1000) / 1000);
+    const track = h(doc, 'div', { cls: 'dv-bullet', attrs: { role: 'meter', 'aria-valuemin': str(min), 'aria-valuemax': str(max),
+      'aria-valuenow': d.value === null || d.value === undefined ? null : str(d.value), 'aria-valuetext': str(d.text), 'aria-label': str(d.label || panel.title || panel.id) } },
+    list(d.bands).map((b) => h(doc, 'span', { cls: 'dv-bullet-band ' + (toneClass(b && b.tone) || ''), style: { '--dv-from': at(Math.min(b.from, b.to)), '--dv-to': at(Math.max(b.from, b.to)) } }))
+      .concat([d.lower, d.upper].filter((v) => v !== null && v !== undefined).map((v) => h(doc, 'span', { cls: 'dv-bullet-bound', style: { '--dv-at': at(v) } })))
+      .concat(d.value === null || d.value === undefined ? [] : [h(doc, 'span', { cls: 'dv-bullet-mark ' + (toneClass(d.tone) || 'dv-t-accent'), style: { '--dv-at': at(d.value) } })]));
+    const scale = h(doc, 'div', { cls: 'dv-bullet-scale' }, [h(doc, 'span', { text: str(d.lowerText) }), h(doc, 'span', { text: str(d.upperText) })]);
+    const box = h(doc, 'div', { cls: 'dv-gauge-box dv-bullet-box' }, [h(doc, 'div', { cls: 'dv-gauge-text ' + (toneClass(d.tone) || ''), text: str(d.text) }), track, scale,
+      d.label || d.caption ? h(doc, 'div', { cls: 'dv-metric-caption', text: str(d.caption || d.label) }) : null]);
+    body.appendChild(box);
+    return { dispose() { box.remove(); } };
+  }
+};
+
 CHART_KINDS.forEach((k) => defineKind(k, engineKind(k)));
+defineKind('bullet', bullet);
 defineKind('hbar', bars);
 defineKind('gauge', gauge);

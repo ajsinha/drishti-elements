@@ -26,6 +26,30 @@ const upper = (v) => String(v == null ? '' : v).trim().toUpperCase();
 const panelOf = (el) => { const p = el.closest('.pnl'); return p ? p.getAttribute('data-panel') : null; };
 
 /**
+ * The mark a click on a panel chart chose, when it carries its row (contract 1.2 ev): a line's or an area's point (the series' ev
+ * beside x, else the chart's), a surface's cell (its ev), else the record the option item holds (a point, a step, a candle, an event).
+ * @param {string} kind
+ * @param {Object} d the panel's data
+ * @param {Object} p the engine's click (seriesIndex, dataIndex, data)
+ * @returns {?{ev: string, series: (string|undefined), set: (Object|undefined)}}
+ */
+export function pointOf(kind, d, p) {
+  if (!d || !p) { return null; }
+  const i = p.dataIndex;
+  if (kind === 'line' || kind === 'area') {
+    const s = (d.series || [])[p.seriesIndex] || {};
+    const ev = Array.isArray(s.ev) ? s.ev[i] : Array.isArray(d.ev) ? d.ev[i] : null;
+    if (ev === null || ev === undefined) { return null; }
+    const out = { ev: String(ev), series: s.label };
+    if (Array.isArray(d.set) && d.set[i]) { out.set = d.set[i]; }
+    return out;
+  }
+  const rec = p.data && (p.data.point || p.data.step || p.data.candle || p.data.event || p.data.cell || p.data.rec);
+  if (rec && rec.ev !== undefined && rec.ev !== null) { return Object.assign({ ev: String(rec.ev) }, rec.set ? { set: rec.set } : {}); }
+  return null;
+}
+
+/**
  * Draws a map panel with a map helper; resolves with its clickable places and its note.
  * @param {Object} E the engine (echarts)
  * @param {Object} G the map helper (world, region, find, option, codeOf): drishti-chart's geo part (createGeoHelper) or a host's own
@@ -104,6 +128,7 @@ export function drawMap(E, G, el, d, t, onLink, chartsOut) {
  * @property {function(): Promise<Object>} [graph] loads drishti-graph and resolves with its API (drawGraphPanel draws a graph panel); without
  *   it a graph panel says it did not load
  * @property {function(Object, HTMLElement): void} [onLink] a point, a node or a place that names an entity was clicked ({kind, id}, the container)
+ * @property {function(Object, HTMLElement): void} [onPoint] a mark that carries its row was clicked ({ev, series?, set?}, the container; contract 1.2)
  * @property {function(HTMLElement, Array<{name: string, link: Object, text: string}>, string): void} [onPlaces] a map's clickable places and its note, for the host to list
  * @property {string} [selector='[data-r-chart]'] the chart containers
  * @property {function(HTMLElement): ?{kind: string, data: Object}} [specOf] a container's kind and data (default el.__drishti)
@@ -187,6 +212,8 @@ export class PanelCharts {
         c.on('click', (p) => {
           const link = p.data && ((p.data.point && p.data.point.link) || (p.data.node && p.data.node.link));
           if (link && link.kind && link.id) { this.link(link, el); }
+          const spec = this.o.specOf(el), mark = spec ? pointOf(spec.kind, spec.data, p) : null;   // contract 1.2: a mark that carries its row
+          if (mark && this.o.onPoint) { this.o.onPoint(mark, el); }
         });
       }
     } catch (e) { this.broken(E, el); }

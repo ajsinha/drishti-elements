@@ -255,3 +255,146 @@ def test_the_gallery_pages_of_datasets_draw_every_example_with_its_made_up_data(
         first = await pg.evaluate(pv)
         await pg.wait_for_function("(a) => { const now = (" + pv + ")(); return now && now !== a; }", arg=first, timeout=20000)   # the chart sharing the dataset follows
     gallery_run(browsers, body, "#c=view-datasets")
+
+
+LIVE_TABLES = """() => {
+  const rows = [];
+  for (let i = 1; i <= 40; i++) { rows.push({ id: 'O-' + String(i).padStart(3, '0'), side: i % 2 ? 'BUY' : 'SELL', qty: i * 100, changed: '2026-11-20T09:' + String(i).padStart(2, '0') + ':00Z' }); }
+  const L = window.__live = { rows: rows, asked: [], windows: [], follows: 0, subs: [] };
+  L.push = (p) => L.subs.forEach((s) => s.onPatch(p));
+  L.gap = () => L.subs.splice(0).forEach((s) => s.onGap());
+  return (ref) => ({
+    page(q) {
+      L.asked.push(q);
+      const s = (q.sort || [])[0], out = L.rows.slice();
+      if (s) { out.sort((a, b) => (a[s.col] < b[s.col] ? -1 : a[s.col] > b[s.col] ? 1 : 0) * (s.dir === 'desc' ? -1 : 1)); }
+      return Promise.resolve({ rows: out.slice(0, q.limit), total: L.rows.length, version: { epoch: 'e1', seq: 1 } });
+    },
+    follow(after, keys, top, onPatch, onGap) {
+      L.follows++; L.windows.push({ keys: keys, top: top });
+      const sub = { onPatch: onPatch, onGap: onGap };
+      L.subs.push(sub);
+      return { window(k, t) { L.windows.push({ keys: k, top: t }); return Promise.resolve(); }, stop() { const i = L.subs.indexOf(sub); if (i >= 0) { L.subs.splice(i, 1); } } };
+    }
+  });
+}"""
+
+
+def test_a_live_panel_reads_a_window_follows_its_patches_and_draws_bars(browsers):
+    vm = view([{"id": "blotter", "kind": "live", "title": "Orders", "span": 12, "height": 12,
+                "data": {"dataset": "orders", "columns": [{"field": "id"}, {"field": "side"}, {"field": "qty", "bar": True}],
+                         "sort": [{"field": "changed", "desc": True}], "search": True}}],
+              {"orders": {"key": ["id"], "fields": [{"name": "id", "type": "string", "label": "Order"}, {"name": "side", "type": "string", "label": "Side"},
+                                                    {"name": "qty", "type": "number", "label": "Qty", "fmt": "amount0"}, {"name": "changed", "type": "datetime"}],
+                          "live": {"table": "orders", "window": 10, "top": True, "filter": {"op": "==", "args": [{"col": "side"}, {"lit": "BUY"}]}}}})
+    vm["contract"] = "1.2"
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v, { tables: (" + LIVE_TABLES + ")() })", vm)
+        await pg.wait_for_function(DRAWN, arg=["blotter"], timeout=60000)
+        await frame(pg)
+        got = await ev(pg, """{ asked: window.__live.asked, windows: window.__live.windows.length, keys: window.__live.windows[0].keys.length,
+            top: window.__live.windows[0].top, rows: R.querySelectorAll('[data-panel=blotter] .dg-row').length,
+            first: [...R.querySelector('[data-panel=blotter] .dg-row').children].map((c) => c.textContent),
+            bars: R.querySelectorAll('[data-panel=blotter] .dc-bullet').length,
+            count: R.querySelector('[data-panel=blotter] .dv-live-count').textContent,
+            issues: window.__harness.events.filter((e) => e.type === 'issues').length }""")
+        assert got["asked"] == [{"limit": 10, "sort": [{"col": "changed", "dir": "desc"}], "filter": {"op": "==", "args": [{"col": "side"}, {"lit": "BUY"}]}}]
+        assert got["keys"] == 10 and got["top"] is True and got["rows"] == 10
+        assert "O-040" in got["first"] and "4,000" in " ".join(got["first"])
+        assert got["bars"] > 0 and got["count"] == "10 of 40 rows, live" and got["issues"] == 0
+        await shot(pg, "views-live.png")
+        await pg.evaluate("""() => window.__live.push({ table: 'orders', update: [{ id: 'O-040', qty: 9999 }],
+            add: [{ id: 'O-041', side: 'BUY', qty: 50, changed: '2026-11-20T10:00:00Z' }], top: [['O-041']], total: 41 })""")
+        await frame(pg)
+        await frame(pg)
+        after = await ev(pg, """{ rows: R.querySelectorAll('[data-panel=blotter] .dg-row').length,
+            first: [...R.querySelector('[data-panel=blotter] .dg-row').children].map((c) => c.textContent),
+            all: [...R.querySelectorAll('[data-panel=blotter] .dg-row')].map((r) => r.textContent).join('|'),
+            windows: window.__live.windows.length, last: window.__live.windows[window.__live.windows.length - 1].keys.length,
+            count: R.querySelector('[data-panel=blotter] .dv-live-count').textContent }""")
+        assert after["rows"] == 10 and "O-041" in after["first"]       # new on top; the bottom row left the window
+        assert "O-031" not in after["all"] and "9,999" in after["all"], after["all"]
+        assert after["windows"] == 2 and after["last"] == 10 and after["count"] == "10 of 41 rows, live"
+        await pg.evaluate("() => window.__live.push({ table: 'orders', remove: [['O-041']], total: 40 })")
+        await frame(pg)
+        assert await ev(pg, "R.querySelectorAll('[data-panel=blotter] .dg-row').length") == 9
+        await pg.evaluate("() => window.__live.gap()")                  # a gap reads the page again and follows anew
+        await pg.wait_for_function("() => window.__live.asked.length === 2 && window.__live.follows === 2", timeout=10000)
+        await frame(pg)
+        assert await ev(pg, "R.querySelectorAll('[data-panel=blotter] .dg-row').length") == 10
+        await pg.evaluate("window.__harness.handle.dispose()")
+        assert await pg.evaluate("window.__live.subs.length") == 0
+    run_with(browsers, body)
+
+
+def test_a_live_panel_without_live_tables_says_so(browsers):
+    vm = view([{"id": "blotter", "kind": "live", "data": {"dataset": "orders"}}],
+              {"orders": {"key": ["id"], "fields": [{"name": "id", "type": "string"}], "live": {"table": "orders", "window": 10}}})
+    vm["contract"] = "1.2"
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", vm)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=blotter]'); return e && /options.tables/.test(e.textContent); }", timeout=30000)
+    run_with(browsers, body)
+
+
+def test_a_line_of_several_series_draws_marks_on_two_axes_and_a_click_hands_back_the_row(browsers):
+    vm = view([{"id": "pv", "kind": "line", "title": "P&L against VaR", "span": 12, "height": 10,
+                "data": {"x": ["2026-01-12", "2026-01-13", "2026-01-14"], "ev": ["0", "1", "2"],
+                         "series": [{"label": "P&L", "values": [120000, -260000, 45000], "tone": "accent", "mark": "bar"},
+                                    {"label": "VaR", "values": [310000, 305000, 298000], "tone": "warn", "axis": "right"},
+                                    {"label": "Limit", "values": [400000, 400000, 400000], "tone": "bad", "mark": "point", "axis": "right"}]}},
+               {"id": "cc", "kind": "line", "span": 12, "height": 8,
+                "data": {"x": ["1Y", "5Y", "10Y"], "series": [{"label": "Today", "values": [0.0412, 0.0388, 0.0395], "tone": "link", "ev": ["0", "1", "2"]},
+                                                              {"label": "Yesterday", "values": [0.0409, None, 0.0401], "tone": None, "ev": ["3", None, "4"]}]}}], {})
+    vm["contract"] = "1.2"
+    del vm["datasets"]
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", vm)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=cc] .dv-chart'); return e && window.echarts && window.echarts.getInstanceByDom(e); }", timeout=30000)
+        await frame(pg)
+        got = await ev(pg, """(() => { const o = window.echarts.getInstanceByDom(R.querySelector('[data-panel=pv] .dv-chart')).getOption();
+            return { types: o.series.map((s) => s.type), axes: o.yAxis.length, legend: [...R.querySelectorAll('[data-panel=pv] .dv-legend li')].map((li) => li.textContent) }; })()""")
+        assert got == {"types": ["bar", "line", "scatter"], "axes": 2, "legend": ["P&L", "VaR (right)", "Limit (right)"]}
+        await shot(pg, "views-line-series.png")
+        xy = await ev(pg, """(() => { const el = R.querySelector('[data-panel=cc] .dv-chart'), c = window.echarts.getInstanceByDom(el);
+            c.setOption({ tooltip: { show: false } });   // the engine's tooltip writes inline styles (a known limit under the strict CSP)
+            const p = c.convertToPixel({ seriesIndex: 1 }, [0, 0.0409]), b = el.getBoundingClientRect(); return [b.left + p[0], b.top + p[1]]; })()""")
+        await pg.mouse.click(xy[0], xy[1])
+        await frame(pg)
+        pts = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
+        assert pts and pts[-1]["panel"] == "cc" and pts[-1]["ev"] == "3" and pts[-1]["series"] == "Yesterday", pts
+    run_with(browsers, body)
+
+
+def test_a_treemap_and_bullets_draw_and_a_cell_hands_back_its_row(browsers):
+    vm = view([{"id": "tm", "kind": "treemap", "span": 8, "height": 10,
+                "data": {"cells": [{"label": "Alpha Bank", "group": "Banks", "value": 4200000, "text": "4,200,000", "tone": "pos", "ev": "0"},
+                                   {"label": "Beta Bank", "group": "Banks", "value": 2100000, "text": "2,100,000", "tone": "neg", "ev": "1"},
+                                   {"label": "Gamma Oil", "group": "Energy", "value": 3300000, "text": "3,300,000", "ev": "2"}], "total": "9,600,000"}},
+               {"id": "band", "kind": "bullet", "span": 4,
+                "data": {"value": -720000, "text": "−720,000", "label": "Net delta", "min": -1200000, "max": 1200000,
+                         "bands": [{"from": -1000000, "to": -800000, "tone": "warn"}, {"from": -800000, "to": 800000, "tone": "ok"}, {"from": 800000, "to": 1000000, "tone": "warn"}],
+                         "lower": -1000000, "lowerText": "−1,000,000", "upper": 1000000, "upperText": "+1,000,000", "tone": "ok"}}], {})
+    vm["contract"] = "1.2"
+    del vm["datasets"]
+
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", vm)
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const e = R.querySelector('[data-panel=tm] .dv-chart'); return e && window.echarts && window.echarts.getInstanceByDom(e); }", timeout=30000)
+        await frame(pg)
+        got = await ev(pg, """(() => { const o = window.echarts.getInstanceByDom(R.querySelector('[data-panel=tm] .dv-chart')).getOption();
+            return { groups: o.series[0].data.map((g) => g.name), bands: R.querySelectorAll('[data-panel=band] .dv-bullet-band').length,
+              bounds: R.querySelectorAll('[data-panel=band] .dv-bullet-bound').length, mark: R.querySelector('[data-panel=band] .dv-bullet-mark').style.getPropertyValue('--dv-at'),
+              text: R.querySelector('[data-panel=band] .dv-gauge-text').textContent, issues: window.__harness.events.filter((e) => e.type === 'issues').length }; })()""")
+        assert got == {"groups": ["Banks", "Energy"], "bands": 3, "bounds": 2, "mark": "0.2", "text": "−720,000", "issues": 0}, got
+        await shot(pg, "views-treemap-bullet.png")
+        xy = await ev(pg, """(() => { const el = R.querySelector('[data-panel=tm] .dv-chart'), c = window.echarts.getInstanceByDom(el); c.setOption({ tooltip: { show: false } });
+            const b = el.getBoundingClientRect(); return [b.left + b.width * 0.25, b.top + b.height * 0.6]; })()""")
+        await pg.mouse.click(xy[0], xy[1])
+        await frame(pg)
+        pts = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
+        assert pts and pts[-1]["panel"] == "tm" and pts[-1]["ev"] in ("0", "1", "2"), pts   # a cell, not a group
+    run_with(browsers, body)

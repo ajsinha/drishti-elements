@@ -19,8 +19,21 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
-- **Charts, views**: a chart drawn before its box had a height (the engine at 0 px high) now follows its own box: each chart container is observed, not only the view, so the chart-point click is steady under parallel load (the browser test waits for the chart to be sized to its box); JSDoc for `drishti_views-state.js` complete, `docs/API.md` regenerated.
-
+- **Charts, views**: a chart drawn before its box had a height (the engine at 0 px high) now follows its own box: each chart container is observed, not only the view, so the chart-point click is steady under parallel load (the browser test waits for the chart to be sized to its box).
+- **Treemap and bullet panels** (contract 1.2): `treemap` drawn by drishti-chart's panel charts (cells nested by group, toned by sign,
+  the groups' labels on top, no zoom; a cell that carries its row is a `point` event) with its data table; `bullet` drawn by drishti-views
+  as elements (the zones, the bounds, the figure's mark toned by its zone, the bounds' words, a meter for assistive technology).
+- **Several series on a line panel** (drishti-chart's panel charts, drishti-views; contract 1.2 `Series.mark`, `axis`, `ev`): a series'
+  mark (bar, area, point; a line by default), a right-hand axis when a series asks for it, the palette's colours past the first, and a
+  legend drawn by drishti-views as elements (the engine's legend writes inline styles); a click on a mark that carries its row (a series'
+  `ev`, else the chart's) is the view's new event `point` (`{panel, ev, series?, set?}`; `PanelCharts` option `onPoint`, `pointOf`).
+- **The live kind** (drishti-views; ViewModel contract 1.2, the pin moved to drishti-rachana g3/kinds): a grid over a live table of the
+  Data Protocol. The dataset's `live` reference (table, window, top, filter) is read through `options.tables(ref)`, the page's live tables
+  (drishti-rachana's `liveTables` over its DataClient: `page(query)` and `follow(after, keys, top, onPatch, onGap)`): the first window in the
+  panel's order, a windowed subscription with its keys, each patch applied (reset, remove by key lists, update with ticking cells, add,
+  `top` inserts first, the total), rows past the window leave from the bottom and the window follows, a gap reads the page again; "n of N
+  rows, live" under the grid; without `options.tables` the panel says so. Cell bars: a column's `bar` (grid and live) draws drishti-grid's
+  `barCell` against the column's largest magnitude. Browser tests with an in-page live table.
 - **Donut clicks and tooltips under a strict CSP** (drishti-views, drishti-chart): the donut shape of an hbar fires `bar-click` on the slice's bar exactly as the
   bar form does (`set` and `on` lists, contract 1.2; each slice carries its bar). The panel charts' tooltips are elements built with the DOM
   (`elementTooltips`; no markup string, no style attribute), so no chart tooltip needs `'unsafe-inline'` for styles; the chart-click browser test

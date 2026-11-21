@@ -22,7 +22,7 @@
 import { formatCompact } from '../../drishti-core/src/drishti_index.js';
 
 /** The panel kinds drawn with the engine. */
-export const PANEL_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'graph', 'donut', 'surface', 'map']);
+export const PANEL_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'graph', 'donut', 'surface', 'map', 'treemap']);
 
 const ENT = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 /**
@@ -83,13 +83,19 @@ const tip = (t, extra) => Object.assign({ backgroundColor: t.surface, borderColo
 function line(d0, t, kind) {
   const d = JSON.parse(JSON.stringify(d0 || {})), area = kind === 'area';
   d.x = d.x || []; d.series = d.series || [];
-  const series = d.series.map((s) => {
+  const pal = palette(t), many = d.series.length > 1;
+  const right = d.series.some((s) => s && s.axis === 'right'), bars = d.series.some((s) => s && s.mark === 'bar');
+  const series = d.series.map((s, si) => {
     const values = (s.values || []).map((v) => (num(v) ? v : null));
+    const colour = s.tone && t[s.tone] ? t[s.tone] : many && si > 0 ? pal[si % pal.length] : tone(t, s.tone);
     const o = { type: 'line', name: s.label, data: values, connectNulls: false, smooth: false, symbol: 'circle', symbolSize: 5,
-      lineStyle: { width: 1.6, color: tone(t, s.tone) }, itemStyle: { color: tone(t, s.tone) } };
-    if (area) { o.areaStyle = { color: tone(t, s.tone), opacity: 0.12 }; o.symbol = 'none'; }
-    if (d.step) { o.step = 'end'; o.symbol = 'none'; }
-    if (d.mark) {
+      lineStyle: { width: 1.6, color: colour }, itemStyle: { color: colour } };
+    if (s.mark === 'bar') { Object.assign(o, { type: 'bar', barMaxWidth: 28, itemStyle: { color: colour, borderRadius: [2, 2, 0, 0] } }); delete o.lineStyle; delete o.symbol; delete o.symbolSize; delete o.smooth; delete o.connectNulls; }
+    if (s.mark === 'point') { Object.assign(o, { type: 'scatter', symbolSize: 7 }); delete o.lineStyle; delete o.smooth; delete o.connectNulls; }
+    if ((area && !s.mark) || s.mark === 'area') { o.areaStyle = { color: colour, opacity: 0.12 }; o.symbol = 'none'; }
+    if (s.axis === 'right') { o.yAxisIndex = 1; }
+    if (d.step && o.type === 'line') { o.step = 'end'; o.symbol = 'none'; }
+    if (d.mark && si === 0) {
       const i = d.x.indexOf(d.mark);
       if (i >= 0) { o.markPoint = { symbol: 'circle', symbolSize: 10, itemStyle: { color: t.accent }, label: { show: false }, data: [{ coord: [i, values[i]] }] }; }
     }
@@ -100,14 +106,16 @@ function line(d0, t, kind) {
       label: { position: 'insideEndTop', formatter: (d.limitLabel || 'limit') + ' ' + panelLineCompact(d.limit), color: t.neg, fontSize: 10 }, data: [{ yAxis: d.limit }] };
   }
   const A = { axisLine: { lineStyle: { color: t.border } }, axisLabel: { color: t.muted, fontFamily: t.mono, fontSize: 10 }, splitLine: { lineStyle: { color: t.border, opacity: 0.5 } } };
-  const yAxis = { type: 'value', scale: !area, axisLabel: { color: t.muted, fontFamily: t.mono, fontSize: 10, formatter: panelLineCompact }, axisLine: A.axisLine, splitLine: A.splitLine };
+  const yAxis = { type: 'value', scale: !area && !bars, axisLabel: { color: t.muted, fontFamily: t.mono, fontSize: 10, formatter: panelLineCompact }, axisLine: A.axisLine, splitLine: A.splitLine };
   if (num(d.limit)) {
     yAxis.max = (v) => { const m = Math.max(v.max, d.limit); return m + Math.abs(m - Math.min(v.min, d.limit)) * 0.05; };
     yAxis.min = (v) => { const m = Math.min(v.min, d.limit); return area && m >= 0 ? 0 : m - Math.abs(Math.max(v.max, d.limit) - m) * 0.05; };
   }
-  return { animationDuration: 500, grid: { left: 44, right: 12, top: 12, bottom: 22 },
+  const yAxes = right ? [yAxis, { type: 'value', scale: true, position: 'right', axisLabel: yAxis.axisLabel, axisLine: A.axisLine, splitLine: { show: false } }] : yAxis;
+  const legend = many ? { legend: { show: false, data: series.map((s) => s.name) } } : {};   // the host draws the legend (no inline styles)
+  return Object.assign({ animationDuration: 500, grid: { left: 44, right: right ? 44 : 12, top: 12, bottom: 22 },
     tooltip: { trigger: 'axis', backgroundColor: t.surface, borderColor: t.border, textStyle: { color: t.ink, fontFamily: t.mono, fontSize: 11 } },
-    xAxis: Object.assign({ type: 'category', data: d.x, boundaryGap: false }, A), yAxis, series };
+    xAxis: Object.assign({ type: 'category', data: d.x, boundaryGap: bars }, A), yAxis: yAxes, series }, legend);
 }
 
 // ---- waterfall ------------------------------------------------------------------------------------------------------------------
@@ -242,7 +250,27 @@ function surfaceOption(d, t, view) {
     series: [{ type: 'heatmap', data: cells, label: { show: x.length * y.length <= 72, color: t.ink, fontFamily: t.mono, fontSize: 10, formatter: (p) => Math.round(p.value[2] * 100) / 100 } }] };
 }
 
-const BUILD = { line: (d, t) => line(d, t, 'line'), area: (d, t) => line(d, t, 'area'), waterfall, histogram, scatter, candlestick, donut,
+// ---- treemap (contract 1.2) ------------------------------------------------------------------------------------------------------
+function treemap(d, t) {
+  const cells = (d && d.cells) || [], pal = palette(t), groups = new Map();
+  const item = (c) => ({ name: String(c.label), value: c.value, text: c.text, cell: c,   // the ViewModel's own cell: its ev, set and on (a click finds the mark by it)
+    itemStyle: c.tone ? { color: tone(t, c.tone === 'pos' ? 'ok' : 'neg') } : undefined });
+  const top = [];
+  cells.forEach((c) => {
+    if (c.group === undefined || c.group === null) { top.push(item(c)); return; }
+    let g = groups.get(c.group);
+    if (!g) { g = { name: String(c.group), children: [], itemStyle: { color: pal[groups.size % pal.length] } }; groups.set(c.group, g); top.push(g); }
+    g.children.push(item(c));
+  });
+  return { tooltip: { formatter: (p) => esc(p.name) + (p.data && p.data.text ? ': ' + esc(p.data.text) : '') },
+    series: [{ type: 'treemap', data: top, roam: false, nodeClick: false, breadcrumb: { show: false }, width: '100%', height: '100%', top: 0, left: 0,
+      label: { show: true, color: t.ink, fontFamily: t.mono, fontSize: 10, formatter: (p) => p.name + (p.data && p.data.text ? '\n' + p.data.text : '') },
+      upperLabel: { show: groups.size > 0, height: 16, color: t.muted, fontFamily: t.mono, fontSize: 10 },
+      itemStyle: { borderColor: t.surface, borderWidth: 1, gapWidth: 1 },
+      levels: [{ itemStyle: { borderColor: t.border, borderWidth: 1, gapWidth: 2 } }, { itemStyle: { gapWidth: 1 }, colorSaturation: [0.35, 0.6] }] }] };
+}
+
+const BUILD = { line: (d, t) => line(d, t, 'line'), area: (d, t) => line(d, t, 'area'), waterfall, histogram, scatter, candlestick, donut, treemap,
   surface: (d, t, s, view) => surfaceOption(d, t, view || 'heatmap') };
 
 /**
