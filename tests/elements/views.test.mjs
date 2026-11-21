@@ -199,3 +199,25 @@ test('complete fills a record behind a reference (ref, provenance) with its own 
   assert.deepEqual(V.validate(vm).issues, []);
   assert.deepEqual(V.complete({ contract: '1.0', ref: { kind: 'region', id: 'EMEA' }, title: { id: 'x' }, strip: [], panels: [], keys: [] }, 'ViewModel').ref, { kind: 'region', id: 'EMEA' });   // what the producer sent stays
 });
+
+test('complete gives a ViewModel without a contract the painter\'s, and keeps one that is sent', () => {
+  assert.equal(V.complete({ title: { id: 'x' }, strip: [], panels: [], keys: [] }, 'ViewModel').contract, V.CONTRACT);
+  assert.equal(V.complete({ contract: '1.0', title: { id: 'x' }, strip: [], panels: [], keys: [] }, 'ViewModel').contract, '1.0');
+});
+
+test('table tools: a number column\'s condition, and a grid\'s range charted with the row\'s first column across', () => {
+  assert.deepEqual(V.parseCondition('> 1m'), { type: 'number', op: 'gt', value: 1e6 });
+  assert.deepEqual(V.parseCondition('<= 250k'), { type: 'number', op: 'lte', value: 250000 });
+  assert.deepEqual(V.parseCondition('(1,200)'), { type: 'number', op: 'equals', value: -1200 });
+  assert.deepEqual(V.parseCondition('≠ 0'), { type: 'number', op: 'notEquals', value: 0 });
+  assert.equal(V.parseCondition('EUR'), null);
+  assert.equal(V.gridChart({ tools: { chart: false } }, { id: 'g' }, []), null);              // without the tool: the grid only raises chartRequested
+  const asked = [];
+  const ctx = { tools: { chart: true }, root: null, chartTable: (t, opener) => { asked.push(t); return Promise.resolve(); } };
+  const hook = V.gridChart(ctx, { id: 'g', title: 'Desks' }, [{ header: 'Desk' }, { header: 'P&L' }, { header: 'VaR' }]);
+  hook({ ranges: [{ r1: 0, r2: 1, c1: 1, c2: 2 }], table: { columns: ['P&L', 'VaR'], rows: [['FX', 5, 1], ['Rates', 7, 2]] } });
+  hook({ ranges: [{ r1: 0, r2: 0, c1: 0, c2: 1 }], table: { columns: ['Desk', 'P&L'], rows: [['FX', 'FX', 5]] } });
+  hook({ ranges: [], table: { columns: [], rows: [] } });                                     // nothing selected: nothing opens
+  assert.deepEqual(asked, [{ title: 'Desks', columns: ['Desk', 'P&L', 'VaR'], rows: [['FX', 5, 1], ['Rates', 7, 2]] },
+    { title: 'Desks', columns: ['Desk', 'P&L'], rows: [['FX', 5]] }]);
+});

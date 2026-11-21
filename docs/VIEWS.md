@@ -34,6 +34,18 @@ The view draws inside a shadow root (`shadow: false` draws into the element). A 
 drishti-graph) the first time a view has one; a page of words and tables never loads a chart engine. A map draws out of the box (see
 [Maps](#maps)).
 
+A host that styles the view itself passes `sheets` (constructable `CSSStyleSheet`s): they are adopted by the view's shadow root, or by
+the root the element is in, and the painter links no stylesheet at all, so a host page whose `style-src` refuses links still draws. The
+chart engine is loaded the first time a view has a chart: the vendored copy by default, or the host's way with `engine: () => promise`
+(a Trusted Types policy, say).
+
+`tableTools: { filters: true, chart: true }` gives every table the reader's tools: a funnel on each column heading (the column's values
+with their counts, a search, Select all, and on a number column a condition such as `> 1m` or `<= 250k`; the filters combine across
+columns and with the filter box, survive a patch, and are cleared from the table's bar), and Chart any table: the rows as shown
+(filtered, sorted) open as a chart in a dialog beside the table, never a new window, with the kind (bar, line, area, pie, scatter), what
+goes across and the series to choose, and the chart card's data table and export (drishti-chart's `openTableChart`, which a page can call
+on any rows). A grid's "Chart the range" (its context menu) opens the same dialog. The view raises `filter` and `chart-table` events.
+
 **2. The element**
 
 ```html

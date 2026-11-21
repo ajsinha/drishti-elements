@@ -160,10 +160,33 @@ function withBars(G, cols, d, rows) {
   });
 }
 
+/**
+ * Chart any table on a grid (the host's tableTools.chart): the grid's "Chart the range" (its context menu) opens the range as a chart in a
+ * dialog beside the grid, the row's first column across. Without the tool the grid only raises chartRequested.
+ * @param {Object} ctx the painter's context
+ * @param {Object} panel
+ * @param {Object[]} cols the grid's columns
+ * @returns {?function(Object): void} drishti-grid's chart option
+ */
+export function gridChart(ctx, panel, cols) {
+  if (!(ctx.tools || {}).chart) { return null; }
+  return (detail) => {
+    const g = detail && list(detail.ranges)[0], t = (detail && detail.table) || { columns: [], rows: [] };
+    if (!g || !t.rows.length) { return; }
+    const first = g.c1 === 0;                       // the range holds the first column: its cells are the row's label already
+    const columns = first ? t.columns.slice() : [String((cols[0] && cols[0].header) || '')].concat(t.columns);
+    const rows = t.rows.map((r) => (first ? r.slice(1) : r.slice()));
+    const opener = ctx.root && ctx.root.ownerDocument ? ctx.root.ownerDocument.activeElement : null;
+    ctx.chartTable({ title: panel.title || '', columns: columns, rows: rows }, opener).catch(() => null);
+  };
+}
+
 const grid = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => ds.source().then((src) => {
   const d = panel.data;
   const o = { columns: withBars(G, gridColumns(d, ds), d, () => (Array.isArray(src) ? ds.held || src : [])), layout: 'wells', density: ctx.density || 'compact', rowSelection: 'single',
     getRowId: (r, i) => rowKey(r, ds.key, i) };
+  const chart = gridChart(ctx, panel, o.columns);
+  if (chart) { o.chart = chart; }
   if (Array.isArray(src)) { o.rows = src; } else { o.datasource = src; if (ds.def.pages && ds.def.pages.size > 0) { o.blockSize = ds.def.pages.size; } }
   if (d.pivot && list(d.pivot.values).length) {
     o.pivot = { rows: list(d.pivot.rows), columns: list(d.pivot.columns), filters: [],
@@ -286,7 +309,7 @@ const live = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => {
     if (g) { g.setRows(Array.from(held.values())); } else {
       const cols = withBars(G, gridColumns(d, ds), d, () => Array.from(held.values()));
       g = new G.Grid(box, Object.assign({ columns: edit ? cols.map((c) => edit.column(c)) : cols, layout: 'wells', density: ctx.density || 'compact',
-        rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()) }, edit ? edit.gridOptions() : {}));
+        rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()), chart: gridChart(ctx, panel, cols) || undefined }, edit ? edit.gridOptions() : {}));
       if (list(d.group).length) { g.model.setRowGroups(list(d.group)); }   // the rows keep the host's order (the query's sort)
       g.refresh();
       g.on('selectionChanged', () => {

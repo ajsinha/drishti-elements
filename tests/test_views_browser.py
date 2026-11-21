@@ -407,7 +407,8 @@ CHARTS_VIEW = {
         {"id": "wf", "kind": "waterfall", "data": {"steps": [{"label": "Start", "value": 10}, {"label": "Fees", "value": -3}]}},
         {"id": "hi", "kind": "histogram", "data": {"bins": [{"from": 0, "to": 1, "count": 4}, {"from": 1, "to": 2, "count": 6}]}},
         {"id": "sc", "kind": "scatter", "data": {"points": [{"x": 1, "y": 2, "label": "p"}, {"x": 2, "y": 3, "label": "q"}], "xLabel": "size", "yLabel": "cost"}},
-        {"id": "cs", "kind": "candlestick", "data": {"candles": [{"x": "d1", "open": 1, "high": 3, "low": 0.5, "close": 2}]}},
+        {"id": "cs", "kind": "candlestick", "data": {"candles": [{"x": "d1", "open": 1, "high": 3, "low": 0.5, "close": 2, "openText": "1.00", "highText": "3.00", "lowText": "0.50", "closeText": "2.00"},
+                                                                {"x": "d2", "open": 2, "high": 2.5, "low": 1, "close": 1.5}]}},
         {"id": "su", "kind": "surface", "data": {"x": ["1y", "2y"], "y": ["a", "b"], "z": [[1, 2], [3, 4]]}},
         {"id": "gr", "kind": "graph", "data": {"nodes": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}], "edges": [{"from": "a", "to": "b"}]}},
         {"id": "mp", "kind": "map", "data": {"mode": "world", "shade": {"label": "Orders", "items": [{"code": "DEU", "value": 4}]}}},
@@ -427,12 +428,14 @@ def test_the_kinds_of_charts_load_the_chart_library_only_then(browsers):
           bars: [...R.querySelectorAll('[data-panel=hb] .dv-bars li')].map((li) => [li.querySelector('.dv-bar-label').textContent, getComputedStyle(li.querySelector('.dv-bar')).getPropertyValue('--dv-share').trim(), li.querySelector('.dv-bar').className]),
           gauge: ['role', 'aria-valuenow', 'aria-valuemax', 'aria-valuetext', 'aria-label'].map((a) => R.querySelector('[data-panel=ga] .dv-gauge').getAttribute(a)),
           table: [...R.querySelectorAll('[data-panel=ln] .dv-data tr')].map((r) => r.textContent),
+          candles: [...R.querySelectorAll('[data-panel=cs] .dv-data tbody tr')].map((r) => [...r.children].map((c) => c.textContent)),
           graph: !!R.querySelector('[data-panel=gr] .dv-chart').__drishtiGraph,
           map: !!R.querySelector('[data-panel=mp] svg path'),
           img: R.querySelector('[data-panel=sc] .dv-chart').getAttribute('role') }""")
         assert got["bars"] == [["DEU", "1", "dv-bar dv-t-accent"], ["FRA", "0.5", "dv-bar dv-t-warn"]]
         assert got["gauge"] == ["meter", "85", "100", "85%", "Capacity"]
         assert got["table"] == ["Orders", "Mon3", "Tue5", "Wed"]
+        assert got["candles"] == [["d1", "1.00", "3.00", "0.50", "2.00"], ["d2", "2", "2.5", "1", "1.5"]]   # the producer's texts, else the numbers
         assert got["graph"] and got["img"] == "img" and got["map"]                 # a map draws out of the box (the geo part)
         await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels[0]));
             p.data.series[0].values = [3, 5, 8]; H.handle.patch({ seq: 1, patches: [{ op: 'panel', panel: p }] }); }""")
@@ -576,4 +579,85 @@ def test_a_view_with_only_the_minimum_draws_without_the_ref_warning_when_asked_t
         assert got["false"]["warned"] == 1 and got["false"]["mentionsRef"] is True       # as sent, the contract's required ref is missing: one warning
         assert got["true"]["warned"] == 0 and got["true"]["text"] is True                # completed on a copy: drawn, no warning
         assert got["true"]["refAdded"] is False                                          # the caller's object is not changed
+    run(browsers, body, "view=V007")
+
+
+TOOLS_VIEW = {
+    "contract": "1.0", "ref": {"kind": "book", "id": "B-2"}, "title": {"pill": "Book", "id": "B-2"},
+    "panels": [
+        {"id": "flows", "kind": "table", "title": "Flows", "data": {"columns": ["Date", "Ccy", "Amount"], "numeric": [False, False, True], "search": True,
+            "rows": [{"cells": [{"text": "2026-01-02"}, {"text": "EUR"}, {"text": "1.5m"}]}, {"cells": [{"text": "2026-01-03"}, {"text": "USD"}, {"text": "250k"}]},
+                     {"cells": [{"text": "2026-01-04"}, {"text": "EUR"}, {"text": "(1,200)"}]}, {"cells": [{"text": "2026-01-05"}, {"text": "GBP"}, {"text": "2m"}]},
+                     {"cells": [{"text": "2026-01-06"}, {"text": ""}, {"text": "10"}]}]}}]}
+FLOWS = "[...R.querySelectorAll('[data-panel=flows] tbody tr')].map((r) => r.children[1].textContent)"
+
+
+def test_table_tools_column_funnels_combine_and_survive_a_patch_and_chart_any_table_opens_beside_the_table(browsers):
+    async def body(pg):
+        await pg.evaluate("(v) => window.__harness.paint(v)", TOOLS_VIEW)
+        await frame(pg)
+        assert await ev(pg, "[R.querySelectorAll('.dv-funnel').length, R.querySelector('[data-chart-table]').hidden]") == [0, True]   # off by default
+        await pg.evaluate("(v) => window.__harness.paint(v, { tableTools: { filters: true, chart: true } })", TOOLS_VIEW)
+        await frame(pg)
+        assert await ev(pg, "R.querySelectorAll('[data-panel=flows] thead .dv-funnel').length") == 3
+        await ev(pg, "R.querySelector('[data-funnel=\"1\"]').click()")
+        items = await ev(pg, "[...R.querySelectorAll('.dv-cf .dv-cf-list .dv-cf-item')].map((l) => l.textContent)")
+        assert items == ["EUR2", "GBP1", "USD1", "(Blanks)1"]                     # the column's values with their counts, blanks last
+        assert await ev(pg, "R.activeElement && R.activeElement.classList.contains('dv-cf-search')")
+        await ev(pg, "(() => { const a = R.querySelector('[data-cf-all]'); a.checked = false; a.dispatchEvent(new Event('change')); const e = R.querySelector('[data-cf-value=\"EUR\"]'); e.checked = true; e.dispatchEvent(new Event('change')); R.querySelector('.dv-cf-ok').click(); })()")
+        assert await ev(pg, FLOWS) == ["EUR", "EUR"]
+        assert await ev(pg, "[R.querySelector('[data-funnel=\"1\"]').getAttribute('aria-pressed'), R.querySelector('.dv-cf'), R.activeElement.getAttribute('data-funnel')]") == ["true", None, "1"]
+        await ev(pg, "R.querySelector('[data-funnel=\"2\"]').click()")
+        await ev(pg, "(() => { const c = R.querySelector('.dv-cf-cond'); c.value = 'nonsense'; R.querySelector('.dv-cf-ok').click(); })()")
+        assert await ev(pg, "!R.querySelector('.dv-cf-note').hidden && !!R.querySelector('.dv-cf')")          # a bad condition is said, the menu stays
+        await ev(pg, "(() => { const c = R.querySelector('.dv-cf-cond'); c.value = '> 1m'; R.querySelector('.dv-cf-ok').click(); })()")
+        assert await ev(pg, "[...R.querySelectorAll('[data-panel=flows] tbody tr')].map((r) => r.textContent)") == ["2026-01-02EUR1.5m"]   # the two filters combine
+        await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels[0]));
+            p.data.rows.push({ cells: [{ text: '2026-01-07' }, { text: 'EUR' }, { text: '3m' }] }); H.handle.patch({ seq: 1, patches: [{ op: 'panel', panel: p }] }); }""")
+        await frame(pg)
+        assert await ev(pg, FLOWS) == ["EUR", "EUR"]                                # a patch keeps the filters
+        await ev(pg, "R.querySelector('[data-funnel=\"1\"]').click()")
+        await pg.keyboard.press("Escape")
+        assert await ev(pg, "[R.querySelector('.dv-cf'), R.activeElement.getAttribute('data-funnel')]") == [None, "1"]
+        await ev(pg, "R.querySelector('[data-chart-table]').click()")
+        await pg.wait_for_function("() => { const R = " + ROOT + "; const d = R.querySelector('dialog.dc-tc'); return d && d.open && !!d.querySelector('.dc-canvas canvas'); }", timeout=30000)
+        got = await ev(pg, "[R.querySelector('.dc-tc-title').textContent, [...R.querySelectorAll('.dc-tc [data-tc-series]')].map((i) => [i.getAttribute('data-tc-series'), i.checked]), R.querySelector('.dc-tc [data-tc=kind]').component.value]")
+        assert got == ["Chart · Flows", [["Amount", True]], "line"]                   # dates across: a line; the number column a series
+        await ev(pg, "R.querySelector('.dc-tc .dc-tool[data-tool=table]').click()")
+        rows = await ev(pg, "[...R.querySelectorAll('.dc-tc .dc-table tbody tr')].map((r) => r.textContent)")
+        assert len(rows) == 2                                                         # the rows as shown: the filtered two
+        await pg.keyboard.press("Escape")
+        await pg.wait_for_function("() => { const R = " + ROOT + "; return !R.querySelector('dialog.dc-tc'); }", timeout=5000)   # the close event comes in its own task
+        assert await ev(pg, "R.activeElement && R.activeElement.hasAttribute('data-chart-table')")
+        await ev(pg, "R.querySelector('.dv-cf-clear').click()")
+        assert len(await ev(pg, FLOWS)) == 6
+        await shot(pg, "views-table-tools.png")
+    run(browsers, body, "view=V001")
+
+
+def test_host_sheets_are_adopted_and_no_sheet_is_linked_and_the_host_loads_the_chart_engine(browsers):
+    async def body(pg):
+        got = await pg.evaluate("""async () => {
+            const V = window.Drishti.elements.views, core = window.Drishti.elements.core;
+            const C = await core.load('drishti-chart'), E = window.echarts;
+            delete window.echarts;
+            let asked = 0;
+            const own = new CSSStyleSheet(); own.replaceSync('.dv-panel { border-top-style: dashed; }');
+            const host = document.createElement('div'); document.body.appendChild(host);
+            const sr = host.attachShadow({ mode: 'open' }), inner = document.createElement('div'); sr.appendChild(inner);
+            const before = document.querySelectorAll('link').length;
+            const vm = { contract: '1.0', ref: { kind: 'b', id: '1' }, title: { id: 'Sheets' }, strip: [], keys: [],
+              panels: [{ id: 'ln', kind: 'line', data: { x: ['a', 'b'], series: [{ label: 'S', values: [1, 2], tone: null }] } }] };
+            const h = V.paint(inner, vm, { shadow: false, sheets: [own], libraries: { 'drishti-chart': C }, engine: () => { asked++; window.echarts = E; return Promise.resolve(E); } });
+            await h.ready;
+            for (let i = 0; i < 100 && !(h.panelCharts && h.panelCharts.instances().length); i++) { await new Promise((r) => setTimeout(r, 50)); }
+            const out = { adopted: sr.adoptedStyleSheets.indexOf(own) >= 0, links: sr.querySelectorAll('link').length + document.querySelectorAll('link').length - before,
+              dashed: getComputedStyle(sr.querySelector('.dv-panel')).borderTopStyle, asked: asked, charts: h.panelCharts ? h.panelCharts.instances().length : 0 };
+            const h2 = V.paint(document.body.appendChild(document.createElement('div')), vm, { sheets: [own], libraries: { 'drishti-chart': C } });
+            await h2.ready;
+            out.shadowAdopted = h2.el.shadowRoot.adoptedStyleSheets.indexOf(own) >= 0;
+            out.shadowLinks = h2.el.shadowRoot.querySelectorAll('link').length;
+            return out;
+        }""")
+        assert got == {"adopted": True, "links": 0, "dashed": "dashed", "asked": 1, "charts": 1, "shadowAdopted": True, "shadowLinks": 0}, got
     run(browsers, body, "view=V007")

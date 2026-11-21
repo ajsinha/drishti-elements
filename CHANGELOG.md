@@ -19,6 +19,17 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Table tools for embeds** (drishti-views, drishti-chart): the paint option `tableTools: {filters, chart}` gives a table a funnel on each column
+  heading (values with counts, search, Select all, a number condition such as `> 1m`; filters combine across columns and survive a patch) and Chart any
+  table (the rows as shown opened as a chart in a dialog beside the table: kind, across, series; the card's data table and export). drishti-chart's new
+  `TableChart`, `openTableChart`, `tableChartSpec` and `tableChartData` chart any rows of text; a grid panel's "Chart the range" opens the same dialog.
+  drishti-views' size budget is 255,000 bytes (243,130 with them; was 232,000).
+- **The host styles and loads** (drishti-views): `sheets` (constructable sheets adopted by the view's root; the painter links no stylesheet) and
+  `engine` (the host loads ECharts its own way); without `engine` the painter loads the vendored chart engine itself the first time a view has a chart.
+- **A candlestick's data table prints the producer's texts** (drishti-views): `openText`, `highText`, `lowText`, `closeText` (the raw number only
+  when a text is absent), as the contract carries them.
+- **`complete` gives a ViewModel without a contract the painter's** (drishti-views): a document with no `contract` speaks contract 1.
+
 - **Quoted-phrase search in all ten search sites** (decision accepted): a "quoted phrase" is one word in the grid, tree, inputs, designer and core
   filter searches, one reader (`searchWords`), no site keeps its own. **Core's size budget is 190,000** bytes (was 180,000; deliberate, owner: bigger
   is fine when deliberate).

@@ -351,3 +351,21 @@ test('a line panel of several series (contract 1.2): bars, points and areas by m
   assert.equal(one.legend, undefined);
   assert.equal(one.yAxis.type, 'value');
 });
+
+test('Chart any table: columns typed from their cells, the smart default and the reader\'s choice', () => {
+  const table = { title: 'Flows', columns: ['Date', 'Ccy', 'Amount', 'Fee', ''], rows: [['2026-01-02', 'EUR', '1.5m', '(10)', 'a'], ['2026-01-03', 'USD', '250k', '5', 'b'], ['2026-01-04', '', '—', '1', 'c']] };
+  const d = C.tableChartData(table);
+  assert.deepEqual(d.fields.map((f) => [f.name, f.type]), [['Date', 'date'], ['Ccy', 'text'], ['Amount', 'number'], ['Fee', 'number'], ['Column 5', 'text']]);
+  assert.deepEqual(d.rows[0], { Date: '2026-01-02', Ccy: 'EUR', Amount: 1500000, Fee: -10, 'Column 5': 'a' });
+  assert.equal(d.rows[2].Amount, null);                                                     // a dash is no number
+  const a = C.tableChartSpec(table);
+  assert.deepEqual(a.choice, { kind: 'line', x: 'Date', series: ['Amount', 'Fee'] });       // dates across: a line, every number column a series
+  assert.deepEqual(a.spec.series, [{ field: 'Amount', name: 'Amount' }, { field: 'Fee', name: 'Fee' }]);
+  assert.equal(a.spec.title, 'Flows');
+  const b = C.tableChartSpec(table, { kind: 'pie', x: 'Ccy', series: ['Fee'] });
+  assert.deepEqual([b.spec.category, b.spec.value], [{ field: 'Ccy' }, { field: 'Fee' }]);
+  assert.deepEqual(C.tableChartSpec(table, { x: 'Ccy' }).choice.kind, 'bar');                // text across: bars
+  assert.deepEqual(C.tableChartSpec(table, { kind: 'scatter' }).spec.x, { field: 'Amount', type: 'value' });
+  assert.deepEqual(C.normalizeSpec(a.spec).kind, 'line');                                   // a spec the chart takes
+  assert.deepEqual(C.TABLE_CHART_KINDS, ['bar', 'line', 'area', 'pie', 'scatter']);
+});

@@ -17649,6 +17649,87 @@ Leaves the studio (the chart goes back to a card).
 
 Returns `void`.
 
+### drishti_chart-table.js
+
+#### `TABLE_CHART_KINDS`
+
+The kinds a table is offered as.
+
+#### `TABLE_CHART_SERIES`
+
+The most series drawn by default.
+
+#### `tableChartData(table)`
+
+A table's fields and rows as values: each column's type from its cells, numbers read from their text.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `table` | `{columns: string[], rows: Array&lt;Array&lt;*&gt;&gt;}` | the headings and each row's cells (text as shown, or numbers) |
+
+Returns `{fields: Array&lt;{name: string, type: ('number'\|'date'\|'text')}&gt;, rows: Object[]}`.
+
+#### `tableChartSpec(table, choice)`
+
+The chart spec of a table and the reader's choice: what goes across (x), the series, the kind. Left out: the smart default.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `table` | `{columns: string[], rows: Array&lt;Array&lt;*&gt;&gt;, title: string}` |  |
+| `[choice]` | `{kind: string, x: string, series: string[]}` |  |
+
+Returns `{spec: Object, fields: Object[], choice: {kind: string, x: string, series: string[]}}`.
+
+#### class `TableChart`
+
+A table opened as a chart: the dialog, its settings and drishti-chart's card. new TableChart(root, table, options).open().
+
+##### `new TableChart(root, table, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `root` | `(Element\|ShadowRoot)` | where the dialog goes (the view's root, so its sheets style it) |
+| `table` | `{columns: string[], rows: Array&lt;Array&lt;*&gt;&gt;, title: string}` |  |
+| `[o]` | `{opener: HTMLElement, chart: Object, choice: Object, onClose: function(): void}` | opener: gets the focus back; chart: the chart's own options (ChartOptions); choice: the kind, x and series to start with |
+
+##### `TableChart.open()`
+
+Shows the dialog with the chart drawn.
+
+Returns `Promise&lt;TableChart&gt;`: once the chart is drawn.
+
+##### `TableChart.choose(choice)`
+
+Draws another choice (kind, x, series).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `choice` | `{kind: string, x: string, series: string[]}` |  |
+
+Returns `Promise&lt;void&gt;`.
+
+##### `TableChart.shut()`
+
+Closes the dialog (the focus goes back to the opener).
+
+Returns `void`.
+
+#### `openTableChart(root, table, o)`
+
+Opens a table as a chart in a dialog inside root.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `root` | `(Element\|ShadowRoot)` |  |
+| `table` | `{columns: string[], rows: Array&lt;Array&lt;*&gt;&gt;, title: string}` |  |
+| `[o]` | `Object` | TableChart's options |
+
+Returns `TableChart`.
+
+```js
+openTableChart(view.shadowRoot, { title: 'Flows', columns: ['Date', 'Amount'], rows: [['2026-01-02', '1.5m']] }, { opener: btn })
+```
+
 ### drishti_chart-view.js
 
 #### `CHART_EVENTS`
@@ -22845,6 +22926,16 @@ The number a formatted text shows ("1,234.5", "-4.2%", "(1,200)", "12.3m"), or N
 
 Returns `number`.
 
+#### `parseCondition(t)`
+
+A number column's condition as drishti-core's filter model ("&gt; 1m", "&lt;= 250k", "= 0", "1.5m"), or null when it is not one.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `t` | `string` |  |
+
+Returns `?{type: string, op: string, value: number}`.
+
 ### drishti_views-tabs.js
 
 #### `MAX_NESTING`
@@ -23065,6 +23156,18 @@ drishti-chart's spec of a chart panel over rows already derived (grouped and com
 
 Returns `Object`.
 
+#### `gridChart(ctx, panel, cols)`
+
+Chart any table on a grid (the host's tableTools.chart): the grid's "Chart the range" (its context menu) opens the range as a chart in a dialog beside the grid, the row's first column across. Without the tool the grid only raises chartRequested.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `ctx` | `Object` | the painter's context |
+| `panel` | `Object` |  |
+| `cols` | `Object[]` | the grid's columns |
+
+Returns `?function(Object): void`: drishti-grid's chart option.
+
 ### drishti_views-live.js
 
 #### `LIVE_KINDS`
@@ -23143,7 +23246,7 @@ A ViewModel or frame the builders refused: the problems, each with its path and 
 
 #### `complete(value, def)`
 
-The value with every field contract 1 requires and the producer left out filled in: null where the schema allows it, otherwise the type's empty value (false, 0, '', [], {}); nested records alike. Nothing is removed or changed.
+The value with every field contract 1 requires and the producer left out filled in: null where the schema allows it, otherwise the type's empty value (false, 0, '', [], {}); nested records alike; a ViewModel without a contract speaks this painter's (CONTRACT). Nothing is removed or changed.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -23440,6 +23543,9 @@ Returns `void`.
 | Name | Type | Meaning |
 |---|---|---|
 | `[shadow=true]` | `boolean` | draw inside a shadow root (false: into the element itself, styled by the page's sheets) |
+| `[sheets]` | `CSSStyleSheet[]` | the host styles the view: these constructable sheets (Elements' tokens and the painter's and libraries' rules, as the host builds them) are adopted by the view's shadow root, or without one by the root the element is in (a host's shadow root or the document), and the painter links no stylesheet of its own or of a library: a host page whose style-src refuses links works |
+| `[engine]` | `function(): Promise&lt;Object&gt;` | loads the chart engine (ECharts) the host's way (its Trusted Types policy); default: the painter loads the vendored engine the first time a view has a chart (drishti-core's loadScript of drishti-chart's scripts) |
+| `[tableTools]` | `{filters: boolean, chart: boolean}` | filters: a funnel on each column heading of a table (its values with counts, Select all, a search, a condition on a number column such as "&gt; 1m"), filters that combine across columns; chart: Chart any table (a table's rows as shown, or a grid's range, opened as a chart in a dialog beside it: drishti-chart's openTableChart) |
 | `[density]` | `('comfortable'\|'compact'\|'terminal')` | the density of the view (default: the page's) |
 | `[messages]` | `Object&lt;string, string&gt;` | the painter's own words, over the bundled English ones |
 | `[header='full']` | `('full'\|'strip'\|'none')` | how much of the header is drawn |

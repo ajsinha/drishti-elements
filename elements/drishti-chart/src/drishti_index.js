@@ -48,6 +48,7 @@ export { colourTone, d3Format, fromVegaLite, vegaLiteAlternative, vegaLiteRefusa
 export { valueText, tooltipElement, dataTable, legendElement, markSelection, addZoom, dragBrush, rangeBrush, rectBrush, idsInBox, svgOf } from './drishti_chart-parts.js';
 export { MAP_MODES, geoLoader, MapView } from './drishti_map-view.js';
 export { Studio } from './drishti_chart-studio.js';
+export { TABLE_CHART_KINDS, TABLE_CHART_SERIES, tableChartData, tableChartSpec, TableChart, openTableChart } from './drishti_chart-table.js';
 export { CHART_EVENTS, CHART_MODES, Chart } from './drishti_chart-view.js';
 export { ChartIO } from './drishti_chart-io.js';
 export { buildCalendar } from './drishti_chart-calendar.js';

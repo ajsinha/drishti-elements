@@ -381,7 +381,10 @@
       const t = node && node.type;
       return t === 'array' ? [] : t === 'boolean' ? false : t === 'integer' || t === 'number' ? 0 : t === 'string' ? '' : t === 'object' ? {} : null;
     }
-    function complete(value, def) { return fill(value, { $ref: '#/$defs/' + def }); }
+    function complete(value, def) {
+      if (def === 'ViewModel' && value && typeof value === 'object' && !Array.isArray(value) && value.contract === undefined) { value.contract = CONTRACT; }   // no contract: contract 1, as this painter draws it (VIEWMODEL.md section 8)
+      return fill(value, { $ref: '#/$defs/' + def });
+    }
     function fill(v, node) {
       if (Array.isArray(v)) {
         const d = defOf(node, v);
@@ -551,6 +554,19 @@
       moreRows: '{count} more rows',
       showMore: 'Show {count} more',
       filterRows: 'Filter the rows',
+      filterColumn: 'Filter {label}',
+      clearFilters: 'Clear filters',
+      searchValues: 'Search the values',
+      selectAll: 'Select all',
+      blankValue: '(Blanks)',
+      conditionHint: 'A condition, e.g. > 1m',
+      conditionLabel: 'A condition on {label}',
+      conditionBad: 'Write a number, or a comparison and a number: > 1m, <= 250k, = 0',
+      ok: 'OK',
+      clear: 'Clear',
+      cancel: 'Cancel',
+      chartTable: 'Chart',
+      chartTableTitle: 'Chart this table',
       rowsMatch: '{count} rows match',
       sortBy: 'Sort by {label}',
       expandRow: 'Open {label}',
@@ -1734,7 +1750,7 @@
   })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
-    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart, now = __lib("drishti-core").now, fetcher = __lib("drishti-core").fetcher;
+    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, loadScript = __lib("drishti-core").loadScript, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded, loadPart = __lib("drishti-core").loadPart, now = __lib("drishti-core").now, fetcher = __lib("drishti-core").fetcher;
     var CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
     var validate = __m["src/drishti_views-validate.js"].validate, formatIssue = __m["src/drishti_views-validate.js"].formatIssue;
     var complete = __m["src/drishti_views-build.js"].complete;
@@ -1749,7 +1765,7 @@
     var ask = __m["src/drishti_views-forms.js"].ask;
     const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
     const HANDLES = new WeakMap();
-    const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'refused', 'bound', 'drawn', 'dispose', 'point'];
+    const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'refused', 'bound', 'drawn', 'dispose', 'point', 'filter', 'chart-table'];
     const CANCELABLE = { link: true, key: true };
     let counter = 0;
     function isView(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) && typeof v.then !== 'function' && !(typeof Response !== 'undefined' && v instanceof Response); }
@@ -1795,6 +1811,8 @@
           flash: (node) => self.flash(node),
           library: (name) => self.library(name),
           charts: () => self.charts(),
+          tools: Object.assign({ filters: false, chart: false }, o.tableTools || {}),
+          chartTable: (table, opener) => self.chartTable(table, opener),
           styles: (name) => self.styles(name),
           fire: (id, trigger, mark) => self.fire(id, trigger, mark).catch(() => null),
           root: self.root,
@@ -1821,15 +1839,17 @@
           if (!sr) { try { sr = el.attachShadow({ mode: 'open' }); } catch (e) { sr = null; } }
           if (sr) {
             while (sr.firstChild) { sr.removeChild(sr.firstChild); }
+            if (this.hostSheets()) { this.sheets = []; adoptSheets(sr, this.options.sheets); return sr; }
             this.sheets = this.links(sr);
             return sr;
           }
         }
         this.sheets = [];
-        sheetPaths().forEach((p) => loadStyle(staticUrl(p)));
+        if (this.hostSheets()) { adoptSheets(el.getRootNode ? el.getRootNode() : el.ownerDocument, this.options.sheets); } else { sheetPaths().forEach((p) => loadStyle(staticUrl(p))); }
         while (el.firstChild) { el.removeChild(el.firstChild); }
         return el;
       }
+      hostSheets() { return Array.isArray(this.options.sheets); }
       links(sr) {
         const doc = this.el.ownerDocument, pack = this.packSheet(doc);
         if (pack) { this.styled = this.styled || new Set(); this.styled.add(pack.href); }          // a pack's one stylesheet stands for every sheet
@@ -2142,6 +2162,7 @@
       }
       styles(name) {
         const libs = manifest().libraries, css = (libs[name] && libs[name].css) || [];
+        if (this.hostSheets()) { return Promise.resolve(); }                  // the host's sheets hold every rule
         if (this.host === this.el) { css.forEach((c) => loadStyle(staticUrl(c))); return Promise.resolve(); }
         this.styled = this.styled || new Set();
         const doc = this.el.ownerDocument;
@@ -2180,13 +2201,32 @@
           const win = this.el.ownerDocument.defaultView, o = this.options;
           this.chartsP = this.library('drishti-chart').then((C) => {
             if (this.disposed) { throw new Error('disposed'); }
-            this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
+            this.panelCharts = new C.PanelCharts(this.host, { engine: () => this.engine(),
               tokensFrom: () => this.root, onLink: (l) => this.openLink(l),
               onPoint: (m, el) => { const pn = el.closest('[data-panel]'); this.emit('point', Object.assign({ panel: pn ? pn.getAttribute('data-panel') : null }, m)); }, geo: typeof o.geo === 'function' ? o.geo : () => this.geoHelper(), gl: o.gl, graph: () => this.library('drishti-graph') });
             return this.panelCharts;
           });
         }
         return this.chartsP;
+      }
+      engine() {
+        const win = this.el.ownerDocument.defaultView, o = this.options;
+        if (win.echarts) { return Promise.resolve(win.echarts); }
+        if (!this.engineP) {
+          const lib = manifest().libraries['drishti-chart'] || {};
+          const go = typeof o.engine === 'function' ? Promise.resolve(o.engine()) : (lib.scripts || []).reduce((p, src) => p.then(() => loadScript(staticUrl(src))), Promise.resolve());
+          this.engineP = go.then(() => { if (!win.echarts) { throw new Error('no chart engine'); } return win.echarts; });
+          this.engineP.catch(() => { this.engineP = null; });
+        }
+        return this.engineP;
+      }
+      chartTable(table, opener) {
+        return Promise.all([this.library('drishti-chart'), this.engine(), this.styles('drishti-chart')]).then(([C]) => {
+          if (this.disposed) { throw new Error('disposed'); }
+          const t = new C.TableChart(this.root, table, { opener: opener, chart: { density: this.options.density || 'compact' } });
+          this.emit('chart-table', { title: table.title || '', rows: table.rows.length });
+          return t.open();
+        }).catch((e) => { this.emit('error', { code: 'view.chart', error: e }); throw e; });
       }
       geoHelper() {
         const o = this.options, given = o.libraries && o.libraries['drishti-chart:geo'], win = this.el.ownerDocument.defaultView;
@@ -2211,6 +2251,11 @@
         if (this.host !== this.el) { while (this.host.firstChild) { this.host.removeChild(this.host.firstChild); } } else if (this.root.parentNode) { this.root.remove(); }
         if (HANDLES.get(this.el) === this) { HANDLES.delete(this.el); }
       }
+    }
+    function adoptSheets(root, sheets) {
+      if (!root || !('adoptedStyleSheets' in root)) { return; }
+      const have = root.adoptedStyleSheets;
+      root.adoptedStyleSheets = have.concat(sheets.filter((x) => x && have.indexOf(x) < 0));
     }
     function sheetPaths() {
       const libs = manifest().libraries;
@@ -2440,12 +2485,13 @@
   })();
   /* ---- src/drishti_views-tables.js ---- */
   __m["src/drishti_views-tables.js"] = (function () {
-    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount;
+    var h = __lib("drishti-core").h, formatCount = __lib("drishti-core").formatCount, passes = __lib("drishti-core").passes, textSortKey = __lib("drishti-core").textSortKey, compareTextKeys = __lib("drishti-core").compareTextKeys;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var drawCell = __m["src/drishti_views-cells.js"].drawCell, say = __m["src/drishti_views-cells.js"].say;
     var marksOf = __m["src/drishti_views-state.js"].marksOf, hasEffects = __m["src/drishti_views-state.js"].hasEffects, clickable = __m["src/drishti_views-state.js"].clickable;
     const PAGE_ROWS = 100;
     const list = (x) => (Array.isArray(x) ? x : []);
+    const tbtn = (doc, o) => h(doc, 'button', Object.assign({}, o, { attrs: Object.assign({ type: 'button' }, o.attrs || {}) }));
     const textOf = (c) => (c && typeof c.text === 'string' ? c.text : '');
     function numberOfText(t) {
       let s = String(t || '').trim();
@@ -2458,6 +2504,22 @@
       const n = parseFloat(m[1]) * scale;
       return neg ? -n : n;
     }
+    const BLANK = '\u0000';
+    const CONDITION = /^\s*(>=|<=|≥|≤|!=|≠|<>|>|<|=)?\s*(.+?)\s*$/;
+    const OPS = { '>': 'gt', '<': 'lt', '>=': 'gte', '≥': 'gte', '<=': 'lte', '≤': 'lte', '=': 'equals', '!=': 'notEquals', '≠': 'notEquals', '<>': 'notEquals' };
+    function parseCondition(t) {
+      const m = CONDITION.exec(String(t || ''));
+      if (!m) { return null; }
+      const n = numberOfText(m[2]);
+      return isNaN(n) ? null : { type: 'number', op: OPS[m[1] || '='], value: n };
+    }
+    function cellPasses(text, numeric, f) {
+      if (!f) { return true; }
+      const t = String(text || '').trim();
+      if (f.keep && !f.keep.has(t || BLANK)) { return false; }
+      if (f.cond) { const n = numeric ? numberOfText(t) : NaN; return !isNaN(n) && passes(n, f.cond); }
+      return true;
+    }
     class TableView {
       constructor(body, panel, ctx, o) {
         this.ctx = ctx;
@@ -2466,19 +2528,23 @@
         this.query = '';
         this.open = new Map();
         this.shown = PAGE_ROWS;
+        this.cf = new Map();                                         // a column's index to its filter (tableTools.filters), kept through patches
         const doc = ctx.doc;
         this.box = h(doc, 'div', { cls: 'dv-table' + (o.ladder ? ' dv-ladder' : '') });
         this.filter = h(doc, 'input', { cls: 'dv-filter', attrs: { type: 'search', 'aria-label': say(ctx.messages, 'filterRows'), placeholder: say(ctx.messages, 'filterRows') },
           on: { input: () => { this.query = this.filter.value.trim().toLowerCase(); this.shown = PAGE_ROWS; this.drawRows(); } } });
         this.count = h(doc, 'span', { cls: 'dv-count', attrs: { 'aria-live': 'polite' } });
-        this.bar = h(doc, 'div', { cls: 'dv-table-bar' }, [this.filter, this.count]);
+        this.clearBtn = tbtn(doc, { cls: 'dv-tool-btn dv-cf-clear', text: say(ctx.messages, 'clearFilters'), attrs: { type: 'button' }, on: { click: () => { this.cf.clear(); this.shown = PAGE_ROWS; this.drawHead(); this.drawRows(); } } });
+        this.chartBtn = tbtn(doc, { cls: 'dv-tool-btn dv-chart-btn', text: say(ctx.messages, 'chartTable'), attrs: { type: 'button', 'data-chart-table': '', title: say(ctx.messages, 'chartTableTitle') },
+          on: { click: () => this.chart() } });
+        this.bar = h(doc, 'div', { cls: 'dv-table-bar' }, [this.filter, this.count, h(doc, 'span', { cls: 'dv-sp' }), this.clearBtn, this.chartBtn]);
         this.table = h(doc, 'table', { cls: 'dv-tbl' });
         this.thead = h(doc, 'thead');
         this.tbody = h(doc, 'tbody');
         this.tfoot = h(doc, 'tfoot');
         this.table.append(this.thead, this.tbody, this.tfoot);
         this.scroll = h(doc, 'div', { cls: 'dv-tbl-scroll', attrs: { tabindex: '0', role: 'region', 'aria-label': panel.title || panel.id } }, [this.table]);
-        this.more = h(doc, 'button', { cls: 'dv-more-btn', attrs: { type: 'button' }, on: { click: () => { this.shown += PAGE_ROWS; this.drawRows(); } } });
+        this.more = tbtn(doc, { cls: 'dv-more-btn', attrs: { type: 'button' }, on: { click: () => { this.shown += PAGE_ROWS; this.drawRows(); } } });
         this.note = h(doc, 'p', { cls: 'dv-more' });
         this.box.append(this.bar, this.scroll, this.more, this.note);
         this.tbody.addEventListener('click', (e) => this.onPick(e));
@@ -2495,7 +2561,9 @@
         this.columns = list(d.columns).length ? list(d.columns).map(String) : (list(d.levels)[0] && list(list(d.levels)[0].columns)) || [];
         this.numeric = list(d.numeric);
         this.expandDepth = Number.isInteger(d.expand) ? d.expand : 0;
-        this.bar.hidden = d.search !== true;
+        this.filter.hidden = d.search !== true;
+        this.chartBtn.hidden = !(this.ctx.tools || {}).chart;
+        this.cf.forEach((f, i) => { if (i >= this.columns.length) { this.cf.delete(i); } });
         this.drawHead();
         this.drawRows();
         while (this.tfoot.firstChild) { this.tfoot.removeChild(this.tfoot.firstChild); }
@@ -2507,10 +2575,15 @@
         const doc = this.ctx.doc, tr = h(doc, 'tr');
         this.columns.forEach((c, i) => {
           const dir = this.sort && this.sort.col === i ? this.sort.dir : null;
-          const btn = h(doc, 'button', { cls: 'dv-sort', text: c, attrs: { type: 'button', title: say(this.ctx.messages, 'sortBy', { label: c }) },
+          const btn = tbtn(doc, { cls: 'dv-sort', text: c, attrs: { type: 'button', title: say(this.ctx.messages, 'sortBy', { label: c }) },
             on: { click: () => { this.sort = { col: i, dir: dir === 'ascending' ? 'descending' : 'ascending' }; this.drawHead(); this.drawRows(); } } });
-          tr.appendChild(h(doc, 'th', { cls: this.numeric[i] ? 'dv-num' : null, attrs: { scope: 'col', 'aria-sort': dir || null } }, [btn]));
+          const funnel = (this.ctx.tools || {}).filters ? tbtn(doc, { cls: 'dv-funnel' + (this.cf.has(i) ? ' dv-on' : ''), text: '⏷',
+            attrs: { type: 'button', 'data-funnel': String(i), 'aria-haspopup': 'dialog', 'aria-pressed': this.cf.has(i) ? 'true' : 'false', 'aria-label': say(this.ctx.messages, 'filterColumn', { label: c }), title: say(this.ctx.messages, 'filterColumn', { label: c }) },
+            on: { click: (e) => this.menu(i, e.currentTarget) } }) : null;
+          tr.appendChild(h(doc, 'th', { cls: this.numeric[i] ? 'dv-num' : null, attrs: { scope: 'col', 'aria-sort': dir || null } }, [btn, funnel]));
         });
+        this.clearBtn.hidden = !this.cf.size;
+        this.bar.hidden = this.filter.hidden && this.chartBtn.hidden && this.clearBtn.hidden;
         while (this.thead.firstChild) { this.thead.removeChild(this.thead.firstChild); }
         this.thead.appendChild(tr);
       }
@@ -2529,9 +2602,78 @@
         });
       }
       matches(r) {
-        if (!this.query) { return true; }
-        if (list(r.cells).some((c) => textOf(c).toLowerCase().indexOf(this.query) >= 0)) { return true; }
-        return list(r.children).some((k) => this.matches(k));
+        if (!this.query && !this.cf.size) { return true; }
+        const cells = list(r.cells);
+        const own = (!this.query || cells.some((c) => textOf(c).toLowerCase().indexOf(this.query) >= 0))
+          && Array.from(this.cf).every(([i, f]) => cellPasses(textOf(cells[i]), !!this.numeric[i], f));
+        return own || list(r.children).some((k) => this.matches(k));
+      }
+      allRows() {
+        const out = [], walk = (rows) => rows.forEach((r) => { if (r && typeof r === 'object') { out.push(r); walk(list(r.children)); } });
+        walk(list(this.d.rows));
+        return out;
+      }
+      menu(col, opener) {
+        const ctx = this.ctx, doc = ctx.doc, m = ctx.messages, label = this.columns[col] || '';
+        if (this.popup) { this.popup.close(); }
+        const counts = new Map();
+        this.allRows().forEach((r) => { const t = textOf(list(r.cells)[col]).trim() || BLANK; counts.set(t, (counts.get(t) || 0) + 1); });
+        const values = Array.from(counts.keys()).sort((a, b) => (a === BLANK) - (b === BLANK) || compareTextKeys(textSortKey(a), textSortKey(b)));
+        const cur = this.cf.get(col), kept = new Set(cur && cur.keep ? cur.keep : values);
+        const search = h(doc, 'input', { cls: 'dv-filter dv-cf-search', attrs: { type: 'search', placeholder: say(m, 'searchValues'), 'aria-label': say(m, 'searchValues') } });
+        const all = h(doc, 'input', { attrs: { type: 'checkbox', 'data-cf-all': '' } });
+        const boxes = values.map((v) => {
+          const input = h(doc, 'input', { attrs: { type: 'checkbox', 'data-cf-value': v === BLANK ? '' : v } });
+          input.checked = kept.has(v);
+          return { v: v, input: input, row: h(doc, 'label', { cls: 'dv-cf-item' }, [input, h(doc, 'span', { text: v === BLANK ? say(m, 'blankValue') : v }), h(doc, 'span', { cls: 'dv-count', text: formatCount(counts.get(v)) })]) };
+        });
+        const sync = () => { const shown = boxes.filter((b) => !b.row.hidden); all.checked = shown.every((b) => b.input.checked); all.indeterminate = !all.checked && shown.some((b) => b.input.checked); };
+        all.addEventListener('change', () => { boxes.forEach((b) => { if (!b.row.hidden) { b.input.checked = all.checked; } }); sync(); });
+        boxes.forEach((b) => b.input.addEventListener('change', sync));
+        search.addEventListener('input', () => { const q = search.value.trim().toLowerCase(); boxes.forEach((b) => { b.row.hidden = !!q && (b.v === BLANK ? say(m, 'blankValue') : b.v).toLowerCase().indexOf(q) < 0; }); sync(); });
+        sync();
+        const numeric = !!this.numeric[col];
+        const cond = numeric ? h(doc, 'input', { cls: 'dv-filter dv-cf-cond', attrs: { type: 'text', placeholder: say(m, 'conditionHint'), 'aria-label': say(m, 'conditionLabel', { label: label }) } }) : null;
+        if (cond && cur && cur.condText) { cond.value = cur.condText; }
+        const note = h(doc, 'p', { cls: 'dv-cf-note', attrs: { role: 'alert', hidden: true } });
+        const close = (focus) => { pop.remove(); doc.removeEventListener('mousedown', outside, true); this.popup = null; if (focus && opener.isConnected) { opener.focus(); } };
+        const apply = () => {
+          const keep = new Set(boxes.filter((b) => b.input.checked).map((b) => b.v)), f = {};
+          if (keep.size < values.length) { f.keep = keep; }
+          if (cond && cond.value.trim()) {
+            const c = parseCondition(cond.value);
+            if (!c) { note.textContent = say(m, 'conditionBad'); note.hidden = false; cond.focus(); return; }
+            f.cond = c; f.condText = cond.value.trim();
+          }
+          if (f.keep || f.cond) { this.cf.set(col, f); } else { this.cf.delete(col); }
+          this.shown = PAGE_ROWS;
+          close(false);
+          this.drawHead();
+          this.drawRows();
+          const again = this.thead.querySelector('[data-funnel="' + col + '"]');     // the heading is drawn again: its new funnel takes the focus
+          if (again) { again.focus(); }
+          ctx.emit('filter', { panel: this.panel.id, column: col, label: label, active: this.cf.has(col) });
+        };
+        const btn = (text, cls, fn) => tbtn(doc, { cls: 'dv-tool-btn ' + cls, text: text, attrs: { type: 'button' }, on: { click: fn } });
+        const pop = h(doc, 'div', { cls: 'dv-cf', attrs: { role: 'dialog', 'aria-label': say(m, 'filterColumn', { label: label }), 'data-cf-col': String(col) },
+          on: { keydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); } else if (e.key === 'Enter' && e.target && e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') { e.preventDefault(); apply(); } } } }, [
+          search,
+          h(doc, 'label', { cls: 'dv-cf-item dv-cf-all' }, [all, h(doc, 'span', { text: say(m, 'selectAll') })]),
+          h(doc, 'div', { cls: 'dv-cf-list' }, boxes.map((b) => b.row)),
+          cond, note,
+          h(doc, 'div', { cls: 'dv-cf-foot' }, [btn(say(m, 'ok'), 'dv-cf-ok', apply), btn(say(m, 'clear'), 'dv-cf-reset', () => { boxes.forEach((b) => { b.input.checked = true; b.row.hidden = false; }); search.value = ''; if (cond) { cond.value = ''; } apply(); }),
+            btn(say(m, 'cancel'), 'dv-cf-cancel', () => close(true))])]);
+        const outside = (e) => { if (!e.composedPath().includes(pop) && !e.composedPath().includes(opener)) { close(false); } };
+        doc.addEventListener('mousedown', outside, true);
+        const th = opener.closest('th');
+        pop.style.setProperty('--dv-cf-left', Math.max(0, (th ? th.offsetLeft - this.scroll.scrollLeft : 0)) + 'px');
+        this.box.appendChild(pop);
+        this.popup = { close: () => close(false) };
+        search.focus();
+      }
+      chart() {
+        const rows = this.ordered(list(this.d.rows)).filter((r) => r && typeof r === 'object' && this.matches(r)).map((r) => list(r.cells).map(textOf));
+        return this.ctx.chartTable({ title: this.panel.title || '', columns: this.columns.slice(), rows: rows }, this.chartBtn).catch(() => null);
       }
       drawRows() {
         const doc = this.ctx.doc, out = [];
@@ -2578,7 +2720,7 @@
           const td = h(doc, i === 0 && tag === 'th' ? 'th' : 'td', { cls: this.numeric[i] ? 'dv-num' : null, attrs: i === 0 && tag === 'th' ? { scope: 'row' } : null });
           if (i === 0 && tree) {
             const label = textOf(cells[0]);
-            td.appendChild(h(doc, 'button', { cls: 'dv-twisty', text: tree.open ? '▾' : '▸',
+            td.appendChild(tbtn(doc, { cls: 'dv-twisty', text: tree.open ? '▾' : '▸',
               attrs: { type: 'button', 'aria-expanded': tree.open ? 'true' : 'false', 'aria-label': say(this.ctx.messages, tree.open ? 'collapseRow' : 'expandRow', { label: label }) },
               on: { click: (e) => { e.stopPropagation(); this.open.set(tree.id, !tree.open); this.drawRows(); } } }));
           }
@@ -2593,7 +2735,7 @@
         if (tr.hasAttribute('data-pick')) { this.ctx.emit('pick', { panel: this.panel.id, pick: tr.getAttribute('data-pick'), ev: tr.getAttribute('data-ev') || null }); }
         if (tr.hasAttribute('data-mark')) { this.ctx.fire(String(this.panel.id), 'row-click', Number(tr.getAttribute('data-mark'))); }
       }
-      dispose() { this.box.remove(); }
+      dispose() { if (this.popup) { this.popup.close(); } this.box.remove(); }
     }
     const tableKind = (ladder) => ({ paint: (body, panel, ctx) => new TableView(body, panel, ctx, { ladder: ladder }) });
     class PivotView {
@@ -2636,7 +2778,7 @@
           if (r.group) {
             const open = this.open.has(key) ? this.open.get(key) : depth < expand;
             if (!open) { closed.push(path); }
-            th.appendChild(h(doc, 'button', { cls: 'dv-twisty', text: open ? '▾' : '▸', attrs: { type: 'button', 'aria-expanded': open ? 'true' : 'false',
+            th.appendChild(tbtn(doc, { cls: 'dv-twisty', text: open ? '▾' : '▸', attrs: { type: 'button', 'aria-expanded': open ? 'true' : 'false',
               'aria-label': say(m, open ? 'collapseRow' : 'expandRow', { label: r.label || '' }) }, on: { click: () => { this.open.set(key, !open); this.draw(); } } }));
           }
           th.appendChild(h(doc, 'span', { text: typeof r.label === 'string' ? r.label : '' }));
@@ -2682,7 +2824,7 @@
     defineKind('table', tableKind(false));
     defineKind('ladder', tableKind(true));
     defineKind('pivot', { paint: (body, panel, ctx) => new PivotView(body, panel, ctx) });
-    return { "PAGE_ROWS": PAGE_ROWS, "numberOfText": numberOfText };
+    return { "PAGE_ROWS": PAGE_ROWS, "numberOfText": numberOfText, "parseCondition": parseCondition };
   })();
   /* ---- src/drishti_views-tabs.js ---- */
   __m["src/drishti_views-tabs.js"] = (function () {
@@ -2794,7 +2936,7 @@
         rows = list(d.points).map((p) => [str(p && (p.label || p.group)), str(p && p.x), str(p && p.y)]);
       } else if (kind === 'candlestick') {
         columns = ['', 'open', 'high', 'low', 'close'];
-        rows = list(d.candles).map((c) => [str(c && c.x), str(c && c.open), str(c && c.high), str(c && c.low), str(c && c.close)]);
+        rows = list(d.candles).map((c) => [str(c && c.x)].concat(['open', 'high', 'low', 'close'].map((k) => str(c && (c[k + 'Text'] || c[k])))));   // the producer's texts (contract)
       } else if (kind === 'surface') {
         columns = [''].concat(list(d.x).map(str));
         rows = list(d.y).map((y, i) => [str(y)].concat(list(list(d.z)[i]).map(str)));
@@ -3043,10 +3185,24 @@
         return Object.assign({}, c, { cellRenderer: G.barCell({ max: max }), cellClass: c.cellClass, bar: true });
       });
     }
+    function gridChart(ctx, panel, cols) {
+      if (!(ctx.tools || {}).chart) { return null; }
+      return (detail) => {
+        const g = detail && list(detail.ranges)[0], t = (detail && detail.table) || { columns: [], rows: [] };
+        if (!g || !t.rows.length) { return; }
+        const first = g.c1 === 0;                       // the range holds the first column: its cells are the row's label already
+        const columns = first ? t.columns.slice() : [String((cols[0] && cols[0].header) || '')].concat(t.columns);
+        const rows = t.rows.map((r) => (first ? r.slice(1) : r.slice()));
+        const opener = ctx.root && ctx.root.ownerDocument ? ctx.root.ownerDocument.activeElement : null;
+        ctx.chartTable({ title: panel.title || '', columns: columns, rows: rows }, opener).catch(() => null);
+      };
+    }
     const grid = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => ds.source().then((src) => {
       const d = panel.data;
       const o = { columns: withBars(G, gridColumns(d, ds), d, () => (Array.isArray(src) ? ds.held || src : [])), layout: 'wells', density: ctx.density || 'compact', rowSelection: 'single',
         getRowId: (r, i) => rowKey(r, ds.key, i) };
+      const chart = gridChart(ctx, panel, o.columns);
+      if (chart) { o.chart = chart; }
       if (Array.isArray(src)) { o.rows = src; } else { o.datasource = src; if (ds.def.pages && ds.def.pages.size > 0) { o.blockSize = ds.def.pages.size; } }
       if (d.pivot && list(d.pivot.values).length) {
         o.pivot = { rows: list(d.pivot.rows), columns: list(d.pivot.columns), filters: [],
@@ -3158,7 +3314,7 @@
         if (g) { g.setRows(Array.from(held.values())); } else {
           const cols = withBars(G, gridColumns(d, ds), d, () => Array.from(held.values()));
           g = new G.Grid(box, Object.assign({ columns: edit ? cols.map((c) => edit.column(c)) : cols, layout: 'wells', density: ctx.density || 'compact',
-            rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()) }, edit ? edit.gridOptions() : {}));
+            rowSelection: 'single', getRowId: (r) => idOf(r), rows: Array.from(held.values()), chart: gridChart(ctx, panel, cols) || undefined }, edit ? edit.gridOptions() : {}));
           if (list(d.group).length) { g.model.setRowGroups(list(d.group)); }   // the rows keep the host's order (the query's sort)
           g.refresh();
           g.on('selectionChanged', () => {
@@ -3185,7 +3341,7 @@
     defineKind('live', live);
     defineKind('tree', tree);
     defineKind('chart', chart);
-    return { "DATASET_KINDS": DATASET_KINDS, "gridColumns": gridColumns, "chartSpec": chartSpec };
+    return { "DATASET_KINDS": DATASET_KINDS, "gridColumns": gridColumns, "chartSpec": chartSpec, "gridChart": gridChart };
   })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
@@ -3193,7 +3349,7 @@
     var defineElement = __m["src/drishti_views-element.js"].define;
     function registerKind(name, def) { defineKind(name, def); }
     function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }
-    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "StateStore": __m["src/drishti_views-state.js"].StateStore, "marksOf": __m["src/drishti_views-state.js"].marksOf, "effectsOf": __m["src/drishti_views-state.js"].effectsOf, "hasEffects": __m["src/drishti_views-state.js"].hasEffects, "triggerFor": __m["src/drishti_views-state.js"].triggerFor, "requestText": __m["src/drishti_views-state.js"].requestText, "resolveFire": __m["src/drishti_views-state.js"].resolveFire, "resolveWire": __m["src/drishti_views-state.js"].resolveWire, "pickEvent": __m["src/drishti_views-state.js"].pickEvent, "formFields": __m["src/drishti_views-state.js"].formFields, "formSchema": __m["src/drishti_views-forms.js"].formSchema, "formValues": __m["src/drishti_views-forms.js"].formValues, "problemsByField": __m["src/drishti_views-forms.js"].problemsByField, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "engineAgg": __m["src/drishti_views-data.js"].engineAgg, "aggregate": __m["src/drishti_views-data.js"].aggregate, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "isMasked": __lib("drishti-core").isMasked, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
+    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "StateStore": __m["src/drishti_views-state.js"].StateStore, "marksOf": __m["src/drishti_views-state.js"].marksOf, "effectsOf": __m["src/drishti_views-state.js"].effectsOf, "hasEffects": __m["src/drishti_views-state.js"].hasEffects, "triggerFor": __m["src/drishti_views-state.js"].triggerFor, "requestText": __m["src/drishti_views-state.js"].requestText, "resolveFire": __m["src/drishti_views-state.js"].resolveFire, "resolveWire": __m["src/drishti_views-state.js"].resolveWire, "pickEvent": __m["src/drishti_views-state.js"].pickEvent, "formFields": __m["src/drishti_views-state.js"].formFields, "formSchema": __m["src/drishti_views-forms.js"].formSchema, "formValues": __m["src/drishti_views-forms.js"].formValues, "problemsByField": __m["src/drishti_views-forms.js"].problemsByField, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "parseCondition": __m["src/drishti_views-tables.js"].parseCondition, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "engineAgg": __m["src/drishti_views-data.js"].engineAgg, "aggregate": __m["src/drishti_views-data.js"].aggregate, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "isMasked": __lib("drishti-core").isMasked, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "gridChart": __m["src/drishti_views-datakinds.js"].gridChart, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.2.0" }, __m["src/drishti_index.js"]));
 });
