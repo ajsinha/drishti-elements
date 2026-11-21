@@ -18,10 +18,10 @@
    a derived read of the rows). Each loads its library (and adopts its sheets) the first time a view has such a panel, reads its dataset
    by name and follows the dataset's rows patches: a grid by transaction (only the rows in view are drawn again), a tree and a chart by
    drawing their rows again in the next animation frame. Values are raw: each column formats them with its field's fmt. */
-import { h, stateBlock } from '../../drishti-core/src/drishti_index.js';
+import { h, stateBlock, isMasked } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';
-import { valueText, rowKey, derive, isMasked } from './drishti_views-data.js';
+import { valueText, rowKey, derive } from './drishti_views-data.js';
 
 const SEP = '\u001f';
 

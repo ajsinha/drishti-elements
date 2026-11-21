@@ -1542,13 +1542,12 @@
   })();
   /* ---- src/drishti_views-data.js ---- */
   __m["src/drishti_views-data.js"] = (function () {
-    var hasFormat = __lib("drishti-core").hasFormat, formatNamed = __lib("drishti-core").formatNamed, formatNumber = __lib("drishti-core").formatNumber, MASK = __lib("drishti-core").MASK;
+    var hasFormat = __lib("drishti-core").hasFormat, formatNamed = __lib("drishti-core").formatNamed, formatNumber = __lib("drishti-core").formatNumber, MASK = __lib("drishti-core").MASK, aggFunc = __lib("drishti-core").aggFunc, aggregate = __lib("drishti-core").aggregate, isMasked = __lib("drishti-core").isMasked;
     const AGGS = Object.freeze(['sum', 'count', 'min', 'max', 'avg', 'first', 'last', 'distinct']);
     const DATASET_FORMS = Object.freeze(['values', 'rows', 'name', 'arrow', 'pages', 'server', 'live']);
     const READ_LIMIT = 100000;
     const SEP = '\u001f';
     const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
-    function isMasked(v) { return v !== null && typeof v === 'object' && v.$masked === true; }
     function valueText(v, fmt, type) {
       if (isMasked(v)) { return MASK; }
       if (v === null || v === undefined || v === '') { return ''; }
@@ -1576,19 +1575,6 @@
       }
       return t || 'string';
     }
-    function aggregate(values, agg) {
-      if (agg === 'count') { return values.filter((v) => v !== null && v !== undefined).length; }
-      if (agg === 'distinct') { return new Set(values.filter((v) => v !== null && v !== undefined).map((v) => (isMasked(v) ? MASK : String(v)))).size; }
-      if (agg === 'first') { return values.length ? values[0] : null; }
-      if (agg === 'last') { return values.length ? values[values.length - 1] : null; }
-      if (values.some(isMasked)) { return { $masked: true }; }
-      const nums = values.filter((v) => typeof v === 'number' && isFinite(v));
-      if (!nums.length) { return null; }
-      if (agg === 'min') { return Math.min.apply(null, nums); }
-      if (agg === 'max') { return Math.max.apply(null, nums); }
-      const sum = nums.reduce((a, b) => a + b, 0);
-      return agg === 'avg' ? sum / nums.length : sum;
-    }
     function derive(rows, q) {
       const y = q.y || [];
       let out = rows;
@@ -1601,7 +1587,7 @@
           g.members.push(r);
         });
         out = Array.from(groups.values()).map((g) => {
-          y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), m.agg || 'sum'); });
+          y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), aggFunc(m.agg) ? m.agg : 'sum'); });
           return g.row;
         });
       }
@@ -1742,7 +1728,7 @@
       Object.keys(d).forEach((name) => { if (!FORBIDDEN.has(name)) { out.set(name, new Dataset(name, d[name], env)); } });
       return out;
     }
-    return { "AGGS": AGGS, "DATASET_FORMS": DATASET_FORMS, "READ_LIMIT": READ_LIMIT, "isMasked": isMasked, "valueText": valueText, "rowKey": rowKey, "inferFields": inferFields, "aggregate": aggregate, "derive": derive, "allowedAddress": allowedAddress, "Dataset": Dataset, "datasetsOf": datasetsOf };
+    return { "AGGS": AGGS, "DATASET_FORMS": DATASET_FORMS, "READ_LIMIT": READ_LIMIT, "valueText": valueText, "rowKey": rowKey, "inferFields": inferFields, "derive": derive, "allowedAddress": allowedAddress, "Dataset": Dataset, "datasetsOf": datasetsOf };
   })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
@@ -2954,10 +2940,10 @@
   })();
   /* ---- src/drishti_views-datakinds.js ---- */
   __m["src/drishti_views-datakinds.js"] = (function () {
-    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock;
+    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, isMasked = __lib("drishti-core").isMasked;
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     var say = __m["src/drishti_views-cells.js"].say, toneClass = __m["src/drishti_views-cells.js"].toneClass;
-    var valueText = __m["src/drishti_views-data.js"].valueText, rowKey = __m["src/drishti_views-data.js"].rowKey, derive = __m["src/drishti_views-data.js"].derive, isMasked = __m["src/drishti_views-data.js"].isMasked;
+    var valueText = __m["src/drishti_views-data.js"].valueText, rowKey = __m["src/drishti_views-data.js"].rowKey, derive = __m["src/drishti_views-data.js"].derive;
     const SEP = '\u001f';
     const DATASET_KINDS = Object.freeze(['grid', 'tree', 'chart', 'live']);
     const list = (x) => (Array.isArray(x) ? x : []);
@@ -3205,7 +3191,7 @@
     var defineElement = __m["src/drishti_views-element.js"].define;
     function registerKind(name, def) { defineKind(name, def); }
     function install(root) { if (root && root.customElements && root.HTMLElement) { defineElement({ window: root }); } }
-    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "StateStore": __m["src/drishti_views-state.js"].StateStore, "marksOf": __m["src/drishti_views-state.js"].marksOf, "effectsOf": __m["src/drishti_views-state.js"].effectsOf, "hasEffects": __m["src/drishti_views-state.js"].hasEffects, "triggerFor": __m["src/drishti_views-state.js"].triggerFor, "requestText": __m["src/drishti_views-state.js"].requestText, "resolveFire": __m["src/drishti_views-state.js"].resolveFire, "resolveWire": __m["src/drishti_views-state.js"].resolveWire, "pickEvent": __m["src/drishti_views-state.js"].pickEvent, "formFields": __m["src/drishti_views-state.js"].formFields, "formSchema": __m["src/drishti_views-forms.js"].formSchema, "formValues": __m["src/drishti_views-forms.js"].formValues, "problemsByField": __m["src/drishti_views-forms.js"].problemsByField, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "isMasked": __m["src/drishti_views-data.js"].isMasked, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "aggregate": __m["src/drishti_views-data.js"].aggregate, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
+    return { "registerKind": registerKind, "install": install, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "conflate": __m["src/drishti_views-patch.js"].conflate, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "StateStore": __m["src/drishti_views-state.js"].StateStore, "marksOf": __m["src/drishti_views-state.js"].marksOf, "effectsOf": __m["src/drishti_views-state.js"].effectsOf, "hasEffects": __m["src/drishti_views-state.js"].hasEffects, "triggerFor": __m["src/drishti_views-state.js"].triggerFor, "requestText": __m["src/drishti_views-state.js"].requestText, "resolveFire": __m["src/drishti_views-state.js"].resolveFire, "resolveWire": __m["src/drishti_views-state.js"].resolveWire, "pickEvent": __m["src/drishti_views-state.js"].pickEvent, "formFields": __m["src/drishti_views-state.js"].formFields, "formSchema": __m["src/drishti_views-forms.js"].formSchema, "formValues": __m["src/drishti_views-forms.js"].formValues, "problemsByField": __m["src/drishti_views-forms.js"].problemsByField, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable, "AGGS": __m["src/drishti_views-data.js"].AGGS, "DATASET_FORMS": __m["src/drishti_views-data.js"].DATASET_FORMS, "READ_LIMIT": __m["src/drishti_views-data.js"].READ_LIMIT, "valueText": __m["src/drishti_views-data.js"].valueText, "rowKey": __m["src/drishti_views-data.js"].rowKey, "inferFields": __m["src/drishti_views-data.js"].inferFields, "derive": __m["src/drishti_views-data.js"].derive, "allowedAddress": __m["src/drishti_views-data.js"].allowedAddress, "Dataset": __m["src/drishti_views-data.js"].Dataset, "datasetsOf": __m["src/drishti_views-data.js"].datasetsOf, "isMasked": __lib("drishti-core").isMasked, "aggregate": __lib("drishti-core").aggregate, "DATASET_KINDS": __m["src/drishti_views-datakinds.js"].DATASET_KINDS, "gridColumns": __m["src/drishti_views-datakinds.js"].gridColumns, "chartSpec": __m["src/drishti_views-datakinds.js"].chartSpec, "LIVE_KINDS": __m["src/drishti_views-live.js"].LIVE_KINDS, "LiveLink": __m["src/drishti_views-live.js"].LiveLink, "VIEW_ELEMENT": __m["src/drishti_views-element.js"].VIEW_ELEMENT, "VIEW_ATTRIBUTES": __m["src/drishti_views-element.js"].VIEW_ATTRIBUTES, "define": __m["src/drishti_views-element.js"].define, "KIND_DATA": __m["src/drishti_views-build.js"].KIND_DATA, "stampOf": __m["src/drishti_views-build.js"].stampOf, "ViewError": __m["src/drishti_views-build.js"].ViewError, "complete": __m["src/drishti_views-build.js"].complete, "ViewBuilder": __m["src/drishti_views-build.js"].ViewBuilder, "view": __m["src/drishti_views-build.js"].view, "FrameBuilder": __m["src/drishti_views-build.js"].FrameBuilder, "frame": __m["src/drishti_views-build.js"].frame, "sse": __m["src/drishti_views-build.js"].sse };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.2.0" }, __m["src/drishti_index.js"]));
 });

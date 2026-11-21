@@ -23,7 +23,7 @@
    changes a dataset by key (reset, remove, update, add) and reaches every panel that reads it. Values are raw: the panels format them
    with the field's fmt (drishti-core's named formats); {"$masked": true} prints as the mask. Derived reads (a chart's groups and
    aggregations, its top categories) are computed here, over the rows, with no expression language. */
-import { hasFormat, formatNamed, formatNumber, MASK } from '../../drishti-core/src/drishti_index.js';
+import { hasFormat, formatNamed, formatNumber, MASK, aggFunc, aggregate, isMasked } from '../../drishti-core/src/drishti_index.js';
 
 /** The aggregations a measure may name. */
 export const AGGS = Object.freeze(['sum', 'count', 'min', 'max', 'avg', 'first', 'last', 'distinct']);
@@ -34,13 +34,6 @@ export const READ_LIMIT = 100000;
 
 const SEP = '\u001f';
 const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
-
-/**
- * Whether a value is the Data Protocol's mask ({"$masked": true}).
- * @param {*} v
- * @returns {boolean}
- */
-export function isMasked(v) { return v !== null && typeof v === 'object' && v.$masked === true; }
 
 /**
  * A raw value as text, by a format name (drishti-core's named formats) and the field's type; the mask as the mask, nothing as ''.
@@ -93,26 +86,6 @@ function typeOf(values) {
 }
 
 /**
- * Combines numbers by an aggregation; the mask and nothing are left out (a masked member masks a sum: the figure is not shown).
- * @param {Array<*>} values
- * @param {string} agg
- * @returns {*}
- */
-export function aggregate(values, agg) {
-  if (agg === 'count') { return values.filter((v) => v !== null && v !== undefined).length; }
-  if (agg === 'distinct') { return new Set(values.filter((v) => v !== null && v !== undefined).map((v) => (isMasked(v) ? MASK : String(v)))).size; }
-  if (agg === 'first') { return values.length ? values[0] : null; }
-  if (agg === 'last') { return values.length ? values[values.length - 1] : null; }
-  if (values.some(isMasked)) { return { $masked: true }; }
-  const nums = values.filter((v) => typeof v === 'number' && isFinite(v));
-  if (!nums.length) { return null; }
-  if (agg === 'min') { return Math.min.apply(null, nums); }
-  if (agg === 'max') { return Math.max.apply(null, nums); }
-  const sum = nums.reduce((a, b) => a + b, 0);
-  return agg === 'avg' ? sum / nums.length : sum;
-}
-
-/**
  * A derived read (VIEWS_DESIGN 4.5): the rows grouped by x (and by), each measure combined by its aggregation; without any aggregation
  * the rows as they are. limit keeps the categories with the largest first figure (the others are left out).
  * @param {Object[]} rows
@@ -131,7 +104,7 @@ export function derive(rows, q) {
       g.members.push(r);
     });
     out = Array.from(groups.values()).map((g) => {
-      y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), m.agg || 'sum'); });
+      y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), aggFunc(m.agg) ? m.agg : 'sum'); });
       return g.row;
     });
   }

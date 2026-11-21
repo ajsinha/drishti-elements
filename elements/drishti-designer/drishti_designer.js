@@ -597,14 +597,14 @@
   })();
   /* ---- src/drishti_palette.js ---- */
   __m["src/drishti_palette.js"] = (function () {
-    var EventBus = __lib("drishti-core").EventBus, announce = __lib("drishti-core").announce, h = __lib("drishti-core").h;
+    var EventBus = __lib("drishti-core").EventBus, announce = __lib("drishti-core").announce, h = __lib("drishti-core").h, searchWords = __lib("drishti-core").searchWords;
     function entryAttrs(attrs) {
       const out = {};
       Object.keys(attrs || {}).forEach((k) => { if (/^data-[a-z0-9-]+$/.test(k) && k !== 'data-dd-entry' && attrs[k] !== null && attrs[k] !== undefined) { out[k] = String(attrs[k]); } });
       return out;
     }
     function searchPalette(entries, query) {
-      const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+      const words = searchWords(query);
       if (!words.length) { return entries.slice(); }
       return entries.filter((e) => {
         const hay = [e.label, e.detail, e.category].concat(e.keywords || []).join(' ').toLowerCase();

@@ -3886,10 +3886,10 @@
   __m["src/drishti_chart-vega.js"] = (function () {
     var compileCondition = __m["src/drishti_chart-data.js"].compileCondition, rowsOf = __m["src/drishti_chart-data.js"].rowsOf, num = __m["src/drishti_chart-data.js"].num;
     var chartIn = __m["src/drishti_chart-element.js"].chartIn;
-    const AGG = { sum: (a) => a.reduce((s, x) => s + x, 0), mean: (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null), count: (a) => a.length,
-      min: (a) => (a.length ? Math.min.apply(null, a) : null), max: (a) => (a.length ? Math.max.apply(null, a) : null),
-      median: (a) => { if (!a.length) { return null; } const s = a.slice().sort((x, y) => x - y), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; } };
-    AGG.average = AGG.mean;
+    var reduceValues = __lib("drishti-core").aggregate, aggFunc = __lib("drishti-core").aggFunc;
+    const AGG_NAME = { mean: 'avg', average: 'avg' };
+    const median = (a) => { if (!a.length) { return null; } const s = a.slice().sort((x, y) => x - y), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+    const agg = (name, values) => (name === 'median' ? median(values) : reduceValues(values, aggFunc(AGG_NAME[name] || name) ? AGG_NAME[name] || name : 'sum'));
     const KNOWN_TOP = ['$schema', 'data', 'mark', 'encoding', 'layer', 'transform', 'title', 'width', 'height', 'autosize', 'config', 'description', 'name', 'background', 'padding'];
     const KNOWN_ENC = ['x', 'y', 'color', 'fill', 'stroke', 'size', 'theta', 'tooltip', 'opacity', 'x2', 'y2'];
     const MARKS = { bar: 1, line: 1, area: 1, point: 1, circle: 1, square: 1, tick: 1, rule: 1, rect: 1, arc: 1, boxplot: 1 };
@@ -3993,8 +3993,8 @@
         const o = {};
         keys.forEach((f) => { o[f] = g[0][f]; });
         aggs.forEach((k) => {
-          const e = enc[k], fn = AGG[e.aggregate] || AGG.sum, name = e.field || '__count';
-          o[name] = e.aggregate === 'count' ? g.length : fn(g.map((r) => num(r[e.field])).filter((v) => v !== null));
+          const e = enc[k], name = e.field || '__count';
+          o[name] = e.aggregate === 'count' ? g.length : agg(e.aggregate, g.map((r) => num(r[e.field])).filter((v) => v !== null));
         });
         return o;
       });

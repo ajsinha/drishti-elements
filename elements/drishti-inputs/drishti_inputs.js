@@ -451,7 +451,7 @@
   })();
   /* ---- src/drishti_inputs-dom.js ---- */
   __m["src/drishti_inputs-dom.js"] = (function () {
-    var EventBus = __lib("drishti-core").EventBus, h = __lib("drishti-core").h, placeUnder = __lib("drishti-core").placeUnder, stateBlock = __lib("drishti-core").stateBlock;
+    var EventBus = __lib("drishti-core").EventBus, h = __lib("drishti-core").h, placeUnder = __lib("drishti-core").placeUnder, stateBlock = __lib("drishti-core").stateBlock, searchWords = __lib("drishti-core").searchWords;
     let seq = 0;
     function uid(prefix) { return 'di-' + prefix + '-' + (++seq); }
     function debounce(fn, ms) {
@@ -594,7 +594,7 @@
         disabled: !!x.disabled, group: x.group || '' } : { value: x, label: String(x), detail: '', disabled: false, group: '' }));
     }
     function searchOptions(items, q) {
-      const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+      const words = searchWords(q);
       if (!words.length) { return items.slice(); }
       const scored = [];
       items.forEach((raw, i) => {
@@ -1693,7 +1693,7 @@
   })();
   /* ---- src/drishti_field-picker.js ---- */
   __m["src/drishti_field-picker.js"] = (function () {
-    var announce = __lib("drishti-core").announce, h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock;
+    var announce = __lib("drishti-core").announce, h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, searchWords = __lib("drishti-core").searchWords;
     var Popover = __m["src/drishti_inputs-dom.js"].Popover, uid = __m["src/drishti_inputs-dom.js"].uid;
     class FieldPicker {
       constructor(doc, o) {
@@ -1746,7 +1746,7 @@
         return words.every((w) => hay.indexOf(w) >= 0);
       }
       render() {
-        const doc = this.doc, words = this.query.toLowerCase().split(/\s+/).filter(Boolean);
+        const doc = this.doc, words = searchWords(this.query);
         this.list.textContent = '';
         this.rows = [];
         let shown = 0;
@@ -2651,6 +2651,7 @@
   })();
   /* ---- src/drishti_tree.js ---- */
   __m["src/drishti_tree.js"] = (function () {
+    var searchWords = __lib("drishti-core").searchWords;
     class TreeModel {
       constructor(o) {
         o = o || {};
@@ -2751,7 +2752,7 @@
       search(q, server) {
         this.query = String(q || '').trim();
         if (!this.query) { this.found = null; return Promise.resolve(0); }
-        const words = this.query.toLowerCase().split(/\s+/);
+        const words = searchWords(this.query);
         const run = () => {
           const hit = new Set();
           this.byId.forEach((n, id) => { const t = (n.label + ' ' + (n.detail || '')).toLowerCase(); if (words.every((w) => t.indexOf(w) >= 0)) { hit.add(id); } });
