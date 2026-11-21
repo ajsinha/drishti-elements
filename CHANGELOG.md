@@ -19,6 +19,10 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **A surface's point clicked in Chromium, heatmap and 3D** (tests): the 3D view drawn by the vendored ECharts GL, each point clicked
+  where the camera shows it, fires `point-click` on that mark and hands `{panel, ev, set}` to the host; on the heatmap an empty point is
+  no mark. Fix found by it (drishti-chart): the surface heatmap's tooltip no longer asks for ECharts' arrow (`position: 'top'`), whose
+  inline style a strict CSP (`style-src-attr`) refused.
 - **Test pins and flake** (G2 gate F15, F18): `tests/support/fire_cases.json` carries the drishti-rachana commit and the hash of the `fire` case
   files it was made from (`tools/views/fire_fixture.mjs` writes both); `tests/test_views_spec.py` reads Rachana's files by that commit, never by the
   branch the sibling checkout has out, and fails when the cases at the fixture's `ref` changed since. The ViewModel schema pin is read the same way.

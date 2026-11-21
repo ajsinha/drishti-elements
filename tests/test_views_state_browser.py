@@ -16,7 +16,8 @@
 * the `fire` conformance cases of drishti-rachana (tests/support/fire_cases.json, made by tools/views/fire_fixture.mjs from the reference
   runtime): every case's steps fired through the painter, with the next bind answered by the recorded ViewModel; the effects run, the
   refusals and the state after each step are the case's own, and only the panels the changed states' reads name are drawn again;
-* the same through the page: a click on a table row, an hbar bar, a figure and a chart's point writes state and the dependent panel follows;
+* the same through the page: a click on a table row, an hbar bar, a figure, a chart's point, a pivot's cell and a surface's point (its
+  heatmap and, through the vendored ECharts GL, its 3D view) writes state and the dependent panel follows;
   notify and host effects reach the host's hooks (Elements runs none); a guard that was false at the ViewModel left its effect out."""
 import json
 from pathlib import Path
@@ -345,4 +346,87 @@ def test_an_action_that_requires_a_permission_is_disabled_unless_the_host_answer
         for mode, cancel_disabled in (("none", True), ("false", True), ("undefined", True), ("yes", True), ("throws", True), ("true", False)):
             got = await pg.evaluate(ALLOWED, [case, mode])
             assert got == [["Cancel A", cancel_disabled], ["Wide", False], ["Reset", False]], (mode, got)
+    with_page(browsers, body)
+
+
+def surface_3d_case():
+    """The surface case's screen drawn in 3D over a full grid (each point a mark, ev its place row by row): ECharts GL draws a surface only
+    over every point of its grid."""
+    c = json.loads(json.dumps(BY_ID["fire/surface-points/a-surface-point-writes-state"]))
+    for vm in [c["viewModel"]] + [st["viewModel"] for st in c["steps"]]:
+        d = vm["panels"][0]["data"]
+        d.update({"view": "3d", "z": [[0.25, 0.2], [0.24, 0.22]], "min": 0.2, "max": 0.25, "ev": [["0", "1"], ["2", "3"]],
+                  "set": [[{"at": "1M 90 0"}, {"at": "1M 110 1"}], [{"at": "1Y 90 2"}, {"at": "1Y 110 3"}]]})
+    return c
+
+
+GL_PAINT = """async ([c, step]) => {
+  const H = window.__harness, w = window.__w = { binds: [], calls: [], bound: [], states: [] };
+  const host = { bind: (req) => { w.binds.push(req); return JSON.parse(JSON.stringify(c.steps[step].viewModel)); },
+    run: (e, x) => w.calls.push(['host', e, x]), notify: (e, x) => w.calls.push(['notify', e, x]) };
+  const gl = () => window.Drishti.elements.chart.ensure3d().then((ok) => { if (!ok) { throw new Error('no WebGL'); } });   // the vendored ECharts GL
+  await H.paint(JSON.parse(JSON.stringify(c.viewModel)), { host: host, gl: gl });
+  H.handle.on('bound', (e) => w.bound.push(e.detail));
+  H.handle.on('state-change', (e) => w.states.push(e.detail));
+}"""
+GL_DRAWN = """(id) => { const R = document.getElementById('hx-view').shadowRoot, el = R && R.querySelector('[data-panel=' + id + '] [data-r-chart]'),
+  c = el && window.echarts && window.echarts.getInstanceByDom(el), o = c && c.getOption();
+  return !!o && Array.isArray(o.series) && o.series[0].type === 'surface' && el.classList.contains('dv-pick'); }"""
+GL_POINT = """([id, i, j]) => {
+  const R = document.getElementById('hx-view').shadowRoot, el = R.querySelector('[data-panel=' + id + '] [data-r-chart]');
+  const c = window.echarts.getInstanceByDom(el), cs = c.getModel().getSeriesByIndex(0).coordinateSystem, view = cs.viewGL, cam = view.camera;
+  const z = el.__drishti.data.z, x0 = Math.floor(i), y0 = Math.floor(j), x1 = Math.min(x0 + 1, z[0].length - 1), y1 = Math.min(y0 + 1, z.length - 1), fx = i - x0, fy = j - y0;
+  const height = (z[y0][x0] * (1 - fx) + z[y0][x1] * fx) * (1 - fy) + (z[y1][x0] * (1 - fx) + z[y1][x1] * fx) * fy;   // on the surface between its points
+  const p = cs.dataToPoint([i, j, height]), v = new window.echarts.graphicGL.Vector3(p[0], p[1], p[2]);
+  v.transformMat4(cam.viewMatrix).applyProjection(cam.projectionMatrix);           // world to the camera's clip space
+  const r = el.getBoundingClientRect(), vp = view.viewport;
+  return { x: r.left + vp.x + (v.x + 1) / 2 * vp.width, y: r.top + vp.y + (1 - v.y) / 2 * vp.height };
+}"""
+HEAT_POINT = """([id, i, j]) => {
+  const R = document.getElementById('hx-view').shadowRoot, el = R.querySelector('[data-panel=' + id + '] [data-r-chart]');
+  const c = window.echarts.getInstanceByDom(el), r = el.getBoundingClientRect(), p = c.convertToPixel({ seriesIndex: 0 }, [i, j]);
+  return { x: r.left + p[0], y: r.top + p[1], done: c.getZr().animation.isFinished() && c.getWidth() === el.clientWidth };
+}"""
+
+
+async def still(pg, js, args):
+    """The point's place once the drawing stands still (the layout, the camera): the same in two frames running."""
+    pos = None
+    for _ in range(60):
+        await frame(pg)
+        now = await pg.evaluate(js, args)
+        if pos == now and now.get("done", True):
+            return now
+        pos = now
+    return pos
+
+
+def test_a_click_on_a_3d_surface_point_fires_point_click_on_that_point(browsers):
+    async def body(pg):
+        case = surface_3d_case()
+        for mark, (i, j) in enumerate([(0, 0), (1, 0), (0, 1), (1, 1)]):
+            await pg.evaluate(GL_PAINT, [case, 0])
+            await pg.wait_for_function(GL_DRAWN, arg="s", timeout=20000)                # drawn by ECharts GL, not its heatmap fallback
+            pos = await still(pg, GL_POINT, ["s", i + (0.5 - i) * 0.3, j + (0.5 - j) * 0.3])   # inside the surface, nearest this point
+            await pg.mouse.click(pos["x"], pos["y"])
+            await pg.wait_for_function(BOUND, timeout=10000)
+            want = case["viewModel"]["panels"][0]["data"]["set"][j][i]
+            assert await pg.evaluate("window.__w.states[0]") == {"changed": ["at"], "values": want, "panel": "s", "trigger": "point-click", "mark": mark}
+            points = await pg.evaluate("window.__harness.events.filter((e) => e.type === 'point').map((e) => e.detail)")
+            assert points[-1] == {"panel": "s", "ev": str(mark), "set": want}                # the host's event: the point's place and its set
+    with_page(browsers, body)
+
+
+def test_a_click_on_a_heatmap_surface_point_fires_point_click_and_an_empty_point_is_no_mark(browsers):
+    async def body(pg):
+        case = BY_ID["fire/surface-points/a-surface-point-writes-state"]
+        await pg.evaluate(PAINT, [case, 0])
+        await pg.wait_for_function(DRAWN, arg="s", timeout=20000)
+        pos = await still(pg, HEAT_POINT, ["s", 0, 1])                                     # 1Y at 90: no number, no mark
+        await pg.mouse.click(pos["x"], pos["y"])
+        pos = await still(pg, HEAT_POINT, ["s", 1, 1])
+        await pg.mouse.click(pos["x"], pos["y"])
+        await pg.wait_for_function(BOUND, timeout=10000)
+        assert await pg.evaluate("window.__w.states.map((s) => s.mark)") == [3]
+        assert await pg.evaluate("window.__harness.handle.stateValues") == case["steps"][0]["actual"]["state"]
     with_page(browsers, body)
