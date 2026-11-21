@@ -1,0 +1,5 @@
+{
+  "about": "The drishti-rachana commit whose live reference host (java/rachana-live) the live-edit browser tests run against. tests/support/pinned_rachana.py checks it out and builds it once under target/tmp. DRISHTI_RACHANA_HOME is an explicit override only.",
+  "repo": "https://github.com/ajsinha/drishti-rachana.git",
+  "commit": "7b1f5e4da80a839c78a68fba673b3ad0d8738ef3"
+}

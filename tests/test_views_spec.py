@@ -21,26 +21,25 @@ the budgets file names every budget the tests read."""
 import hashlib
 import importlib.util
 import json
-import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from conftest import ROOT
+sys.path.insert(0, str(ROOT / "tests" / "support"))
+from pinned_rachana import git_source  # noqa: E402
 
 pytestmark = pytest.mark.static
 
 SPEC = ROOT / "elements" / "drishti-views" / "spec"
-RACHANA_DIR = Path(os.environ.get("DRISHTI_RACHANA") or ROOT.parent / "drishti-rachana")
-RACHANA = RACHANA_DIR / "spec" / "1" / "viewmodel.schema.json"
-HAS_RACHANA = (RACHANA_DIR / ".git").exists()
 FIRE = ROOT / "tests" / "support" / "fire_cases.json"
 
 
 def _git(*args: str) -> bytes:
     """Rachana's objects at a named commit or ref, never the files of whatever branch the sibling checkout has out."""
-    return subprocess.run(["git", "-C", str(RACHANA_DIR), *args], capture_output=True, check=True).stdout
+    return subprocess.run(["git", "-C", str(git_source()), *args], capture_output=True, check=True).stdout
 
 
 def _fire_hash(rev: str) -> str:
@@ -64,14 +63,13 @@ def test_the_copy_is_the_pinned_specification_and_the_compact_form_is_current(ca
     assert _gen().main(["--check"]) == 0, capsys.readouterr()
 
 
-@pytest.mark.skipif(not HAS_RACHANA, reason="no drishti-rachana checkout beside this project (DRISHTI_RACHANA names one)")
 def test_the_pin_is_the_hash_of_the_specification_at_the_pinned_commit():
     """By the commit the pin names, never by the files of the branch the sibling checkout happens to have out."""
     pin = json.loads((SPEC / "drishti_viewmodel.pin.json").read_text(encoding="utf-8"))
     assert pin.get("commit"), "the pin names no drishti-rachana commit: python3 tools/views/gen.py --sync DIR --commit <hash>"
     got = _git("show", f"{pin['commit']}:spec/1/viewmodel.schema.json")
     assert hashlib.sha256(got).hexdigest() == pin["sha256"], (
-        "the pin is not the schema at its commit " + pin["commit"] + ": python3 tools/views/gen.py --sync " + str(RACHANA_DIR) + " --commit <hash>")
+        "the pin is not the schema at its commit " + pin["commit"] + ": python3 tools/views/gen.py --sync " + "<drishti-rachana checkout>" + " --commit <hash>")
 
 
 def test_the_fire_cases_fixture_names_the_rachana_commit_and_the_hash_it_was_made_from():
@@ -80,13 +78,12 @@ def test_the_fire_cases_fixture_names_the_rachana_commit_and_the_hash_it_was_mad
         "tests/support/fire_cases.json has no pin: node tools/views/fire_fixture.mjs <drishti-rachana checkout>")
 
 
-@pytest.mark.skipif(not HAS_RACHANA, reason="no drishti-rachana checkout beside this project (DRISHTI_RACHANA names one)")
 def test_the_fire_cases_fixture_is_the_cases_at_its_commit_and_they_have_not_moved_since():
     fx = json.loads(FIRE.read_text(encoding="utf-8"))
     assert _fire_hash(fx["commit"]) == fx["sha256"], "the fixture's hash is not the fire cases at its commit " + fx["commit"]
     now = _fire_hash(fx["ref"])
     assert now == fx["sha256"], ("drishti-rachana's fire cases at " + fx["ref"] + " changed since the fixture was made: "
-                                 "node tools/views/fire_fixture.mjs " + str(RACHANA_DIR) + " (needs its runtime bundle built) and commit the new fixture")
+                                 "node tools/views/fire_fixture.mjs " + "<drishti-rachana checkout>" + " (needs its runtime bundle built) and commit the new fixture")
 
 
 def test_a_keyword_the_validator_does_not_implement_is_refused():

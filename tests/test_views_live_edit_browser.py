@@ -14,7 +14,8 @@
 
 """The grid's live-mode edit (drishti_live-edit.js) in Chromium, driving a live table of drishti-rachana's reference host (its
 LiveReferenceServer, the one protocol_check.py --live starts) through drishti-rachana's DataClient over its test bridge, under the strict CSP.
-The host is found by DRISHTI_RACHANA_HOME, else the newest sibling checkout whose java/rachana-live is built; a run without it fails (it never skips).
+The host is the PINNED drishti-rachana commit (tests/support/rachana_host.pin.json), checked out and built once under target/tmp;
+DRISHTI_RACHANA_HOME is an explicit override only (a built checkout you name). A run that cannot get it fails (it never skips).
 
 * a reader with no `write` sees no edit control; a masked cell is never editable;
 * cells: an edit is checked in the page, sent once (a ULID, the version the row shows), the row stays as it was and the cell is marked
@@ -27,12 +28,15 @@ import asyncio
 import json
 import os
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).with_name("support")))
+from pinned_rachana import host_home  # noqa: E402
 from test_views_browser import ORIGIN, PAGE, READY, STATIC, TYPES, HEADERS, frame, shot
 
 pytestmark = pytest.mark.spread
@@ -64,15 +68,8 @@ TRAY_FIELDS = [{"name": n, "type": "string", "label": n.title()} for n in ["chan
 
 
 def rachana_home():
-    """The drishti-rachana checkout whose live reference host is built."""
-    cands = [Path(os.environ["DRISHTI_RACHANA_HOME"])] if os.environ.get("DRISHTI_RACHANA_HOME") else \
-        sorted(STATIC.parent.glob("drishti-rachana*"), key=lambda p: -p.stat().st_mtime)
-    for c in cands:
-        t = c / "java" / "rachana-live" / "target"
-        if (t / "runtime-classpath.txt").is_file() and list(t.glob("rachana-live-*.jar")) and (c / "js/packages/rachana/src/data_client.js").is_file():
-            return c
-    pytest.fail("drishti-rachana's built live reference host is needed (java/rachana-live/target and js/packages/rachana): set DRISHTI_RACHANA_HOME "
-                "or put a built checkout beside this one", pytrace=False)
+    """The pinned drishti-rachana commit with its live reference host built (tests/support/pinned_rachana.py)."""
+    return host_home()
 
 
 @pytest.fixture(scope="module")
