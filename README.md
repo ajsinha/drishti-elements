@@ -96,6 +96,20 @@ python3 -m pytest -q tests -n 8          # needs: pip install -r tests/requireme
 
 `python3 tools/elements/build.py` rewrites the bundles after a change to a module (offline, Python only).
 
+## Build and run in the IDE
+
+No Java here: Python and Node only. The launchers are checked in and visible.
+
+| IDE | What runs what |
+|---|---|
+| **PyCharm** (open this folder) | `run-configs/`: the build and doc checks, the licence headers, `dist`, the static and browser pytest suites, the gallery server (Python configurations), and the Node tests (a Shell Script configuration) |
+| **IntelliJ IDEA Community** | no Python and no Node/JavaScript support: use the Shell Script configurations only (Node tests), or PyCharm or VS Code for the rest |
+| **VS Code** | **File, Open Workspace from File**, `drishti-elements.code-workspace`: tasks (checks, build, dist, Node and pytest suites, gallery server) and Run and Debug configurations; recommended extensions: Python and Pylance, ESLint, YAML |
+
+Prepare once: `pip install -r tests/requirements.txt` and `playwright install chromium`. Windows: use `python` for `python3`; the Shell Script
+configurations need Git Bash (or run the same command in a terminal). The Rachana and Lake installation order, JDK 21 and the local Maven
+repository are described once, in [Drishti Rachana's java/README](https://github.com/ajsinha/drishti-rachana/blob/g2/integration/java/README.md#build-and-run-in-the-ide).
+
 ## Licence
 
 Proprietary. Copyright (c) 2026 Ashutosh Sinha. All rights reserved. This repository is visible to the public, but no licence is granted: you may not copy,
