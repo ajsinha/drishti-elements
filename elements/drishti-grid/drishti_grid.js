@@ -3023,7 +3023,7 @@
     var XLSX_TYPE = __m["src/drishti_export.js"].XLSX_TYPE;
     var columnMenuItems = __m["src/drishti_grid-ui.js"].columnMenuItems, cellMenuItems = __m["src/drishti_grid-ui.js"].cellMenuItems, FUNCTION_KEYS = __m["src/drishti_grid-ui.js"].FUNCTION_KEYS, parseCondition = __m["src/drishti_grid-ui.js"].parseCondition, pivotMeasures = __m["src/drishti_grid-ui.js"].pivotMeasures;
     var LAYOUTS = __m["src/drishti_grid-model-base.js"].LAYOUTS, DENSITIES = __m["src/drishti_grid-model-base.js"].DENSITIES;
-    var openDialog = __lib("drishti-core").openDialog, h = __lib("drishti-core").h, drishtiUrl = __lib("drishti-core").url;
+    var openDialog = __lib("drishti-core").openDialog, h = __lib("drishti-core").h, drishtiUrl = __lib("drishti-core").url, copyText = __lib("drishti-core").copyText;
     var editorOf = __m["src/drishti_grid-edit.js"].editorOf;
     function onKey(v, e) {
       const m = v.model, k = e.key, mod = e.ctrlKey || e.metaKey;
@@ -3074,8 +3074,7 @@
     function anyEditable(v) { return !v.model.pivotMode && v.model.shownColumns().some((c) => c.editable); }
     function copied(v, text, headers) {
       v.lastCopy = text;
-      const win = v.doc.defaultView;
-      try { if (win.navigator.clipboard) { win.navigator.clipboard.writeText(text).catch(() => {}); } } catch (err) { /* the text stays in lastCopy */ }
+      copyText(v.doc.defaultView, text);                // a refusal leaves the text in lastCopy
       const lines = text ? text.split('\n').length : 0;
       v.say('Copied ' + lines + (lines === 1 ? ' line' : ' lines') + (headers ? ' with headers' : '') + ' as tab-separated text');
       v.emitView('copied', { text: text, headers: !!headers });
@@ -7198,7 +7197,7 @@
   })();
   /* ---- src/drishti_live-model.js ---- */
   __m["src/drishti_live-model.js"] = (function () {
-    var MASK = __lib("drishti-core").MASK, hasFormat = __lib("drishti-core").hasFormat, endpoint = __lib("drishti-core").endpoint, drishtiUrl = __lib("drishti-core").url;
+    var MASK = __lib("drishti-core").MASK, hasFormat = __lib("drishti-core").hasFormat, endpoint = __lib("drishti-core").endpoint, drishtiUrl = __lib("drishti-core").url, fetcher = __lib("drishti-core").fetcher;
     var nestedText = __m["src/drishti_columns.js"].nestedText;
     const ROW_KEY = '__id';
     const ROW_VERSION = '__v';
@@ -7340,7 +7339,7 @@
     function httpLiveApi(o) {
       const base = (o.base || endpoint('live')).replace(/\/$/, ''), id = encodeURIComponent(o.id);
       const changes = () => o.changesUrl || endpoint('changes');
-      const f = o.fetch || ((typeof fetch === 'function') ? fetch.bind(globalThis) : null);
+      const f = fetcher(o.fetch);
       const missing = (what) => Promise.reject(new Error('live set: no address configured (option ' + what + ' or configure({ endpoints }))'));
       const call = (method, path, body) => f(path, { method: method, credentials: 'same-origin', headers: body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
         body: body ? JSON.stringify(body) : undefined }).then((r) => r.json().catch(() => ({})).then((j) => {

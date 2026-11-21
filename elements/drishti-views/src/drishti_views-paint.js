@@ -19,7 +19,7 @@
    That first paint needs no engine. Then ready. A view is drawn inside a shadow root by default, so a ViewModel's names can neither
    collide with the page nor be styled by it; the theme's tokens still reach it (custom properties inherit).
    The painter computes nothing: every figure arrives as the producer's text. */
-import { h, manifest, staticUrl, loadStyle, load, loaded, loadPart } from '../../drishti-core/src/drishti_index.js';
+import { h, manifest, staticUrl, loadStyle, load, loaded, loadPart, now, fetcher } from '../../drishti-core/src/drishti_index.js';
 import { CONTRACT } from './drishti_views-schema.js';
 import { validate, formatIssue } from './drishti_views-validate.js';
 import { complete } from './drishti_views-build.js';
@@ -73,7 +73,6 @@ let counter = 0;
  * @property {import('./drishti_views-live.js').LiveOptions} [live] the view's live stream over drishti-events (subscribed after the first paint)
  */
 
-function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
 function isView(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) && typeof v.then !== 'function' && !(typeof Response !== 'undefined' && v instanceof Response); }
 
 /** A painted view: what paint() answers. */
@@ -207,7 +206,7 @@ export class ViewHandle {
     let p;
     if (typeof source === 'string') {
       this.src = source;
-      const f = this.options.fetch || ((u, init) => fetch(u, init));
+      const f = fetcher(this.options.fetch) || ((u, init) => fetch(u, init));
       p = Promise.resolve().then(() => f(source, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((r) => {
         if (!r.ok) { throw Object.assign(new Error(r.status + ' ' + (r.statusText || '')), { status: r.status }); }
         return r.json();

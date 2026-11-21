@@ -2146,7 +2146,7 @@
   /* ---- src/drishti_map-view.js ---- */
   __m["src/drishti_map-view.js"] = (function () {
     var isRegionLevel = __m["src/drishti_chart-regions.js"].isRegionLevel, regionName = __m["src/drishti_chart-regions.js"].regionName;
-    var h = __lib("drishti-core").h, showState = __lib("drishti-core").showState, ToastTray = __lib("drishti-core").ToastTray, drishtiUrl = __lib("drishti-core").url;
+    var h = __lib("drishti-core").h, showState = __lib("drishti-core").showState, ToastTray = __lib("drishti-core").ToastTray, drishtiUrl = __lib("drishti-core").url, fetcher = __lib("drishti-core").fetcher;
     var createGeoLoader = __m["src/drishti_chart-geo.js"].createGeoLoader, fitView = __m["src/drishti_chart-geo.js"].fitView;
     var buildMap = __m["src/drishti_chart-map.js"].buildMap;
     var rowsOf = __m["src/drishti_chart-data.js"].rowsOf;
@@ -2200,7 +2200,7 @@
       }
       load() {
         const s = this.c.spec, d = s.data || {};
-        const rows = d.source ? Promise.resolve((this.c.o.fetch || ((u) => this.c.win.fetch(drishtiUrl(u), { credentials: 'same-origin' }).then((r) => r.json())))(d.source)).then(rowsOf)
+        const rows = d.source ? Promise.resolve((this.c.o.fetch || ((u) => fetcher(null, this.c.win)(drishtiUrl(u), { credentials: 'same-origin' }).then((r) => r.json())))(d.source)).then(rowsOf)
           : Promise.resolve(rowsOf(Array.isArray(this.c.rawSpec.data) ? this.c.rawSpec.data : d));
         return rows.then((r) => { this.c.rows = r; this.levelRows = {}; return this.go(s.level && s.level !== 'world' ? (/^continents$/i.test(s.level) ? 'continents' : String(s.level).toUpperCase()) : 'world'); }, (e) => this.c.fail(e));
       }
@@ -2524,7 +2524,7 @@
   })();
   /* ---- src/drishti_chart-io.js ---- */
   __m["src/drishti_chart-io.js"] = (function () {
-    var h = __lib("drishti-core").h, toCsv = __lib("drishti-core").toCsv, download = __lib("drishti-core").download;
+    var h = __lib("drishti-core").h, toCsv = __lib("drishti-core").toCsv, download = __lib("drishti-core").download, copyText = __lib("drishti-core").copyText;
     var specText = __m["src/drishti_chart-spec.js"].specText;
     var rowId = __m["src/drishti_chart-kinds.js"].rowId;
     var svgOf = __m["src/drishti_chart-parts.js"].svgOf;
@@ -2554,7 +2554,7 @@
         let out, type, file;
         if (what === 'png' || what === 'svg') { const sn = this.snapshot(what); out = sn.data; file = sn.file; type = sn.type; }
         if (what === 'csv') { const t = this.map ? this.map.table() : this.built.table; out = toCsv({ columns: t.columns, rows: t.rows }); file = name + '.csv'; type = 'text/csv'; }
-        if (what === 'spec') { out = specText(this.rawSpec, { rows: true }); file = name + '.json'; type = 'application/json'; if (this.win.navigator.clipboard) { this.win.navigator.clipboard.writeText(out).catch(() => {}); } }
+        if (what === 'spec') { out = specText(this.rawSpec, { rows: true }); file = name + '.json'; type = 'application/json'; copyText(this.win, out); }
         if (out === undefined) { throw new Error('no export ' + what + ' (png, svg, csv, spec)'); }
         if (what !== 'spec') { (this.o.download || ((f, c, t) => download(this.doc, f, c, t)))(file, out, type); }
         this.emit('exported', { what: what, file: file, size: out.length });
@@ -2594,7 +2594,7 @@
   })();
   /* ---- src/drishti_chart-view.js ---- */
   __m["src/drishti_chart-view.js"] = (function () {
-    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, showState = __lib("drishti-core").showState, renderExplain = __lib("drishti-core").renderExplain, EventBus = __lib("drishti-core").EventBus, sharedBus = __lib("drishti-core").bus, announce = __lib("drishti-core").announce, selectionTopic = __lib("drishti-core").selectionTopic, drishtiUrl = __lib("drishti-core").url;
+    var h = __lib("drishti-core").h, stateBlock = __lib("drishti-core").stateBlock, showState = __lib("drishti-core").showState, renderExplain = __lib("drishti-core").renderExplain, EventBus = __lib("drishti-core").EventBus, sharedBus = __lib("drishti-core").bus, announce = __lib("drishti-core").announce, selectionTopic = __lib("drishti-core").selectionTopic, drishtiUrl = __lib("drishti-core").url, fetcher = __lib("drishti-core").fetcher;
     var normalizeSpec = __m["src/drishti_chart-spec.js"].normalizeSpec, kindOf = __m["src/drishti_chart-spec.js"].kindOf;
     var rowsOf = __m["src/drishti_chart-data.js"].rowsOf;
     var chartTheme = __m["src/drishti_chart-theme.js"].chartTheme, formatterFor = __m["src/drishti_chart-theme.js"].formatterFor;
@@ -2708,7 +2708,7 @@
         if (this.map) { return this.map.load(); }
         if (d.source) {
           this.loadingEl.hidden = false;
-          const get = this.o.fetch || ((u) => this.win.fetch(drishtiUrl(u), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error(u + ': ' + r.status); } return r.json(); }));
+          const get = this.o.fetch || ((u) => fetcher(null, this.win)(drishtiUrl(u), { credentials: 'same-origin' }).then((r) => { if (!r.ok) { throw new Error(u + ': ' + r.status); } return r.json(); }));
           return Promise.resolve(get(d.source)).then((ans) => { this.rows = rowsOf(ans); this.loadingEl.hidden = true; return this.draw(); }, (e) => { this.loadingEl.hidden = true; this.fail(e); });
         }
         this.rows = rowsOf(this.rawSpec.data && Array.isArray(this.rawSpec.data) ? this.rawSpec.data : d);

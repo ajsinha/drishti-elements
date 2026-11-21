@@ -741,6 +741,7 @@
   __m["src/drishti_transport-sse.js"] = (function () {
     var EventError = __m["src/drishti_envelope.js"].EventError;
     var SERVER_FRAMES = __m["src/drishti_protocol.js"].SERVER_FRAMES;
+    var fetcher = __lib("drishti-core").fetcher;
     function parseSse(text) {
       const events = [];
       const blocks = String(text).replace(/\r\n?/g, '\n').split('\n\n');
@@ -795,7 +796,7 @@
     }
     function postFrames(ctx, frames) {
       if (ctx.protocol !== 1) { return Promise.reject(new EventError('protocol', 'a raw stream takes nothing from the page (protocol 1 sends to <events>/send)')); }
-      const F = ctx.env.fetch || globalThis.fetch;
+      const F = fetcher(ctx.env.fetch);
       if (!F) { return Promise.reject(new EventError('transport.missing', 'this page has no fetch')); }
       const session = ctx.session();
       if (!session) { return Promise.reject(new EventError('not.connected', 'the server has not named a session yet')); }
@@ -827,7 +828,7 @@
       };
     }
     function fetchTransport(ctx) {
-      const F = ctx.env.fetch || globalThis.fetch;
+      const F = fetcher(ctx.env.fetch);
       if (!F) { throw new EventError('transport.missing', 'this page has no fetch'); }
       const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
       let ended = false;
@@ -1732,6 +1733,7 @@
   __m["src/drishti_subscription.js"] = (function () {
     var EventError = __m["src/drishti_envelope.js"].EventError, AbortError = __m["src/drishti_envelope.js"].AbortError, makeMessage = __m["src/drishti_envelope.js"].makeMessage, isMessage = __m["src/drishti_envelope.js"].isMessage, isOwnTopic = __m["src/drishti_envelope.js"].isOwnTopic, matches = __m["src/drishti_envelope.js"].matches;
     var createFlow = __m["src/drishti_flow.js"].createFlow, GridSink = __m["src/drishti_flow.js"].GridSink;
+    var now = __lib("drishti-core").now;
     const SUBSCRIPTION_STATES = Object.freeze(['pending', 'active', 'recovering', 'refused', 'closed']);
     class Subscription {
       constructor(events, pattern, fn, o) {
@@ -1907,7 +1909,6 @@
         this.events._forget(this);
       }
     }
-    function now() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
     return { "SUBSCRIPTION_STATES": SUBSCRIPTION_STATES, "Subscription": Subscription };
   })();
   /* ---- src/drishti_tabs.js ---- */

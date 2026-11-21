@@ -192,10 +192,10 @@
   })();
   /* ---- src/drishti_layout-rules.js ---- */
   __m["src/drishti_layout-rules.js"] = (function () {
+    var clamp = __lib("drishti-core").clamp;
     const GRID = 12;
     const MAX_H = 24;
     const DEFAULT_MIN_SPAN = 3;
-    function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
     function clampSpan(n, min, grid) { const g = grid || GRID; return clamp(Math.round(n), clamp(min || DEFAULT_MIN_SPAN, 1, g), g); }
     function clampHeight(n, max) { return n ? clamp(Math.round(n), 1, max || MAX_H) : 0; }
     function hideRefused(hiddenFlags, index) { return !hiddenFlags[index] && hiddenFlags.every((h, i) => i === index || h); }
@@ -249,7 +249,7 @@
       order.forEach((i) => { out[i][axis] = Math.round(at); at += out[i][size] + gap; });
       return out;
     }
-    return { "GRID": GRID, "MAX_H": MAX_H, "DEFAULT_MIN_SPAN": DEFAULT_MIN_SPAN, "clamp": clamp, "clampSpan": clampSpan, "clampHeight": clampHeight, "hideRefused": hideRefused, "sizeText": sizeText, "rowsFromPixels": rowsFromPixels, "snap": snap, "clampRect": clampRect, "overlaps": overlaps, "settle": settle, "bounds": bounds, "ALIGN_EDGES": ALIGN_EDGES, "alignRects": alignRects, "distributeRects": distributeRects };
+    return { "clamp": clamp, "GRID": GRID, "MAX_H": MAX_H, "DEFAULT_MIN_SPAN": DEFAULT_MIN_SPAN, "clampSpan": clampSpan, "clampHeight": clampHeight, "hideRefused": hideRefused, "sizeText": sizeText, "rowsFromPixels": rowsFromPixels, "snap": snap, "clampRect": clampRect, "overlaps": overlaps, "settle": settle, "bounds": bounds, "ALIGN_EDGES": ALIGN_EDGES, "alignRects": alignRects, "distributeRects": distributeRects };
   })();
   /* ---- src/drishti_layout-flow.js ---- */
   __m["src/drishti_layout-flow.js"] = (function () {
@@ -1051,6 +1051,7 @@
   /* ---- src/drishti_yaml-write.js ---- */
   __m["src/drishti_yaml-write.js"] = (function () {
     var parseYamlTree = __m["src/drishti_yaml-read.js"].parseYamlTree;
+    var isObject = __lib("drishti-core").isObject;
     const PLAIN = /^[A-Za-z_/$@(][^\n#{}[\],"'`]*$/;
     const RESERVED = /^(true|false|null|yes|no|on|off|~|-?\d+(\.\d+)?([eE][-+]?\d+)?)$/i;
     function yamlScalar(v) {
@@ -1063,15 +1064,14 @@
     function dumpYaml(value, o) {
       const step = (o && o.indent) || 2, out = [];
       const pad = (n) => ' '.repeat(n);
-      const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
-      const empty = (v) => (Array.isArray(v) && !v.length) || (isObj(v) && !Object.keys(v).length);
+      const empty = (v) => (Array.isArray(v) && !v.length) || (isObject(v) && !Object.keys(v).length);
       const inline = (v) => (Array.isArray(v) ? '[]' : '{}');
       function block(s, ind) { s.replace(/\n$/, '').split('\n').forEach((l) => out.push(l ? pad(ind) + l : '')); }
       function map(obj, ind, firstPrefix) {
         Object.keys(obj).forEach((k, i) => {
           const lead = i === 0 && firstPrefix !== undefined ? firstPrefix : pad(ind), v = obj[k], key = yamlScalar(k);
           if (empty(v)) { out.push(lead + key + ': ' + inline(v)); }
-          else if (isObj(v)) { out.push(lead + key + ':'); map(v, ind + step); }
+          else if (isObject(v)) { out.push(lead + key + ':'); map(v, ind + step); }
           else if (Array.isArray(v)) { out.push(lead + key + ':'); seq(v, ind + step); }
           else if (typeof v === 'string' && v.indexOf('\n') >= 0) { out.push(lead + key + ': |' + (/\n$/.test(v) ? '' : '-')); block(v, ind + step); }
           else { out.push(lead + key + ': ' + yamlScalar(v)); }
@@ -1080,13 +1080,13 @@
       function seq(list, ind) {
         list.forEach((v) => {
           if (empty(v)) { out.push(pad(ind) + '- ' + inline(v)); }
-          else if (isObj(v)) { map(v, ind + 2, pad(ind) + '- '); }
+          else if (isObject(v)) { map(v, ind + 2, pad(ind) + '- '); }
           else if (Array.isArray(v)) { out.push(pad(ind) + '-'); seq(v, ind + step); }
           else if (typeof v === 'string' && v.indexOf('\n') >= 0) { out.push(pad(ind) + '- |' + (/\n$/.test(v) ? '' : '-')); block(v, ind + step); }
           else { out.push(pad(ind) + '- ' + yamlScalar(v)); }
         });
       }
-      if (isObj(value)) { if (empty(value)) { return '{}\n'; } map(value, 0); } else if (Array.isArray(value)) { if (!value.length) { return '[]\n'; } seq(value, 0); } else { out.push(yamlScalar(value)); }
+      if (isObject(value)) { if (empty(value)) { return '{}\n'; } map(value, 0); } else if (Array.isArray(value)) { if (!value.length) { return '[]\n'; } seq(value, 0); } else { out.push(yamlScalar(value)); }
       return out.join('\n') + '\n';
     }
     function yamlRanges(text) {
