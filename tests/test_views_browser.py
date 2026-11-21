@@ -109,7 +109,7 @@ def test_the_screen_and_every_panel_state_drawn_in_a_shadow_root_styled_in_both_
         assert by["hidden"][1] == "denied" and "No access" in by["hidden"][3] and "no access to team" in by["hidden"][3]
         assert by["nothing"][1] == "empty" and "No data available" in by["nothing"][3]
         assert by["summary"][1] == "ready" and "Europe, Middle East and Africa" in by["summary"][3]
-        assert by["trend"][1] == "unknown-kind" and 'does not draw the kind "line"' in by["trend"][3]
+        assert by["trend"][1] == "ready" and "Data table" in by["trend"][3]       # a chart, with its data table
         tags = await ev(pg, "{ code: R.querySelector('[data-panel=orders] .dv-code').textContent, key: R.querySelector('[data-panel=orders] .dv-key').textContent, inferred: R.querySelector('[data-panel=nothing] .dv-tag').getAttribute('title'), err: R.querySelector('[data-panel=failed] [role=alert]') !== null }")
         assert tags == {"code": "ORD", "key": "F3", "inferred": "a dated list was found", "err": True}
         cols = await ev(pg, "[...R.querySelectorAll('.dv-grid > .dv-area')].map((a) => [a.dataset.area, [...a.querySelectorAll('.dv-panel')].map((p) => p.dataset.panel)])")
@@ -393,3 +393,50 @@ def test_the_kinds_of_words_and_tables(browsers):
         assert await ev(pg, "R.querySelector('.dv-metric-value').textContent") == "1,300.0"
         await shot(pg, "views-kinds.png")
     run(browsers, body, "view=V001")
+
+
+CHARTS_VIEW = {
+    "contract": "1.0", "ref": {"kind": "book", "id": "B-1"}, "title": {"pill": "Book", "id": "B-1"},
+    "panels": [
+        {"id": "ln", "kind": "line", "data": {"x": ["Mon", "Tue", "Wed"], "series": [{"label": "Orders", "values": [3, 5, None], "tone": None}], "unit": "k"}},
+        {"id": "ar", "kind": "area", "data": {"x": ["Mon", "Tue"], "series": [{"label": "Load", "values": [1, 2], "tone": None}]}},
+        {"id": "hb", "kind": "hbar", "data": {"bars": [{"label": "DEU", "value": 40, "text": "40", "tone": None}, {"label": "FRA", "value": 20, "text": "20", "tone": "warn"}], "total": "60 in all"}},
+        {"id": "dn", "kind": "hbar", "data": {"shape": "donut", "bars": [{"label": "A", "value": 3, "text": "3", "tone": None}, {"label": "B", "value": 1, "text": "1", "tone": None}]}},
+        {"id": "ga", "kind": "gauge", "data": {"value": 85, "max": 100, "text": "85%", "label": "Capacity"}},
+        {"id": "wf", "kind": "waterfall", "data": {"steps": [{"label": "Start", "value": 10}, {"label": "Fees", "value": -3}]}},
+        {"id": "hi", "kind": "histogram", "data": {"bins": [{"from": 0, "to": 1, "count": 4}, {"from": 1, "to": 2, "count": 6}]}},
+        {"id": "sc", "kind": "scatter", "data": {"points": [{"x": 1, "y": 2, "label": "p"}, {"x": 2, "y": 3, "label": "q"}], "xLabel": "size", "yLabel": "cost"}},
+        {"id": "cs", "kind": "candlestick", "data": {"candles": [{"x": "d1", "open": 1, "high": 3, "low": 0.5, "close": 2}]}},
+        {"id": "su", "kind": "surface", "data": {"x": ["1y", "2y"], "y": ["a", "b"], "z": [[1, 2], [3, 4]]}},
+        {"id": "gr", "kind": "graph", "data": {"nodes": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}], "edges": [{"from": "a", "to": "b"}]}},
+        {"id": "mp", "kind": "map", "data": {"mode": "world", "shade": {"label": "Orders", "items": [{"code": "DEU", "value": 4}]}}},
+        {"id": "odd", "kind": "seat-map", "data": {"rows": 3}}]}
+
+
+def test_the_kinds_of_charts_load_the_chart_library_only_then(browsers):
+    async def body(pg):
+        assert await pg.evaluate("!window.echarts && !window.Drishti.elements.chart")          # a page of words loads no chart engine
+        await pg.evaluate("(v) => window.__harness.paint(v, { validate: 'off' })", CHARTS_VIEW)
+        await pg.wait_for_function("() => window.__harness.handle.panelCharts && window.__harness.handle.panelCharts.instances().length >= 8", timeout=30000)
+        await pg.wait_for_function("() => !!" + ROOT + ".querySelector('[data-panel=gr] .dv-chart').__drishtiGraph", timeout=30000)   # drishti-graph, loaded for it
+        states = await ev(pg, "Object.fromEntries([...R.querySelectorAll('.dv-grid .dv-panel')].map((p) => [p.dataset.panel, p.dataset.state]))")
+        assert states.pop("odd") == "unknown-kind" and set(states.values()) == {"ready"}, states
+        got = await ev(pg, """{
+          bars: [...R.querySelectorAll('[data-panel=hb] .dv-bars li')].map((li) => [li.querySelector('.dv-bar-label').textContent, getComputedStyle(li.querySelector('.dv-bar')).getPropertyValue('--dv-share').trim(), li.querySelector('.dv-bar').className]),
+          gauge: ['role', 'aria-valuenow', 'aria-valuemax', 'aria-valuetext', 'aria-label'].map((a) => R.querySelector('[data-panel=ga] .dv-gauge').getAttribute(a)),
+          table: [...R.querySelectorAll('[data-panel=ln] .dv-data tr')].map((r) => r.textContent),
+          graph: !!R.querySelector('[data-panel=gr] .dv-chart').__drishtiGraph,
+          map: R.querySelector('[data-panel=mp] .dv-chart-off').textContent,
+          img: R.querySelector('[data-panel=sc] .dv-chart').getAttribute('role') }""")
+        assert got["bars"] == [["DEU", "1", "dv-bar dv-t-accent"], ["FRA", "0.5", "dv-bar dv-t-warn"]]
+        assert got["gauge"] == ["meter", "85", "100", "85%", "Capacity"]
+        assert got["table"] == ["Orders", "Mon3", "Tue5", "Wed"]
+        assert got["graph"] and got["img"] == "img" and "map helper" in got["map"]
+        await pg.evaluate("""() => { const H = window.__harness, p = JSON.parse(JSON.stringify(H.handle.viewModel.panels[0]));
+            p.data.series[0].values = [3, 5, 8]; H.handle.patch({ seq: 1, patches: [{ op: 'panel', panel: p }] }); }""")
+        await frame(pg)
+        assert await ev(pg, "[...R.querySelectorAll('[data-panel=ln] .dv-data tr')].map((r) => r.textContent)[3]") == "Wed8"
+        await shot(pg, "views-charts.png")
+        await pg.evaluate("window.__harness.handle.dispose()")
+        assert await pg.evaluate("window.__harness.handle.panelCharts.instances().length") == 0     # disposed with the view
+    run(browsers, body, "view=V002")

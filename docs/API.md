@@ -21411,6 +21411,23 @@ Returns `number`.
 
 How deep tabs may nest panels.
 
+### drishti_views-charts.js
+
+#### `CHART_KINDS`
+
+The kinds drawn by drishti-chart's panel charts (hbar only in its donut shape).
+
+#### `chartTable(kind, d)`
+
+The rows of a chart's data table: its column heads and rows of text (at most 500 rows).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `kind` | `string` |  |
+| `d` | `Object` | the panel's data |
+
+Returns `{columns: string[], rows: string[][]}`.
+
 ### drishti_index.js
 
 #### `registerKind(name, def)`
@@ -21452,6 +21469,9 @@ registerKind('note', { paint(body, panel, ctx) { body.textContent = panel.data.t
 | `[fetch]` | `function(string, Object): Promise&lt;Response&gt;` | the host's fetch, for a view given by its address |
 | `[label]` | `string` | the region's accessible name (default: the title) |
 | `[locale]` | `string` | how times are printed (default: the page's) |
+| `[libraries]` | `Object&lt;string, Object&gt;` | the libraries a kind draws with, given by the host (drishti-chart, drishti-graph); else the ones on the page, else loaded by drishti-core's loader the first time a view has such a panel |
+| `[geo]` | `function(): Promise&lt;Object&gt;` | the host's map helper for map panels (world, region, find, option, codeOf) |
+| `[gl]` | `function(): Promise&lt;void&gt;` | loads the 3D engine for a surface's 3D view |
 
 #### `ViewIssue` : `Object`
 

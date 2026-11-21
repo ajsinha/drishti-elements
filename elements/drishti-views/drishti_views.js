@@ -371,7 +371,10 @@
       expandRow: 'Open {label}',
       collapseRow: 'Close {label}',
       total: 'Total',
-      tooDeep: 'Panels nest at most four deep'
+      tooDeep: 'Panels nest at most four deep',
+      dataTable: 'Data table',
+      noCharts: 'Charts are not available on this page',
+      noMaps: 'Maps need the page\'s map helper (the option geo)'
     });
     const TONES = Object.freeze(['pos', 'neg', 'link', 'accent', 'ok', 'warn', 'bad', 'muted', 'inactive']);
     const DASH = '—';
@@ -954,7 +957,7 @@
   })();
   /* ---- src/drishti_views-paint.js ---- */
   __m["src/drishti_views-paint.js"] = (function () {
-    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle;
+    var h = __lib("drishti-core").h, manifest = __lib("drishti-core").manifest, staticUrl = __lib("drishti-core").staticUrl, loadStyle = __lib("drishti-core").loadStyle, load = __lib("drishti-core").load, loaded = __lib("drishti-core").loaded;
     var CONTRACT = __m["src/drishti_views-schema.js"].CONTRACT;
     var validate = __m["src/drishti_views-validate.js"].validate, formatIssue = __m["src/drishti_views-validate.js"].formatIssue;
     var MESSAGES = __m["src/drishti_views-cells.js"].MESSAGES, say = __m["src/drishti_views-cells.js"].say, safeHref = __m["src/drishti_views-cells.js"].safeHref;
@@ -1004,6 +1007,9 @@
           key: (k) => self.pressKey(k),
           back: () => self.back(),
           flash: (node) => self.flash(node),
+          library: (name) => self.library(name),
+          charts: () => self.charts(),
+          can: (what) => (what === 'geo' ? typeof o.geo === 'function' : false),
           time: (iso) => {
             const d = new Date(iso);
             if (isNaN(d.getTime())) { return String(iso); }
@@ -1225,9 +1231,28 @@
         node.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 450, easing: 'ease-out' });
       }
       metrics() { return Object.assign({}, this.stats); }
+      library(name) {
+        const given = this.options.libraries && this.options.libraries[name];
+        if (given) { return Promise.resolve(given); }
+        const have = loaded(name);
+        return have ? Promise.resolve(have) : load(name);
+      }
+      charts() {
+        if (!this.chartsP) {
+          const win = this.el.ownerDocument.defaultView, o = this.options;
+          this.chartsP = this.library('drishti-chart').then((C) => {
+            if (this.disposed) { throw new Error('disposed'); }
+            this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
+              tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: o.geo, gl: o.gl, graph: () => this.library('drishti-graph') });
+            return this.panelCharts;
+          });
+        }
+        return this.chartsP;
+      }
       dispose() {
         if (this.disposed) { return; }
         this.clear();
+        if (this.panelCharts) { this.panelCharts.dispose(); }
         if (this.ro) { this.ro.disconnect(); }
         this.disposed = true;
         this.emit('dispose', {});
@@ -1712,11 +1737,135 @@
     defineKind('tabs', { paint: (body, panel, ctx) => new TabsView(body, panel, ctx) });
     return { "MAX_NESTING": MAX_NESTING };
   })();
+  /* ---- src/drishti_views-charts.js ---- */
+  __m["src/drishti_views-charts.js"] = (function () {
+    var h = __lib("drishti-core").h;
+    var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
+    var say = __m["src/drishti_views-cells.js"].say, toneClass = __m["src/drishti_views-cells.js"].toneClass;
+    const CHART_KINDS = Object.freeze(['line', 'area', 'waterfall', 'histogram', 'scatter', 'candlestick', 'surface', 'graph', 'map']);
+    const list = (x) => (Array.isArray(x) ? x : []);
+    const str = (v) => (v === null || v === undefined ? '' : String(v));
+    const LIMIT_ROWS = 500;
+    function chartTable(kind, d) {
+      d = d || {};
+      let columns = [], rows = [];
+      if (kind === 'line' || kind === 'area') {
+        const s = list(d.series);
+        columns = [''].concat(s.map((x) => str(x && x.label)));
+        rows = list(d.x).map((x, i) => [str(x)].concat(s.map((y) => str(list(y && y.values)[i]))));
+      } else if (kind === 'hbar') {
+        columns = ['', ''];
+        rows = list(d.bars).map((b) => [str(b && b.label), str(b && (b.text || b.value))]);
+      } else if (kind === 'waterfall') {
+        columns = ['', ''];
+        rows = list(d.steps).map((s) => [str(s && s.label), str(s && (s.text || s.value))]);
+      } else if (kind === 'histogram') {
+        columns = ['from', 'to', 'count'];
+        rows = list(d.bins).map((b) => [str(b && (b.label || b.from)), str(b && b.to), str(b && b.count)]);
+      } else if (kind === 'scatter') {
+        columns = ['', str(d.xLabel || 'x'), str(d.yLabel || 'y')];
+        rows = list(d.points).map((p) => [str(p && (p.label || p.group)), str(p && p.x), str(p && p.y)]);
+      } else if (kind === 'candlestick') {
+        columns = ['', 'open', 'high', 'low', 'close'];
+        rows = list(d.candles).map((c) => [str(c && c.x), str(c && c.open), str(c && c.high), str(c && c.low), str(c && c.close)]);
+      } else if (kind === 'surface') {
+        columns = [''].concat(list(d.x).map(str));
+        rows = list(d.y).map((y, i) => [str(y)].concat(list(list(d.z)[i]).map(str)));
+      } else if (kind === 'graph') {
+        columns = ['from', 'to', ''];
+        const label = new Map(list(d.nodes).map((n) => [str(n && n.id), str(n && (n.label || n.id))]));
+        rows = list(d.edges).map((e) => [label.get(str(e && e.from)) || str(e && e.from), label.get(str(e && e.to)) || str(e && e.to), str(e && e.label)]);
+      } else if (kind === 'map') {
+        const sh = d.shade || {};
+        columns = ['', str(sh.label)];
+        rows = list(sh.items).map((it) => [str(it && it.code), str(it && (it.text || it.value))]);
+      }
+      return { columns: columns, rows: rows.slice(0, LIMIT_ROWS) };
+    }
+    function dataTable(ctx, kind, d) {
+      const doc = ctx.doc, t = chartTable(kind, d);
+      const table = h(doc, 'table', { cls: 'dv-tbl' }, [h(doc, 'thead', {}, [h(doc, 'tr', {}, t.columns.map((c) => h(doc, 'th', { text: c, attrs: { scope: 'col' } })))]),
+        h(doc, 'tbody', {}, t.rows.map((r) => h(doc, 'tr', {}, r.map((c, i) => h(doc, i ? 'td' : 'th', { text: c, attrs: i ? null : { scope: 'row' } })))))]);
+      return h(doc, 'details', { cls: 'dv-data' }, [h(doc, 'summary', { text: say(ctx.messages, 'dataTable') }), h(doc, 'div', { cls: 'dv-tbl-scroll' }, [table])]);
+    }
+    function engineKind(kind) {
+      return {
+        chart: true,
+        paint(body, panel, ctx) {
+          const doc = ctx.doc;
+          const k = kind === 'hbar' ? 'donut' : kind;
+          const el = h(doc, 'div', { cls: 'dv-chart dv-chart-' + k, attrs: { 'data-r-chart': '', role: 'img', 'aria-label': panel.title || panel.id, 'data-view': panel.data.view || null } });
+          el.__drishti = { kind: k, data: panel.data };
+          let table = dataTable(ctx, kind, panel.data);
+          const box = h(doc, 'div', { cls: 'dv-chart-box' }, [el, table]);
+          body.appendChild(box);
+          let gone = false;
+          const words = (w) => { el.removeAttribute('data-r-chart'); el.className = 'dv-chart-off'; el.textContent = w; };
+          if (kind === 'map' && !ctx.can('geo')) { words(say(ctx.messages, 'noMaps')); } else {
+            ctx.charts().then((pc) => { if (!gone) { return pc.draw(box); } return null; }).catch(() => { if (!gone) { words(say(ctx.messages, 'noCharts')); } });
+          }
+          return {
+            update(p) {
+              el.__drishti = { kind: k, data: p.data };
+              const fresh = dataTable(ctx, kind, p.data);
+              fresh.open = table.open;
+              table.replaceWith(fresh);
+              table = fresh;
+              if (el.hasAttribute('data-r-chart')) { ctx.charts().then((pc) => (gone ? null : pc.update(el))).catch(() => undefined); }
+            },
+            dispose() {
+              gone = true;
+              const win = doc.defaultView, E = win && win.echarts, c = E && E.getInstanceByDom && E.getInstanceByDom(el);
+              if (c) { c.dispose(); }
+              if (el.__drishtiGraph && el.__drishtiGraph.destroy) { el.__drishtiGraph.destroy(); }
+              box.remove();
+            }
+          };
+        }
+      };
+    }
+    const bars = {
+      paint(body, panel, ctx) {
+        if (panel.data.shape === 'donut') { return engineKind('hbar').paint(body, panel, ctx); }
+        const doc = ctx.doc, d = panel.data, items = list(d.bars);
+        const max = Math.max.apply(null, items.map((b) => Math.abs(Number(b && b.value) || 0)).concat([0]));
+        const ul = h(doc, 'ul', { cls: 'dv-bars' });
+        items.forEach((b) => {
+          b = b || {};
+          const share = max > 0 ? Math.abs(Number(b.value) || 0) / max : 0;
+          const bar = h(doc, 'span', { cls: ['dv-bar', toneClass(b.tone) || 'dv-t-accent'].join(' '), style: { '--dv-share': String(Math.round(share * 1000) / 1000) } });
+          ul.appendChild(h(doc, 'li', {}, [h(doc, 'span', { cls: 'dv-bar-label', text: str(b.label) }), h(doc, 'span', { cls: 'dv-bar-track' }, [bar]),
+            h(doc, 'span', { cls: 'dv-bar-text', text: str(b.text || b.value) })]));
+        });
+        body.appendChild(ul);
+        if (typeof d.total === 'string' && d.total) { body.appendChild(h(doc, 'p', { cls: 'dv-more', text: d.total })); }
+        return { dispose() { while (body.firstChild) { body.removeChild(body.firstChild); } } };
+      }
+    };
+    const gauge = {
+      paint(body, panel, ctx) {
+        const doc = ctx.doc, d = panel.data, v = Number(d.value), max = Number(d.max) || 0;
+        const share = max > 0 && isFinite(v) ? Math.max(0, Math.min(1, v / max)) : 0;
+        const text = typeof d.text === 'string' && d.text ? d.text : str(d.value);
+        const meter = h(doc, 'div', { cls: 'dv-gauge', attrs: { role: 'meter', 'aria-valuemin': '0', 'aria-valuemax': str(max), 'aria-valuenow': isFinite(v) ? str(v) : null,
+          'aria-valuetext': text, 'aria-label': typeof d.label === 'string' && d.label ? d.label : (panel.title || panel.id) } },
+        [h(doc, 'span', { cls: 'dv-gauge-fill' + (share >= 1 ? ' dv-t-bad' : share >= 0.8 ? ' dv-t-warn' : ' dv-t-accent'), style: { '--dv-share': String(Math.round(share * 1000) / 1000) } })]);
+        const box = h(doc, 'div', { cls: 'dv-gauge-box' }, [h(doc, 'div', { cls: 'dv-gauge-text', text: text }), meter,
+          typeof d.label === 'string' && d.label ? h(doc, 'div', { cls: 'dv-metric-caption', text: d.label }) : null]);
+        body.appendChild(box);
+        return { dispose() { box.remove(); } };
+      }
+    };
+    CHART_KINDS.forEach((k) => defineKind(k, engineKind(k)));
+    defineKind('hbar', bars);
+    defineKind('gauge', gauge);
+    return { "CHART_KINDS": CHART_KINDS, "chartTable": chartTable };
+  })();
   /* ---- src/drishti_index.js ---- */
   __m["src/drishti_index.js"] = (function () {
     var defineKind = __m["src/drishti_views-kinds.js"].defineKind;
     function registerKind(name, def) { defineKind(name, def); }
-    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING };
+    return { "registerKind": registerKind, "CONTRACT": __m["src/drishti_views-schema.js"].CONTRACT, "SCHEMA_SHA256": __m["src/drishti_views-schema.js"].SCHEMA_SHA256, "LIMITS": __m["src/drishti_views-validate.js"].LIMITS, "FORBIDDEN_KEYS": __m["src/drishti_views-validate.js"].FORBIDDEN_KEYS, "validate": __m["src/drishti_views-validate.js"].validate, "formatIssue": __m["src/drishti_views-validate.js"].formatIssue, "MESSAGES": __m["src/drishti_views-cells.js"].MESSAGES, "TONES": __m["src/drishti_views-cells.js"].TONES, "PANEL_STATES": __m["src/drishti_views-panels.js"].PANEL_STATES, "WIDTHS": __m["src/drishti_views-layout.js"].WIDTHS, "arrange": __m["src/drishti_views-layout.js"].arrange, "OPS": __m["src/drishti_views-patch.js"].OPS, "SPECS": __m["src/drishti_views-paint.js"].SPECS, "ViewHandle": __m["src/drishti_views-paint.js"].ViewHandle, "paint": __m["src/drishti_views-paint.js"].paint, "kinds": __m["src/drishti_views-kinds.js"].kinds, "inlineNodes": __m["src/drishti_views-words.js"].inlineNodes, "markupNodes": __m["src/drishti_views-words.js"].markupNodes, "LINK_STATUS": __m["src/drishti_views-words.js"].LINK_STATUS, "PAGE_ROWS": __m["src/drishti_views-tables.js"].PAGE_ROWS, "numberOfText": __m["src/drishti_views-tables.js"].numberOfText, "MAX_NESTING": __m["src/drishti_views-tabs.js"].MAX_NESTING, "CHART_KINDS": __m["src/drishti_views-charts.js"].CHART_KINDS, "chartTable": __m["src/drishti_views-charts.js"].chartTable };
   })();
   return Object.freeze(Object.assign({ library: "drishti-views", version: "3.0.0" }, __m["src/drishti_index.js"]));
 });

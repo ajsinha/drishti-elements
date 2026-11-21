@@ -58,7 +58,10 @@ export const MESSAGES = Object.freeze({
   expandRow: 'Open {label}',
   collapseRow: 'Close {label}',
   total: 'Total',
-  tooDeep: 'Panels nest at most four deep'
+  tooDeep: 'Panels nest at most four deep',
+  dataTable: 'Data table',
+  noCharts: 'Charts are not available on this page',
+  noMaps: 'Maps need the page\'s map helper (the option geo)'
 });
 
 /** The tones of the specification; a word outside it is drawn untoned. */

@@ -175,3 +175,20 @@ th[aria-sort="ascending"] .dv-sort::after { content: " ▲"; } th[aria-sort="des
 .dv-tabpane { display: flex; flex-direction: column; gap: var(--dv-gap); }
 .dv-tabpane[hidden] { display: none; }
 .dv-tabpane-h { margin: 0; font-size: var(--d-fs-13); color: var(--d-muted); }
+
+/* the kinds of charts: a chart and its data table; bars and a gauge as elements */
+.dv-chart { width: 100%; height: calc(var(--dv-rows, 9) * var(--dv-row)); min-height: 180px; }
+.dv-chart-off { color: var(--d-muted); padding: var(--d-sp-8) 0; }
+.dv-data { margin-top: var(--d-sp-4); font-size: var(--d-fs-12); }
+.dv-data summary { cursor: pointer; color: var(--d-muted); }
+.dv-data summary:focus-visible { outline: 2px solid var(--d-accent); outline-offset: 2px; }
+.dv-bars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr) max-content; gap: var(--d-sp-4) var(--d-sp-8); align-items: center; }
+.dv-bars li { display: contents; }
+.dv-bar-label { color: var(--d-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-bar-track { display: block; height: .8em; }
+.dv-bar { display: block; height: 100%; width: calc(var(--dv-share, 0) * 100%); background: currentColor; border-radius: var(--d-radius-2, 2px); min-width: 1px; }
+.dv-bar-text { font-variant-numeric: tabular-nums; text-align: right; }
+.dv-gauge-box { display: flex; flex-direction: column; gap: var(--d-sp-4); }
+.dv-gauge-text { font-size: var(--d-fs-20, 20px); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dv-gauge { height: .9em; border: 1px solid var(--d-border); border-radius: var(--d-radius-pill); overflow: hidden; }
+.dv-gauge-fill { display: block; height: 100%; width: calc(var(--dv-share, 0) * 100%); background: currentColor; }

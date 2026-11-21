@@ -29,6 +29,7 @@ import { defineKind } from './drishti_views-kinds.js';
 export { inlineNodes, markupNodes, LINK_STATUS } from './drishti_views-words.js';
 export { PAGE_ROWS, numberOfText } from './drishti_views-tables.js';
 export { MAX_NESTING } from './drishti_views-tabs.js';
+export { CHART_KINDS, chartTable } from './drishti_views-charts.js';
 
 /**
  * Registers a panel kind's painter: a host's own kind, drawn in the frame, with the states, the layout and the patches of every kind.

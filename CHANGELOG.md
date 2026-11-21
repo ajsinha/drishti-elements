@@ -37,6 +37,12 @@ Each release lists what changed, by library. One version for every library: the 
   row and grand totals, heat over the values) and `tabs` (fields and whole panels per tab, as tabs or columns, nesting at most four
   deep). A patch that replaces a table keeps its sort, filter and open rows. The ViewModel schema re-synced from drishti-rachana's
   g1/integration (only its `$id` changed).
+- **drishti-views** (step 6, the kinds of charts): `line`, `area`, `waterfall`, `histogram`, `scatter`, `candlestick`, `surface`,
+  `graph`, `map` and `hbar`'s donut drawn by drishti-chart's panel charts (a graph by drishti-graph), loaded through drishti-core's
+  loader the first time a view has such a panel (a page of words and tables loads no chart engine; options `libraries`, `geo` and `gl`
+  for a host that gives its own); `hbar`'s bars and `gauge` (a `meter`) drawn as elements; every chart carries its data table, closed
+  until opened; a patch moves a drawn chart to its new data; the charts are disposed with the view. Every kind of contract 1 is now
+  drawn; datasets and the `grid`, `tree` and `chart` kinds wait for the specification (contract 1 has no `datasets`).
 
 ## 3.0.0
 

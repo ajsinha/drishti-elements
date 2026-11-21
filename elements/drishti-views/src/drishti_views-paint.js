@@ -19,7 +19,7 @@
    That first paint needs no engine. Then ready. A view is drawn inside a shadow root by default, so a ViewModel's names can neither
    collide with the page nor be styled by it; the theme's tokens still reach it (custom properties inherit).
    The painter computes nothing: every figure arrives as the producer's text. */
-import { h, manifest, staticUrl, loadStyle } from '../../drishti-core/src/drishti_index.js';
+import { h, manifest, staticUrl, loadStyle, load, loaded } from '../../drishti-core/src/drishti_index.js';
 import { CONTRACT } from './drishti_views-schema.js';
 import { validate, formatIssue } from './drishti_views-validate.js';
 import { MESSAGES, say, safeHref } from './drishti_views-cells.js';
@@ -50,6 +50,10 @@ let counter = 0;
  * @property {function(string, Object): Promise<Response>} [fetch] the host's fetch, for a view given by its address
  * @property {string} [label] the region's accessible name (default: the title)
  * @property {string} [locale] how times are printed (default: the page's)
+ * @property {Object<string, Object>} [libraries] the libraries a kind draws with, given by the host (drishti-chart, drishti-graph); else
+ *   the ones on the page, else loaded by drishti-core's loader the first time a view has such a panel
+ * @property {function(): Promise<Object>} [geo] the host's map helper for map panels (world, region, find, option, codeOf)
+ * @property {function(): Promise<void>} [gl] loads the 3D engine for a surface's 3D view
  */
 
 function now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
@@ -98,6 +102,9 @@ export class ViewHandle {
       key: (k) => self.pressKey(k),
       back: () => self.back(),
       flash: (node) => self.flash(node),
+      library: (name) => self.library(name),
+      charts: () => self.charts(),
+      can: (what) => (what === 'geo' ? typeof o.geo === 'function' : false),
       time: (iso) => {
         const d = new Date(iso);
         if (isNaN(d.getTime())) { return String(iso); }
@@ -402,12 +409,44 @@ export class ViewHandle {
   metrics() { return Object.assign({}, this.stats); }
 
   /**
+   * A library a kind draws with: the host's own (options.libraries), one already on the page, or loaded now by drishti-core's loader.
+   * @private
+   * @param {string} name
+   * @returns {Promise<Object>}
+   */
+  library(name) {
+    const given = this.options.libraries && this.options.libraries[name];
+    if (given) { return Promise.resolve(given); }
+    const have = loaded(name);
+    return have ? Promise.resolve(have) : load(name);
+  }
+
+  /**
+   * The view's panel charts (drishti-chart's PanelCharts over this view's root), made the first time a chart is drawn.
+   * @private
+   * @returns {Promise<Object>}
+   */
+  charts() {
+    if (!this.chartsP) {
+      const win = this.el.ownerDocument.defaultView, o = this.options;
+      this.chartsP = this.library('drishti-chart').then((C) => {
+        if (this.disposed) { throw new Error('disposed'); }
+        this.panelCharts = new C.PanelCharts(this.host, { engine: () => (win.echarts ? Promise.resolve(win.echarts) : Promise.reject(new Error('no chart engine'))),
+          tokensFrom: () => this.root, onLink: (l) => this.openLink(l), geo: o.geo, gl: o.gl, graph: () => this.library('drishti-graph') });
+        return this.panelCharts;
+      });
+    }
+    return this.chartsP;
+  }
+
+  /**
    * Stops everything, disposes every panel's drawing and empties the container.
    * @returns {void}
    */
   dispose() {
     if (this.disposed) { return; }
     this.clear();
+    if (this.panelCharts) { this.panelCharts.dispose(); }
     if (this.ro) { this.ro.disconnect(); }
     this.disposed = true;
     this.emit('dispose', {});
