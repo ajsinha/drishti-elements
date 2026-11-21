@@ -484,6 +484,32 @@ def test_the_live_client_reconnects_and_resumes_and_the_arrow_client_reads_by_fl
     run(browsers, body)
 
 
+def test_the_button_and_the_button_group_toggle_disable_and_press_one_of_many(browsers):
+    async def body(pg):
+        assert await pg.get_attribute("[data-action='go-plain']", "type") == "button"           # a real button, never a submit
+        assert await pg.evaluate("() => document.querySelector('[data-action=go-plain]').tagName") == "BUTTON"
+        await pg.click("[data-action='go-plain']")
+        await pg.click("[data-action='go-primary']")
+        assert await h(pg, "window.__harness.pressed") == ["plain", "primary"]
+        assert await pg.get_attribute("[data-action='stream']", "aria-pressed") == "false"      # a toggle flips itself
+        await pg.click("[data-action='stream']")
+        assert await pg.get_attribute("[data-action='stream']", "aria-pressed") == "true"
+        assert await h(pg, "window.__harness.buttons.toggle.component.getValue()") is True
+        assert await pg.is_disabled("[data-action='off']")                                      # disabled: no click reaches it
+        await pg.click("[data-action='off']", force=True)
+        assert await h(pg, "window.__harness.pressed") == ["plain", "primary"]
+        assert await pg.get_attribute("#hx-ce-button button", "data-action") == "markup"        # the element draws one from its attributes
+        assert await pg.text_content("#hx-ce-button button") == "From markup"
+        seg = "#hx-segment"
+        assert await pg.get_attribute(seg, "role") == "group" and await pg.get_attribute(seg, "aria-label") == "Mode"
+        pressed = lambda: pg.evaluate("() => Array.from(document.querySelectorAll('#hx-segment button')).map((b) => b.getAttribute('aria-pressed'))")
+        assert await pressed() == ["false", "true", "false"]                                    # exactly one pressed
+        await pg.click(f"{seg} button:nth-child(3)")
+        assert await pressed() == ["false", "false", "true"]
+        assert await h(pg, "window.__harness.segment.getValue()") == "c"
+    run(browsers, body)
+
+
 def test_the_studio_widgets_split_pane_tabs_navigator_list_and_column_mapping(browsers):
     async def body(pg):
         await pg.evaluate("() => { try { localStorage.removeItem('drishti.split.hx-split'); } catch (e) {} }")

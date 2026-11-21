@@ -19,6 +19,16 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **Quoted-phrase search in all ten search sites** (decision accepted): a "quoted phrase" is one word in the grid, tree, inputs, designer and core
+  filter searches, one reader (`searchWords`), no site keeps its own. **Core's size budget is 190,000** bytes (was 180,000; deliberate, owner: bigger
+  is fine when deliberate).
+- **Button and ButtonGroup** (drishti-inputs, new): the one way a screen draws a button. `button(doc, {label, action, variant, pressed, toggle, role,
+  selected, current, data, attrs, onClick})`, `<drishti-button>`, `<drishti-button-group mode="single">`. The gallery's 35 hand-made buttons (the toolbars, the
+  tabs, the mode segment, the navigator, the link button) and the chart studio's kind rail now use it; a guard fails on a new hand-made button in the
+  gallery or the studio, and the libraries' own internal buttons (167) are counted and may only fall.
+- **One name per thing** (breaking): chart kinds lose their aliases (`column`, `columns`, `bars`, `lines`, `point`, `points`, `doughnut`, `box`, `box-plot`,
+  `hist`, `choropleth`, `geo`, `candles`; `KIND_ALIASES` is gone) and aggregations lose theirs (`average`, `mean`, `distinct`, `countDistinct`: write `bar`,
+  `line`, `scatter`, `donut`, `boxplot`, `histogram`, `map`, `candlestick`, `avg`, `count_distinct`). A spec with an old kind is refused by its name.
 - **Known duplicates folded into drishti-core** (all libraries): `isObject`, `clamp`, `pad`, `copyText`, `fetcher` and `now` (one copy each, the local ones removed);
   `searchWords` and `hasWords`, the one quick-search reader (a "quoted phrase" is one word) used by the grid, tree, inputs, designer and core filter;
   the aggregation engine (`aggFunc`, `aggregate`, `registerAggFunc`, `isMasked`) moved to drishti-core with the masked rule, used by the grid, the views and the

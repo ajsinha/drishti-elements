@@ -59,15 +59,14 @@ export const AGG_FUNCS = Object.freeze({
     merge: (a, b) => { const s = new Set(a); b.forEach((x) => s.add(x)); return s; }, result: (st) => st.size }
 });
 
-const ALIASES = { average: 'avg', mean: 'avg', distinct: 'count_distinct', countDistinct: 'count_distinct' };
 const CUSTOM = new Map();
 
 /**
- * A function by its name or a usual alias (average, distinct), or a registered one; null when the browser does not compute it.
+ * A function by its name (the server's: sum, count, count_distinct, avg ...), or a registered one; null when the browser does not compute it.
  * @param {string} name
  * @returns {?AggFunc}
  */
-export function aggFunc(name) { return AGG_FUNCS[ALIASES[name] || name] || CUSTOM.get(name) || null; }
+export function aggFunc(name) { return AGG_FUNCS[name] || CUSTOM.get(name) || null; }
 
 /**
  * Registers a host's own aggregation for client-side rows (the AG Grid-style adapter's aggFuncs): it is given every member's value of a
@@ -79,7 +78,7 @@ export function aggFunc(name) { return AGG_FUNCS[ALIASES[name] || name] || CUSTO
  * @returns {AggFunc}
  */
 export function registerAggFunc(name, fn, o) {
-  if (!/^[A-Za-z_]\w*$/.test(String(name)) || AGG_FUNCS[name] || ALIASES[name]) { throw new Error('an aggregation needs a new plain name (letters, digits, _): ' + name); }
+  if (!/^[A-Za-z_]\w*$/.test(String(name)) || AGG_FUNCS[name]) { throw new Error('an aggregation needs a new plain name (letters, digits, _): ' + name); }
   if (typeof fn !== 'function') { throw new Error('aggregation ' + name + ': give a function of the values'); }
   const f = { name: name, label: (o && o.label) || name, numeric: !!(o && o.numeric), init: () => [], add: (st, v) => { st.push(v); return st; },
     merge: (a, b) => a.concat(b), result: (st) => fn(st.slice()), custom: true };

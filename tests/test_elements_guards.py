@@ -171,3 +171,37 @@ def test_no_hand_written_html_escape_outside_drishti_core():
         code = COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), p.read_text(encoding="utf-8"))
         bad += [f"{p.relative_to(ROOT)}: {line.strip()[:120]}" for line in code.splitlines() if ENTITY.search(line)]
     assert not bad, "write no escape of your own, use escapeHtml of drishti-core:\n" + "\n".join(bad)
+
+
+# ---- buttons: one widget (no-bespoke-UI rule) ----------------------------------------------------------------------------------------
+# A screen draws a button with drishti-inputs' Button (`button(doc, {...})`, `<drishti-button>`) or ButtonGroup, never by hand. The gallery and
+# the chart studio hold none. A library's own internals (a grid's toolbar, a picker's day cell) are built part by part: they are counted,
+# the count only falls (lower HAND_MADE_IN_LIBRARIES when one moves onto Button) and a new one fails.
+HAND_BUTTON = re.compile(r"\bh\(\s*[\w.]+,\s*'button'|\bel\(\s*'button'|createElement\(\s*'button'\s*\)|\bmake\(\s*\w+,\s*'button'|<button\b")
+SCREENS = ["gallery/*.js", "elements/drishti-chart/src/drishti_chart-studio.js"]
+HAND_MADE_IN_LIBRARIES = 167
+
+
+def _hand_buttons(path):
+    code = COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), path.read_text(encoding="utf-8"))
+    return [f"{path.relative_to(ROOT)}: {line.strip()[:110]}" for line in code.splitlines() if HAND_BUTTON.search(line)]
+
+
+def test_the_gallery_and_the_chart_studio_make_no_button_by_hand():
+    bad = []
+    for pattern in SCREENS:
+        for p in sorted(ROOT.glob(pattern)):
+            if p.name != "drishti_catalogue.js":
+                bad += _hand_buttons(p)
+    assert not bad, "draw it with drishti-inputs' button(doc, {...}) or ButtonGroup:\n" + "\n".join(bad)
+
+
+def test_the_libraries_hand_made_buttons_only_fall():
+    n = sum(len(_hand_buttons(p)) for p in sorted((ROOT / "elements").glob("*/src/*.js")) if p.name != "drishti_button.js")
+    assert n <= HAND_MADE_IN_LIBRARIES, f"{n} hand-made buttons in the libraries, at most {HAND_MADE_IN_LIBRARIES}: use Button"
+
+
+def test_the_hand_made_button_check_sees_each_form():
+    for s in ["h(doc, 'button', { cls: 'x' })", "this.el('button', { cls: 'x' })", "doc.createElement('button')", "make(doc, 'button', 'x')", "'<button class=a>'"]:
+        assert HAND_BUTTON.search(s), s
+    assert not HAND_BUTTON.search("button(doc, { label: 'Go' })")

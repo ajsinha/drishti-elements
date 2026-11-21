@@ -197,6 +197,11 @@
   /* ---- the studio widgets: split pane, tabs, navigator list, column mapping --------------------------------------------------------- */
   H.split = new I.SplitPane(document.getElementById('hx-split'), { direction: 'horizontal', label: 'Editor and preview', persistKey: 'hx-split', panes: [
     { id: 'left', content: 'Left pane', size: 1, min: 100 }, { id: 'middle', content: 'Middle pane', size: 2, min: 100 }, { id: 'right', content: 'Right pane', size: 1, min: 100, max: 400 }] });
+  H.buttons = {};
+  ['plain', 'primary', 'link'].forEach((v) => { H.buttons[v] = I.button(document, { label: 'Go ' + v, variant: v, action: 'go-' + v, onClick: () => { H.pressed = (H.pressed || []).concat(v); } }); document.getElementById('hx-buttons').appendChild(H.buttons[v]); });
+  H.buttons.toggle = I.button(document, { label: 'Stream', action: 'stream', pressed: false, toggle: true }); document.getElementById('hx-buttons').appendChild(H.buttons.toggle);
+  H.buttons.off = I.button(document, { label: 'Off', action: 'off', disabled: true, onClick: () => { H.pressed = (H.pressed || []).concat('off'); } }); document.getElementById('hx-buttons').appendChild(H.buttons.off);
+  H.segment = new I.ButtonGroup(document.getElementById('hx-segment'), { label: 'Mode', mode: 'single', value: 'b', buttons: [{ label: 'A', data: { value: 'a' } }, { label: 'B', data: { value: 'b' } }, { label: 'C', data: { value: 'c' } }] });
   H.tabs = new I.Tabs(document.getElementById('hx-tabs'), { label: 'Sections', value: 'b', tabs: [
     { id: 'a', label: 'Overview', content: 'Overview panel' }, { id: 'b', label: 'Problems', badge: 3, content: () => { H.tabMade = (H.tabMade || 0) + 1; return 'Problems panel'; } },
     { id: 'c', label: 'Disabled', disabled: true, content: 'never' }, { id: 'd', label: 'History', closable: true, content: 'History panel' }] });

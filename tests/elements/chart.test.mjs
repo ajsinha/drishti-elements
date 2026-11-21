@@ -28,12 +28,13 @@ const env = { theme: th, fmt: C.formatterFor('money'), xfmt: C.formatterFor() };
 const build = (spec, rows) => { const s = C.normalizeSpec(spec); return C.kindOf(s.kind).build(s, rows || C.rowsOf(s.data), env); };
 const DESKS = [{ id: 'r', desk: 'Rates', today: 9e6, yday: 8e6 }, { id: 'f', desk: 'FX', today: -3e6, yday: 2e6 }, { id: 'c', desk: 'Credit', today: 6e6, yday: 7e6 }];
 
-test('the spec: checks with paths, aliases and defaults, and the readable text', () => {
+test('the spec: checks with paths, one name per kind (an old alias is refused by name) and defaults, and the readable text', () => {
   assert.deepEqual(C.checkSpec({ kind: 'nope' }).map((p) => p.path), ['$.kind']);
   const probs = C.checkSpec({ kind: 'line', legend: 'left', onClick: 'zoom', export: ['pdf'], series: [{}], annotations: [{ type: 'band', from: 1 }], marks: [{ when: 'a <' }] });
   assert.deepEqual(probs.map((p) => p.path), ['$.legend', '$.onClick', '$.export[0]', '$.series[0]', '$.annotations[0]', '$.marks[0].when']);
   assert.throws(() => C.normalizeSpec({ kind: 'nope' }), /\$\.kind: no kind nope/);
-  const s = C.normalizeSpec({ kind: 'column', x: 'desk', y: 'today', color: 'region', series: 'region' });
+  ['column', 'bars', 'doughnut', 'hist'].forEach((old) => assert.throws(() => C.normalizeSpec({ kind: old }), new RegExp('\\$\\.kind: no kind ' + old)));
+  const s = C.normalizeSpec({ kind: 'bar', x: 'desk', y: 'today', color: 'region', series: 'region' });
   assert.equal(s.kind, 'bar');
   assert.deepEqual([s.x, s.y, s.colour, s.series], [{ field: 'desk' }, { field: 'today' }, { field: 'region' }, { by: 'region' }]);
   assert.deepEqual([s.legend, s.onClick, s.export, s.a11y.table], ['bottom', 'explain', ['png', 'svg', 'csv', 'spec'], true]);

@@ -24,7 +24,7 @@ version above (not Drishti's own).
 | Library | What it is |
 |---|---|
 | [drishti-core](#drishti-core) | Formats, theme, API client, events, accessibility, resize, keys, dialogs, drawers and toasts, the filter model every library shares, the element maker and placements, Explain's drawing, chips for list attributes, the CSV writer, reading typed numbers, loading vendored engines |
-| [drishti-inputs](#drishti-inputs) | Inputs: business-date and range pickers with holiday calendars, the on/off switch, the tree picker, the multi-select, the combobox with server type-ahead (on its own field or a page's), forms from a schema (live or embedded, steps, named fields, hooks, custom widgets, time, date-and-time and money) with four eyes, the time and date-and-time pickers, the filter bar, the code editor over CodeMirror, a resizable split pane, tabs, a searchable grouped list and tree, a column-mapping table, and a page's own date fields and checkbox lists upgraded in place |
+| [drishti-inputs](#drishti-inputs) | Inputs: business-date and range pickers with holiday calendars, the on/off switch, buttons and button groups, the tree picker, the multi-select, the combobox with server type-ahead (on its own field or a page's), forms from a schema (live or embedded, steps, named fields, hooks, custom widgets, time, date-and-time and money) with four eyes, the time and date-and-time pickers, the filter bar, the code editor over CodeMirror, a resizable split pane, tabs, a searchable grouped list and tree, a column-mapping table, and a page's own date fields and checkbox lists upgraded in place |
 | [drishti-grid](#drishti-grid) | The grid: its engine (columns, row models, virtual scrolling, pivot, selection, export, keyboard) and its look (Grid and &lt;drishti-grid&gt; in three layouts and three densities), cell editing with undo, paste, write-back and four eyes, and the AG Grid-style adapter (createGridFromAgOptions) |
 | [drishti-tree](#drishti-tree) | The tree: hierarchies as an org chart, an indented tree with measures (on drishti-grid's tree data), a sunburst and an icicle; expand and collapse, search with breadcrumbs, measures on nodes with non-additive ones (◆) asked of the server and never summed, Explain, re-parenting in an edit mode that proposes the move for four eyes, the outline of an authoring screen (marks, a hiding filter, a designer's selection followed both ways, moves by drag or Alt+arrows), export, keyboard and ARIA |
 | [drishti-designer](#drishti-designer) | The designer kit: the layout canvas over a layout model (grid or flow: place, move, resize with snap, multi-select, align, distribute, z-order, groups, copy and paste, a phone's order, the keys, undo and redo on one command stack), the palette, the inspector (a form from a schema), the outline (drishti-tree's, drag to re-order or re-parent), the YAML pane kept in step with the model both ways (completion and lint from a JSON Schema) and the designer shell (three panes, Visual / YAML / Both, versions, Validate, Preview, History, Impact, Propose for review) |
@@ -1967,7 +1967,7 @@ The functions by name.
 
 #### `aggFunc(name)`
 
-A function by its name or a usual alias (average, distinct), or a registered one; null when the browser does not compute it.
+A function by its name (the server's: sum, count, count_distinct, avg ...), or a registered one; null when the browser does not compute it.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -4609,6 +4609,125 @@ Moves the focus to the switch.
 
 Returns `void`.
 
+### drishti_button.js
+
+#### class `Button`
+
+A button. Events: click {event}, change {pressed} (a toggle flipped by a click).
+
+##### `new Button(host, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` | a &lt;button&gt; to draw on, or any element to hold a new one |
+| `options` | `ButtonOptions` |  |
+
+##### `Button.setLabel(text)`
+
+The words on the button.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `void`.
+
+##### `Button.getValue()`
+
+The pressed state of a toggle (false for a button that is not one).
+
+Returns `boolean`.
+
+##### `Button.setValue(on)`
+
+Sets the pressed state, without an event.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `on` | `boolean` |  |
+
+Returns `void`.
+
+##### `Button.setPressed(on)`
+
+Sets the pressed state (aria-pressed), without an event.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `on` | `boolean` |  |
+
+Returns `void`.
+
+##### `Button.setSelected(on)`
+
+Sets the selected state of a tab (aria-selected), without an event.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `on` | `boolean` |  |
+
+Returns `void`.
+
+##### `Button.setDisabled(off)`
+
+Turns the button off for use, or back on.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `off` | `boolean` |  |
+
+Returns `void`.
+
+##### `Button.focus()`
+
+Moves the focus to the button.
+
+Returns `void`.
+
+##### `Button.destroy()`
+
+Takes the component off its element: the listeners stay on a &lt;button&gt; it drew on, so the button is left as it is.
+
+Returns `void`.
+
+#### class `ButtonGroup`
+
+A labelled row of buttons. Events: change {value} (mode single).
+
+##### `new ButtonGroup(host, options)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `options` | `ButtonGroupOptions` |  |
+
+##### `ButtonGroup.getValue()`
+
+The pressed button's value (mode single).
+
+Returns `string\|null`.
+
+##### `ButtonGroup.setValue(v)`
+
+Presses the button of a value, without an event.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `v` | `string` |  |
+
+Returns `void`.
+
+#### `button(doc, options)`
+
+Makes a button element in one call.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `doc` | `Document` |  |
+| `options` | `ButtonOptions` |  |
+
+Returns `HTMLButtonElement`: the button; its Button is on .component.
+
 ### drishti_form.js
 
 #### class `Form`
@@ -5576,6 +5695,35 @@ Returns `void`.
 
 ### Types of drishti-inputs
 
+#### `ButtonOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[label]` | `string` | the words |
+| `[action]` | `string` | the action's name (data-action) |
+| `[variant='plain']` | `string` | plain, primary, link or bare |
+| `[pressed]` | `boolean` | a toggle's state (aria-pressed); absent: not a toggle |
+| `[toggle=false]` | `boolean` | a click flips pressed (otherwise the caller sets it) |
+| `[role]` | `string` | the button's role (tab, menuitem ...) |
+| `[selected]` | `boolean` | aria-selected, for a tab |
+| `[current]` | `boolean` | aria-current |
+| `[title]` | `string` | the tooltip |
+| `[disabled=false]` | `boolean` |  |
+| `[cls]` | `string` | extra classes |
+| `[data]` | `Object&lt;string,string&gt;` | data-* attributes (without the prefix) |
+| `[attrs]` | `Object&lt;string,string&gt;` | other attributes (aria-controls, tabindex ...); null or undefined values are left out |
+| `[onClick]` | `function(Event): void` | a click listener |
+
+#### `ButtonGroupOptions` : `Object`
+
+| Name | Type | Meaning |
+|---|---|---|
+| `[label]` | `string` | the group's name (aria-label) |
+| `buttons` | `ButtonOptions[]` | each with a value (data-value) in data or action |
+| `[mode='none']` | `string` | single: exactly one button is pressed and a click moves it; none: the buttons are left alone |
+| `[value]` | `string` | the pressed button's value in mode single (the value of a button is its data.value, else its action) |
+| `[cls]` | `string` | extra classes on the group |
+
 #### `HolidayRule` : `Object`
 
 A holiday rule. One of: {fixed: 'MM-DD', roll}, {nth, weekday, month} (nth -1: the last), {before: 'MM-DD', weekday} (the weekday strictly before a day: Victoria Day), {easter: offset} (days from Easter Sunday: -2 Good Friday, 1 Easter Monday). roll for a fixed day on a weekend: 'nearest' (Saturday to Friday, Sunday to Monday), 'monday' (to the next Monday, or Tuesday when Monday is taken), 'none'. from and to bound the years the rule holds.
@@ -6294,7 +6442,7 @@ The functions by name.
 
 #### `aggFunc(name)`
 
-A function by its name or a usual alias (average, distinct), or a registered one; null when the browser does not compute it.
+A function by its name (the server's: sum, count, count_distinct, avg ...), or a registered one; null when the browser does not compute it.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -16171,10 +16319,6 @@ The registered kinds in the order they were registered: name, label and family.
 
 Returns `Array&lt;{name: string, label: string, family: string, cartesian: boolean}&gt;`.
 
-#### `KIND_ALIASES`
-
-The aliases a spec may use for a kind.
-
 #### `checkSpec(spec)`
 
 A spec's problems, each with its path: an unknown kind, a missing field, a condition that does not read, a value of the wrong kind.
@@ -16187,7 +16331,7 @@ Returns `Array&lt;{path: string, message: string}&gt;`.
 
 #### `normalizeSpec(spec)`
 
-A spec ready to draw: the kind's alias resolved, x, y and value as objects, the defaults filled in (legend at the bottom, click to Explain, every export, the data table on). The spec given is not changed.
+A spec ready to draw: x, y and value as objects, the defaults filled in (legend at the bottom, click to Explain, every export, the data table on). The spec given is not changed.
 
 | Parameter | Type | Meaning |
 |---|---|---|
