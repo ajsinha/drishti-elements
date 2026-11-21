@@ -22874,6 +22874,27 @@ Returns `{columns: string[], rows: string[][]}`.
 
 The aggregations a measure may name.
 
+#### `engineAgg(name)`
+
+The engine's name for an aggregation a view names (the ViewModel says `distinct`; the engine and the server say `count_distinct`).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+
+Returns `string`.
+
+#### `aggregate(values, name)`
+
+Aggregates values by a view's aggregation name.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `values` | `Array&lt;*&gt;` |  |
+| `name` | `string` |  |
+
+Returns `*`.
+
 #### `DATASET_FORMS`
 
 The forms a dataset's rows come in.
@@ -23014,17 +23035,6 @@ Whether a value is the Data Protocol's mask ({"$masked": true}): a value the rea
 | `v` | `*` |  |
 
 Returns `boolean`.
-
-#### `aggregate(values, func)`
-
-The aggregate of some values by a function (a one-off: a selection's figure, a group's, a chart's category). The mask is never summed: a masked member makes every numeric aggregation (sum, min, max, avg) masked, and a distinct count counts all masks as one value.
-
-| Parameter | Type | Meaning |
-|---|---|---|
-| `values` | `Iterable&lt;*&gt;` |  |
-| `func` | `string` |  |
-
-Returns `*`.
 
 ### drishti_views-datakinds.js
 

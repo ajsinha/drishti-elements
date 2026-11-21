@@ -21,7 +21,7 @@
 import { h, stateBlock, isMasked, formatCount } from '../../drishti-core/src/drishti_index.js';
 import { defineKind } from './drishti_views-kinds.js';
 import { say, toneClass } from './drishti_views-cells.js';
-import { valueText, rowKey, derive } from './drishti_views-data.js';
+import { valueText, rowKey, derive, engineAgg } from './drishti_views-data.js';
 
 const SEP = '\u001f';
 
@@ -45,7 +45,7 @@ export function gridColumns(d, ds) {
     if (c.width > 0) { col.width = c.width; }
     if (c.pinned === 'left' || c.pinned === 'right') { col.pinned = c.pinned; }
     if (c.hidden === true) { col.hidden = true; }
-    if (c.agg) { col.aggFunc = c.agg; col.enableValue = true; }
+    if (c.agg) { col.aggFunc = engineAgg(c.agg); col.enableValue = true; }
     if (c.tone === 'sign') { col.cellClass = (v) => (typeof v === 'number' ? (v > 0 ? 'dv-t-pos' : v < 0 ? 'dv-t-neg' : '') : ''); } else if (c.tone) { const t = toneClass(c.tone); col.cellClass = () => t; }
     if (col.type !== 'number') { col.enableRowGroup = true; col.enablePivot = true; }
     return col;
@@ -167,7 +167,7 @@ const grid = datasetKind('drishti-grid', (G, box, panel, ds, ctx) => ds.source()
   if (Array.isArray(src)) { o.rows = src; } else { o.datasource = src; if (ds.def.pages && ds.def.pages.size > 0) { o.blockSize = ds.def.pages.size; } }
   if (d.pivot && list(d.pivot.values).length) {
     o.pivot = { rows: list(d.pivot.rows), columns: list(d.pivot.columns), filters: [],
-      values: list(d.pivot.values).map((m) => Object.assign({ colId: m.field, aggFunc: m.agg || 'sum' }, m.label ? { as: m.label } : {})) };
+      values: list(d.pivot.values).map((m) => Object.assign({ colId: m.field, aggFunc: engineAgg(m.agg || 'sum') }, m.label ? { as: m.label } : {})) };
   }
   const g = new G.Grid(box, o);
   if (list(d.group).length) { g.model.setRowGroups(list(d.group)); }

@@ -23,10 +23,23 @@
    changes a dataset by key (reset, remove, update, add) and reaches every panel that reads it. Values are raw: the panels format them
    with the field's fmt (drishti-core's named formats); {"$masked": true} prints as the mask. Derived reads (a chart's groups and
    aggregations, its top categories) are computed here, over the rows, with no expression language. */
-import { hasFormat, formatNamed, formatNumber, MASK, aggFunc, aggregate, isMasked } from '../../drishti-core/src/drishti_index.js';
+import { hasFormat, formatNamed, formatNumber, MASK, aggFunc, aggregate as coreAggregate, isMasked } from '../../drishti-core/src/drishti_index.js';
 
 /** The aggregations a measure may name. */
 export const AGGS = Object.freeze(['sum', 'count', 'min', 'max', 'avg', 'first', 'last', 'distinct']);
+/**
+ * The engine's name for an aggregation a view names (the ViewModel says `distinct`; the engine and the server say `count_distinct`).
+ * @param {string} name
+ * @returns {string}
+ */
+export function engineAgg(name) { return name === 'distinct' ? 'count_distinct' : name; }
+/**
+ * Aggregates values by a view's aggregation name.
+ * @param {Array<*>} values
+ * @param {string} name
+ * @returns {*}
+ */
+export function aggregate(values, name) { return coreAggregate(values, engineAgg(name)); }
 /** The forms a dataset's rows come in. */
 export const DATASET_FORMS = Object.freeze(['values', 'rows', 'name', 'arrow', 'pages', 'server', 'live']);
 /** How many rows a chart or a tree reads from a source by address at most. */
@@ -104,7 +117,7 @@ export function derive(rows, q) {
       g.members.push(r);
     });
     out = Array.from(groups.values()).map((g) => {
-      y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), aggFunc(m.agg) ? m.agg : 'sum'); });
+      y.forEach((m) => { g.row[m.field] = aggregate(g.members.map((r) => r[m.field]), aggFunc(engineAgg(m.agg)) ? m.agg : 'sum'); });
       return g.row;
     });
   }

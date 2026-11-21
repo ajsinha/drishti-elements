@@ -27,7 +27,7 @@ Each release lists what changed, by library. One version for every library: the 
   tabs, the mode segment, the navigator, the link button) and the chart studio's kind rail now use it; a guard fails on a new hand-made button in the
   gallery or the studio, and the libraries' own internal buttons (167) are counted and may only fall.
 - **One name per thing** (breaking): chart kinds lose their aliases (`column`, `columns`, `bars`, `lines`, `point`, `points`, `doughnut`, `box`, `box-plot`,
-  `hist`, `choropleth`, `geo`, `candles`; `KIND_ALIASES` is gone) and aggregations lose theirs (`average`, `mean`, `distinct`, `countDistinct`: write `bar`,
+  `hist`, `choropleth`, `geo`, `candles`; `KIND_ALIASES` is gone) and the engine's aggregations lose theirs (the views keep the ViewModel's `distinct`, translated at their own boundary by `engineAgg`) (`average`, `mean`, `distinct`, `countDistinct`: write `bar`,
   `line`, `scatter`, `donut`, `boxplot`, `histogram`, `map`, `candlestick`, `avg`, `count_distinct`). A spec with an old kind is refused by its name.
 - **Known duplicates folded into drishti-core** (all libraries): `isObject`, `clamp`, `pad`, `copyText`, `fetcher` and `now` (one copy each, the local ones removed);
   `searchWords` and `hasWords`, the one quick-search reader (a "quoted phrase" is one word) used by the grid, tree, inputs, designer and core filter;
