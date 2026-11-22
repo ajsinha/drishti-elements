@@ -2,16 +2,20 @@
   Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
   Drishti Elements. Proprietary: see LICENSE.
 
-  Elements Node tests: the Node tests (tools/node_tests.mjs over tests/elements, node test).
-  Use it when: after you changed a library under elements/.
-  Maven launcher (pom.xml, exec-maven-plugin): no bash and no Node or Python plugin, so it runs in IntelliJ Community on Windows. Node 20+ on the PATH, or add -Dnode=<path to node> to the goals.
+  Elements: run gallery server: serves the repository over HTTP; open http://localhost:8765/gallery/.
+  Use it when: you look at the gallery in a browser.
+  Maven launcher (exec-maven-plugin): no bash, no Node or Python plugin, so it runs in IntelliJ Community on Windows. Node 20+ / Python 3 on the PATH, or add -Dnode=<path> / -Dpython=<path> to the goals.
   Shared, so it is in git: copy the configuration (Ctrl+D) to change it; a pull overwrites this file.
 -->
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Elements Node tests" type="MavenRunConfiguration" factoryName="Maven" folderName="Elements">
+  <configuration default="false" name="Elements: run gallery server" type="MavenRunConfiguration" factoryName="Maven" folderName="Elements">
     <MavenSettings>
       <option name="myGeneralSettings" />
-      <option name="myRunnerSettings" />
+      <option name="myRunnerSettings">
+        <MavenRunnerSettings>
+          <option name="jreName" value="#USE_PROJECT_JDK" />
+        </MavenRunnerSettings>
+      </option>
       <option name="myRunnerParameters">
         <MavenRunnerParameters>
           <option name="profiles">
@@ -19,7 +23,7 @@
           </option>
           <option name="goals">
             <list>
-              <option value="exec:exec@node-tests" />
+              <option value="exec:exec@gallery" />
             </list>
           </option>
           <option name="pomFileName" value="pom.xml" />

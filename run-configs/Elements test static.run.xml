@@ -2,13 +2,13 @@
   Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
   Drishti Elements. Proprietary: see LICENSE.
 
-  Elements browser tests (one file): one browser suite; edit the file name in Parameters.
-  Use it when: you iterate on one library.
+  Elements: test static: the static pytest suite (no browser).
+  Use it when: a quick check.
   Needs a Python 3.10+ interpreter (PyCharm: Settings, Project, Python Interpreter).
   Shared, so it is in git: copy the configuration (Ctrl+D) to change it; a pull overwrites this file.
 -->
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Elements browser tests (one file)" type="PythonConfigurationType" factoryName="Python" folderName="Elements">
+  <configuration default="false" name="Elements: test static" type="PythonConfigurationType" factoryName="Python" folderName="Elements">
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -21,7 +21,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="SCRIPT_NAME" value="pytest" />
-    <option name="PARAMETERS" value="-q tests/test_elements_grid_browser.py" />
+    <option name="PARAMETERS" value="-q tests -m static" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="true" />

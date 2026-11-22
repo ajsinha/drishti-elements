@@ -1,43 +1,46 @@
 // Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
 // Drishti Elements. Proprietary: see LICENSE.
 //
-// Drishti Elements in VS Code: File, Open Workspace from File. The tasks and launch configurations mirror the JetBrains run
-// configurations (run-configs/). Build and run in the IDE: README.md#build-and-run-in-the-ide. No Java here; Python and Node only.
+// Elements in VS Code: File, Open Workspace from File. The tasks and launch configurations carry the SAME names as the JetBrains run
+// configurations in run-configs/ (the launcher standard: docs/plans/LAUNCHER_STANDARD.md in the Drishti repository). JDK 21: change the
+// Java path below (Windows: C:\\jdk-21). Build and run in the IDE: README.md#build-and-run-in-the-ide.
 {
-  "folders": [ { "name": "elements", "path": "." } ],
-  "extensions": {
-    "recommendations": [ "ms-python.python", "ms-python.vscode-pylance", "ms-python.debugpy", "dbaeumer.vscode-eslint", "redhat.vscode-yaml" ]
-  },
+  "folders": [{"name": "elements", "path": "."}],
+  "extensions": {"recommendations": ["ms-python.python", "ms-python.vscode-pylance", "ms-python.debugpy", "dbaeumer.vscode-eslint", "redhat.vscode-yaml"]},
   "settings": {
     "python.defaultInterpreterPath": "python3",
     "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [ "tests" ],
+    "python.testing.pytestArgs": ["tests"],
     "python.testing.cwd": "${workspaceFolder:elements}",
     "javascript.validate.enable": true,
-    "files.exclude": { "**/__pycache__": true }
+    "files.exclude": {"**/__pycache__": true}
   },
   "tasks": {
     "version": "2.0.0",
     "tasks": [
-      { "label": "Elements build check", "type": "shell", "command": "python3 tools/elements/build.py --check", "windows": { "command": "python tools/elements/build.py --check" }, "options": { "cwd": "${workspaceFolder:elements}" }, "problemMatcher": [] },
-      { "label": "Elements build bundles", "type": "shell", "command": "python3 tools/elements/build.py", "windows": { "command": "python tools/elements/build.py" }, "options": { "cwd": "${workspaceFolder:elements}" }, "group": "build", "problemMatcher": [] },
-      { "label": "Elements API docs check", "type": "shell", "command": "python3 tools/docs/elements_api.py --check", "windows": { "command": "python tools/docs/elements_api.py --check" }, "options": { "cwd": "${workspaceFolder:elements}" }, "problemMatcher": [] },
-      { "label": "Elements licence headers", "type": "shell", "command": "python3 tools/license_headers.py", "windows": { "command": "python tools/license_headers.py" }, "options": { "cwd": "${workspaceFolder:elements}" }, "problemMatcher": [] },
-      { "label": "Elements dist", "type": "shell", "command": "python3 tools/elements/cli.py dist", "windows": { "command": "python tools/elements/cli.py dist" }, "options": { "cwd": "${workspaceFolder:elements}" }, "problemMatcher": [] },
-      { "label": "Elements Node tests", "type": "shell", "command": "node tools/node_tests.mjs tests/elements", "options": { "cwd": "${workspaceFolder:elements}" }, "group": "test", "problemMatcher": [] },
-      { "label": "Elements static tests", "type": "shell", "command": "python3 -m pytest -q tests -m static", "windows": { "command": "python -m pytest -q tests -m static" }, "options": { "cwd": "${workspaceFolder:elements}" }, "group": "test", "problemMatcher": [] },
-      { "label": "Elements browser tests (8 workers)", "type": "shell", "command": "python3 -m pytest -q tests -n 8", "windows": { "command": "python -m pytest -q tests -n 8" }, "options": { "cwd": "${workspaceFolder:elements}" }, "group": "test", "problemMatcher": [] },
-      { "label": "Elements gallery server (port 8765)", "type": "shell", "command": "python3 -m http.server 8765", "windows": { "command": "python -m http.server 8765" }, "options": { "cwd": "${workspaceFolder:elements}" }, "isBackground": true, "problemMatcher": [] }
+      {"label": "Elements: build all", "type": "shell", "command": "python3 tools/elements/build.py", "windows": {"command": "python tools/elements/build.py"}, "options": {"cwd": "${workspaceFolder:elements}"}, "group": "build", "problemMatcher": []},
+      {"label": "Elements: check bundles", "type": "shell", "command": "python3 tools/elements/build.py --check", "windows": {"command": "python tools/elements/build.py --check"}, "options": {"cwd": "${workspaceFolder:elements}"}, "problemMatcher": []},
+      {"label": "Elements: build dist", "type": "shell", "command": "python3 tools/elements/cli.py dist", "windows": {"command": "python tools/elements/cli.py dist"}, "options": {"cwd": "${workspaceFolder:elements}"}, "problemMatcher": []},
+      {"label": "Elements: check API docs", "type": "shell", "command": "python3 tools/docs/elements_api.py --check", "windows": {"command": "python tools/docs/elements_api.py --check"}, "options": {"cwd": "${workspaceFolder:elements}"}, "problemMatcher": []},
+      {"label": "Elements: check licence headers", "type": "shell", "command": "python3 tools/license_headers.py", "windows": {"command": "python tools/license_headers.py"}, "options": {"cwd": "${workspaceFolder:elements}"}, "problemMatcher": []},
+      {"label": "Elements: test", "type": "shell", "command": "python3 -m pytest -q tests -n 8", "windows": {"command": "python -m pytest -q tests -n 8"}, "options": {"cwd": "${workspaceFolder:elements}"}, "group": "test", "problemMatcher": []},
+      {"label": "Elements: test static", "type": "shell", "command": "python3 -m pytest -q tests -m static", "windows": {"command": "python -m pytest -q tests -m static"}, "options": {"cwd": "${workspaceFolder:elements}"}, "group": "test", "problemMatcher": []},
+      {"label": "Elements: test one file", "type": "shell", "command": "python3 -m pytest -q tests/test_elements_grid_browser.py", "windows": {"command": "python -m pytest -q tests/test_elements_grid_browser.py"}, "options": {"cwd": "${workspaceFolder:elements}"}, "group": "test", "problemMatcher": []},
+      {"label": "Elements: test Node", "type": "shell", "command": "node tools/node_tests.mjs tests/elements", "options": {"cwd": "${workspaceFolder:elements}"}, "group": "test", "problemMatcher": []},
+      {"label": "Elements: run gallery server", "type": "shell", "command": "python3 -m http.server 8765", "windows": {"command": "python -m http.server 8765"}, "options": {"cwd": "${workspaceFolder:elements}"}, "isBackground": true, "problemMatcher": []}
     ]
   },
   "launch": {
     "version": "0.2.0",
     "configurations": [
-      { "name": "Elements build bundles", "type": "debugpy", "request": "launch", "program": "${workspaceFolder:elements}/tools/elements/build.py", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal" },
-      { "name": "Elements pytest (current file)", "type": "debugpy", "request": "launch", "module": "pytest", "args": [ "-q", "${file}" ], "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal" },
-      { "name": "Elements pytest (static)", "type": "debugpy", "request": "launch", "module": "pytest", "args": [ "-q", "tests", "-m", "static" ], "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal" },
-      { "name": "Elements gallery server", "type": "debugpy", "request": "launch", "module": "http.server", "args": [ "8765" ], "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal" },
-      { "name": "Elements Node test (current file)", "type": "node", "request": "launch", "program": "${file}", "runtimeArgs": [ "--test" ], "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal" }
+      {"name": "Elements: build all", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "program": "${workspaceFolder:elements}/tools/elements/build.py"},
+      {"name": "Elements: check bundles", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "program": "${workspaceFolder:elements}/tools/elements/build.py", "args": ["--check"]},
+      {"name": "Elements: build dist", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "program": "${workspaceFolder:elements}/tools/elements/cli.py", "args": ["dist"]},
+      {"name": "Elements: check API docs", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "program": "${workspaceFolder:elements}/tools/docs/elements_api.py", "args": ["--check"]},
+      {"name": "Elements: check licence headers", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "program": "${workspaceFolder:elements}/tools/license_headers.py"},
+      {"name": "Elements: test", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "module": "pytest", "args": ["-q", "tests", "-n", "8"]},
+      {"name": "Elements: test static", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "module": "pytest", "args": ["-q", "tests", "-m", "static"]},
+      {"name": "Elements: test one file", "type": "debugpy", "request": "launch", "cwd": "${workspaceFolder:elements}", "console": "integratedTerminal", "module": "pytest", "args": ["-q", "tests/test_elements_grid_browser.py"]}
     ]
   }
 }

@@ -19,6 +19,8 @@ Each release lists what changed, by library. One version for every library: the 
 
 ## Unreleased
 
+- **IDE launchers follow the platform standard**: one `run-configs/`, every launcher named `Elements: <verb> <what>` (IntelliJ folder `Elements`), the same names as the VS Code tasks and launches; `Elements: test` (all pytest suites) added; the check `tools/launchers/check_launchers.py` (static test `tests/test_launchers.py`).
+
 - **A link whose target is missing is still a link** (drishti-views, links): its `missing` chip says so; only a `denied` target is drawn as words.
 - **Table tools for embeds** (drishti-views, drishti-chart): the paint option `tableTools: {filters, chart}` gives a table a funnel on each column
   heading (values with counts, search, Select all, a number condition such as `> 1m`; filters combine across columns and survive a patch) and Chart any

@@ -2,13 +2,13 @@
   Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
   Drishti Elements. Proprietary: see LICENSE.
 
-  Elements build bundles: rewrites the bundled scripts from the modules (offline).
-  Use it when: after you changed a module under elements/.
+  Elements: build dist: tools/elements/cli.py dist: the distribution folder.
+  Use it when: you hand the libraries to a host.
   Needs a Python 3.10+ interpreter (PyCharm: Settings, Project, Python Interpreter).
   Shared, so it is in git: copy the configuration (Ctrl+D) to change it; a pull overwrites this file.
 -->
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Elements build bundles" type="PythonConfigurationType" factoryName="Python" folderName="Elements">
+  <configuration default="false" name="Elements: build dist" type="PythonConfigurationType" factoryName="Python" folderName="Elements">
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -20,8 +20,8 @@
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tools/elements/build.py" />
-    <option name="PARAMETERS" value="" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tools/elements/cli.py" />
+    <option name="PARAMETERS" value="dist" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

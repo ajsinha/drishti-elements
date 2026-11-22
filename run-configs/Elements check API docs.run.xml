@@ -2,13 +2,13 @@
   Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
   Drishti Elements. Proprietary: see LICENSE.
 
-  Elements static tests: the quick file checks (no browser).
-  Use it when: a fast check before the browser suites. Install once: pip install -r tests/requirements.txt.
+  Elements: check API docs: tools/docs/elements_api.py option check: the generated API pages are current.
+  Use it when: after you changed a library's public API.
   Needs a Python 3.10+ interpreter (PyCharm: Settings, Project, Python Interpreter).
   Shared, so it is in git: copy the configuration (Ctrl+D) to change it; a pull overwrites this file.
 -->
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Elements static tests" type="PythonConfigurationType" factoryName="Python" folderName="Elements">
+  <configuration default="false" name="Elements: check API docs" type="PythonConfigurationType" factoryName="Python" folderName="Elements">
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -20,11 +20,11 @@
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
-    <option name="SCRIPT_NAME" value="pytest" />
-    <option name="PARAMETERS" value="-q tests -m static" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tools/docs/elements_api.py" />
+    <option name="PARAMETERS" value="--check" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
-    <option name="MODULE_MODE" value="true" />
+    <option name="MODULE_MODE" value="false" />
     <option name="REDIRECT_INPUT" value="false" />
     <option name="INPUT_FILE" value="" />
     <method v="2" />
