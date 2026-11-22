@@ -17,7 +17,7 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
-## Unreleased
+## 3.3.0 (2026-11-21)
 
 - **IDE launchers follow the platform standard**: one `run-configs/`, every launcher named `Elements: <verb> <what>` (IntelliJ folder `Elements`), the same names as the VS Code tasks and launches; `Elements: test` (all pytest suites) added; the check `tools/launchers/check_launchers.py` (static test `tests/test_launchers.py`).
 

@@ -14,7 +14,7 @@
   See the LICENSE file in the root of this repository.
 -->
 
-# Drishti Elements 3.2.0: the API reference
+# Drishti Elements 3.3.0: the API reference
 
 Generated from the libraries' typed JSDoc by `python3 tools/docs/elements_api.py` (do not edit; `--check` refuses a stale copy or a
 public symbol without a typed comment). Every library is ES modules under `elements/<library>/src/` and

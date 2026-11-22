@@ -21,7 +21,7 @@
  *  A library's parts (files beside its bundle, loaded by loadPart) are named with their file and style sheets.
  *  @type {{elements: string, libraries: Object<string, {title: string, bundle: string, entry: string, global: string, requires: string[], css: string[], scripts: string[], module: string, parts: Object<string, {file: string, css: string[]}>}>}} */
 export const MANIFEST = Object.freeze({
-  "elements": "3.2.0",
+  "elements": "3.3.0",
   "libraries": {
     "drishti-core": {
       "title": "Formats, theme, API client, events, accessibility, resize, keys, dialogs, drawers and toasts, the filter model every library shares, the element maker and placements, Explain's drawing, chips for list attributes, the CSV writer, reading typed numbers, loading vendored engines",
