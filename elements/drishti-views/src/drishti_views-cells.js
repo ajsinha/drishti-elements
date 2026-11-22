@@ -90,7 +90,18 @@ export const MESSAGES = Object.freeze({
   linkReconnecting: 'reconnecting',
   linkOffline: 'offline',
   linkRefused: 'the live stream was refused',
-  linkClosed: 'disconnected'
+  linkClosed: 'disconnected',
+  ctlBar: 'View controls',
+  ctlSide: 'Filters',
+  ctlPanel: 'Controls of this panel',
+  ctlAll: '(all)',
+  ctlSearch: 'contains…',
+  ctlFrom: '{label} from',
+  ctlTo: '{label} to',
+  ctlFirst: 'first {count} shown',
+  ctlUpdated: '{panels} updated.',
+  ctlUpdatedAll: 'Updated.',
+  ctlFailed: 'The panels could not be updated: {detail}'
 });
 
 /** The tones of the specification; a word outside it is drawn untoned. */

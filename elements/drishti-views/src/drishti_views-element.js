@@ -15,7 +15,8 @@
  */
 /* <elements-view>: a view as an element, a thin wrapper over paint(). Its ViewModel is the property viewModel, the address in src, or an
    inline <script type="application/json"> child (a page that is one file); the options are the property options, and the attributes
-   density, header, panels, locale, validate, label and live (the events address of its live stream) over them. Changing src, the
+   density, header, panels, locale, validate, label, controls (the control values the reader set: "legs=2&when=2026-01-01..") and live (the
+   events address of its live stream) over them; the property controls reads the values the reader has set since, as query text. Changing src, the
    ViewModel or an attribute paints again; leaving the page disposes the view. The tag is the library's own (no host's tag collides);
    define({ tag }) registers it under another name. */
 import { paint } from './drishti_views-paint.js';
@@ -24,7 +25,7 @@ import { paint } from './drishti_views-paint.js';
 export const VIEW_ELEMENT = 'elements-view';
 
 /** The attributes the element reads (each as the option of the same name; live is the events address). */
-export const VIEW_ATTRIBUTES = Object.freeze(['src', 'density', 'header', 'panels', 'locale', 'validate', 'label', 'live', 'complete']);
+export const VIEW_ATTRIBUTES = Object.freeze(['src', 'density', 'header', 'panels', 'locale', 'validate', 'label', 'live', 'complete', 'controls']);
 
 /**
  * Registers <elements-view> (or another tag) in a window's custom elements; nothing when the window has none or the tag is taken.
@@ -56,6 +57,11 @@ export function define(o) {
 
     get options() { return this._options; }
 
+    /** The control values the reader set, as query text (ctl.legs=2&...); setting it paints again with those values. */
+    get controls() { return this.handle ? this.handle.controlQuery() : (this.getAttribute('controls') || ''); }
+
+    set controls(v) { if (v == null || v === '') { this.removeAttribute('controls'); } else { this.setAttribute('controls', String(v)); } }
+
     /** @private one paint per task, however many changes */
     repaint() {
       if (this._queued) { return; }
@@ -70,6 +76,7 @@ export function define(o) {
       const o = Object.assign({}, this._options);
       ['density', 'header', 'locale', 'validate', 'label'].forEach((a) => { if (this.hasAttribute(a)) { o[a] = this.getAttribute(a); } });
       if (this.hasAttribute('complete')) { o.complete = true; }
+      if (this.hasAttribute('controls')) { o.controls = this.getAttribute('controls'); }
       if (this.hasAttribute('panels')) { o.panels = this.getAttribute('panels').split(',').map((s) => s.trim()).filter(Boolean); }
       if (this.getAttribute('live')) { o.live = Object.assign({}, o.live || {}, { url: this.getAttribute('live') }); }
       this.handle = paint(this, source, o);

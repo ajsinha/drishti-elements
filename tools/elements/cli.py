@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-engines", action="store_true", help="leave the vendored engines (ECharts) out: the page loads its own first")
     p.add_argument("--maps", action="store_true", help="copy drishti-chart's map shapes (vendor/echarts/maps) beside the files")
     p.add_argument("--data", action="store_true", help="copy the shared tables a server formats with (data/formats.yaml, data/world-regions.yaml) under data/")
-    p.add_argument("--label", help="the version the pack says of itself, for an untagged build a host pins by folder name (3.3.1-dev+<commit>); default the train's")
+    p.add_argument("--label", help="the version the pack says of itself, for an untagged build a host pins by folder name (3.3.2-dev+<commit>); default the train's")
     d = sub.add_parser("dist", help="the release tree drishti-elements-<version>/ and its zip (SRI hashes, themes, gallery)")
     d.set_defaults(func=cmd_dist)
     d.add_argument("--out", default=str(DEFAULT_OUT), help="the folder to write (default dist)")
