@@ -14,7 +14,7 @@
   See the LICENSE file in the root of this repository.
 -->
 
-# Drishti Elements 3.3.1: the API reference
+# Drishti Elements 3.3.2: the API reference
 
 Generated from the libraries' typed JSDoc by `python3 tools/docs/elements_api.py` (do not edit; `--check` refuses a stale copy or a
 public symbol without a typed comment). Every library is ES modules under `elements/<library>/src/` and
@@ -23037,7 +23037,7 @@ Returns `Promise&lt;{effects: Object[], problems: Object[], state: Object&lt;str
 
 ##### `ViewHandle.change(control, value)`
 
-A control's change (contract 1.2): the control takes the value and its change effects run in order with that value as the event, the state and the control go back to the host's bind, and the panels that read them are drawn again. A control the screen lacks is refused (RCH-5001; nothing runs). The host draws the controls (the painter draws panels): it calls this when the reader picks a value.
+A control's change (contract 1.2): the control takes the value and its change effects run in order with that value as the event, the state and the control go back to the host's bind, and the panels that read them are drawn again. A control the screen lacks is refused (RCH-5001; nothing runs). The painter's own controls call it when the reader picks a value; a host that draws its own (controls: false) calls it.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -23045,6 +23045,12 @@ A control's change (contract 1.2): the control takes the value and its change ef
 | `value` | `*` | the new value (a list for a multi-select) |
 
 Returns `Promise&lt;{effects: Object[], problems: Object[], state: Object&lt;string, *&gt;}&gt;`.
+
+##### `ViewHandle.controlQuery()`
+
+The control values the reader set as query text (ctl.legs=2&ctl.when=2026-01-01..), for the host's address or its own request.
+
+Returns `string`.
 
 ##### `ViewHandle.metrics()`
 
@@ -23601,6 +23607,133 @@ Stops the subscription (and the connection it made).
 
 Returns `void`.
 
+### drishti_views-controls.js
+
+#### `CONTROL_KINDS`
+
+The control kinds drawn (contract 1: ControlView.kind); another kind is drawn as a search field.
+
+#### `TYPING_PAUSE_MS`
+
+Milliseconds of rest before a typed value (search, a number) counts.
+
+#### class `Controls`
+
+The controls of one painted ViewModel, drawn into the view's header, side bar and panels' headers.
+
+##### `new Controls(view, list, panels)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `view` | `Object` | the view's handle (ViewHandle): its ctx, frames, library loading, change() and the reader's values (view.ctl) |
+| `list` | `Object[]` | the ViewModel's controls |
+| `panels` | `{drawn: string[], all: boolean}` | the panels drawn (all: no panels option) |
+
+##### `Controls.value(id)`
+
+The reader's value of a control now.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `string`: its text (empty when none).
+
+##### `Controls.mount(screen, frames, focus)`
+
+Draws every control's holder in its place (the frames exist), then fills them with drishti-inputs' components.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `screen` | `Object` | the view's Screen (its header element) |
+| `frames` | `Map&lt;string, Object&gt;` | the panels' frames |
+| `[focus]` | `string` | the control that had the focus before a full paint: it gets it back |
+
+Returns `?HTMLElement`: the side bar, when a control is placed there (the caller lays it out beside the panels).
+
+##### `Controls.show(id)`
+
+A value taken by the view (a pick, or the host's change()): the widget shows it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `void`.
+
+##### `Controls.reconcile(list)`
+
+The controls a bind answered: new options draw the control again (not while the reader is in it), a corrected value is shown.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `list` | `Object[]` |  |
+
+Returns `void`.
+
+##### `Controls.say(text)`
+
+Says in the status region (read by a screen reader) what the last change did.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `text` | `string` |  |
+
+Returns `void`.
+
+##### `Controls.focused()`
+
+The control that holds the focus.
+
+Returns `?string`: its id, or null.
+
+##### `Controls.focus(id)`
+
+Puts the focus on a control's component.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+
+Returns `void`.
+
+##### `Controls.dispose()`
+
+Stops the pending picks and takes every component out (an open list closes).
+
+Returns `void`.
+
+#### `controlValues(given)`
+
+The control values a host gives: a query text ("legs=2&ctl.when=2026-01-01..") or an object, keyed by the control's id (ctl. dropped).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `given` | `(string\|Object&lt;string, *&gt;)` |  |
+
+Returns `Object&lt;string, string&gt;`.
+
+#### `controlQuery(values, ids)`
+
+The query text of control values (ctl.&lt;id&gt;=&lt;value&gt;&...), commas and colons kept readable.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `values` | `Object&lt;string, string&gt;` |  |
+| `[ids]` | `string[]` | these, in this order (default every value) |
+
+Returns `string`.
+
+#### `controlText(c)`
+
+A ControlView's value as text: a multi-select's values joined with commas, a range from..to, empty when none.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `c` | `Object` |  |
+
+Returns `string`.
+
 ### drishti_views-element.js
 
 #### `VIEW_ELEMENT`
@@ -23967,6 +24100,7 @@ Returns `void`.
 | `[gl]` | `function(): Promise&lt;void&gt;` | loads the 3D engine for a surface's 3D view |
 | `[host]` | `{notify: ?function(Object, Object): void, run: ?function(Object, Object): void, bind: ?function(Object): *}` | the host's hooks for the screen's state and effects (contract 1.2). notify(effect, where) shows a notify effect {do, text, tone}; run(effect, where) runs a host effect {do, action, with} (Elements never runs one); bind({state, params}) is the next bind after a click wrote state: state is every value as text (null: cleared, its default stands), params the same as state.&lt;id&gt; request parameters; it answers the new ViewModel (or a promise of one), of which only the panels the changed states' reads name are drawn again. Without bind the values are kept and nothing is drawn again. where is {panel, trigger, mark}. |
 | `[live]` | `import('./drishti_views-live.js').LiveOptions` | the view's live stream over drishti-events (subscribed after the first paint) |
+| `[controls]` | `(string\|Object&lt;string, *&gt;\|boolean)` | the view's controls (ViewModel.controls) are drawn by the painter with drishti-inputs' components (in the bar under the title line, a side bar or a panel's header); a query text ("legs=2&ctl.when=2026-01-01..") or an object gives the values the reader had set (sent with every bind and added to a view's address); false: none drawn (the host draws its own and calls change()). A pick runs the control's change effects, then the host's bind with every value the reader set (ctl.&lt;id&gt;); without bind, a view given by its address is read again with them. The control-change event {control, value, values, query} tells the host first. |
 
 #### `ViewIssue` : `Object`
 

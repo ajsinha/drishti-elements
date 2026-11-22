@@ -32,12 +32,13 @@ import { LiveLink } from './drishti_views-live.js';
 import { datasetsOf } from './drishti_views-data.js';
 import { StateStore, resolveFire, resolveWire, requestText } from './drishti_views-state.js';
 import { ask } from './drishti_views-forms.js';
+import { Controls, controlValues, controlQuery } from './drishti_views-controls.js';
 
 /** The contract majors this painter draws. */
 export const SPECS = Object.freeze([Number(String(CONTRACT).split('.')[0])]);
 
 const HANDLES = new WeakMap();
-const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'refused', 'bound', 'drawn', 'dispose', 'point', 'filter', 'chart-table'];
+const EVENTS = ['ready', 'error', 'issues', 'link', 'key', 'patch', 'navigate', 'pick', 'select', 'state-change', 'notify', 'host', 'refused', 'bound', 'drawn', 'dispose', 'point', 'filter', 'chart-table', 'control-change'];
 const CANCELABLE = { link: true, key: true };
 let counter = 0;
 
@@ -79,6 +80,11 @@ let counter = 0;
  *   stands), params the same as state.<id> request parameters; it answers the new ViewModel (or a promise of one), of which only the panels the changed
  *   states' reads name are drawn again. Without bind the values are kept and nothing is drawn again. where is {panel, trigger, mark}.
  * @property {import('./drishti_views-live.js').LiveOptions} [live] the view's live stream over drishti-events (subscribed after the first paint)
+ * @property {(string|Object<string, *>|boolean)} [controls] the view's controls (ViewModel.controls) are drawn by the painter with drishti-inputs' components
+ *   (in the bar under the title line, a side bar or a panel's header); a query text ("legs=2&ctl.when=2026-01-01..") or an object gives the values the
+ *   reader had set (sent with every bind and added to a view's address); false: none drawn (the host draws its own and calls change()). A pick runs the
+ *   control's change effects, then the host's bind with every value the reader set (ctl.<id>); without bind, a view given by its address is read again
+ *   with them. The control-change event {control, value, values, query} tells the host first.
  */
 
 function isView(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) && typeof v.then !== 'function' && !(typeof Response !== 'undefined' && v instanceof Response); }
@@ -98,6 +104,9 @@ export class ViewHandle {
     this.frames = new Map();
     this.vm = null;
     this.state = new StateStore();
+    const given = controlValues(this.options.controls);
+    /** the reader's control values (text by id) and the ids they set, kept across paints of the same handle */
+    this.ctl = { values: given, touched: new Set(Object.keys(given)) };
     this.firing = Promise.resolve();
     this.disposed = false;
     this.prefix = 'dv' + (++counter) + '-';
@@ -219,6 +228,7 @@ export class ViewHandle {
     }
     let p;
     if (typeof source === 'string') {
+      source = this.withControls(source);
       this.src = source;
       const f = fetcher(this.options.fetch) || ((u, init) => fetch(u, init));
       p = Promise.resolve().then(() => f(source, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((r) => {
@@ -277,6 +287,7 @@ export class ViewHandle {
 
   /** @private */
   build(vm) {
+    const focus = this.controls ? this.controls.focused() : null;
     this.clear();
     this.vm = vm;
     this.state.load(vm.state);
@@ -293,7 +304,9 @@ export class ViewHandle {
     this.layout = new Layout(ctx, arrange(Object.assign({}, vm, { panels: panels })), this.frames);
     this.root.setAttribute('aria-labelledby', this.screen.title.id);
     if (this.options.label) { this.root.setAttribute('aria-label', this.options.label); this.root.removeAttribute('aria-labelledby'); }
-    this.root.append(this.screen.element, this.layout.element);
+    this.controls = this.options.controls === false ? null : new Controls(this, vm.controls, { drawn: panels.map((p) => String(p.id)), all: !only });
+    const side = this.controls ? this.controls.mount(this.screen, this.frames, focus) : null;
+    this.root.append(this.screen.element, side ? h(this.ctx.doc, 'div', { cls: 'dv-ctl-split' }, [side, this.layout.element]) : this.layout.element);
     this.screen.back.hidden = !this.history.length;
     this.layout.fit(this.width || 1280);
     this.layout.mounted();
@@ -320,6 +333,7 @@ export class ViewHandle {
 
   /** @private */
   clear() {
+    if (this.controls) { this.controls.dispose(); this.controls = null; }
     this.frames.forEach((f) => f.dispose());
     this.frames.clear();
     this.layout = null;
@@ -485,7 +499,7 @@ export class ViewHandle {
   /**
    * A control's change (contract 1.2): the control takes the value and its change effects run in order with that value as the event, the
    * state and the control go back to the host's bind, and the panels that read them are drawn again. A control the screen lacks is refused
-   * (RCH-5001; nothing runs). The host draws the controls (the painter draws panels): it calls this when the reader picks a value.
+   * (RCH-5001; nothing runs). The painter's own controls call it when the reader picks a value; a host that draws its own (controls: false) calls it.
    * @param {string} control the control's id
    * @param {*} value the new value (a list for a multi-select)
    * @returns {Promise<{effects: Object[], problems: Object[], state: Object<string, *>}>}
@@ -540,6 +554,7 @@ export class ViewHandle {
     if (found.problems.length) {
       return { effects: [], problems: found.problems, state: this.state.values() };
     }
+    if (trigger === 'change') { this.takeControl(String(control), value); }
     const done = trigger === 'change' || trigger === 'submit' || trigger === 'cancel' ? this.state.run(found.effects, found.event) : trigger === 'action' ? this.state.run(found.effects, null) : this.state.run(found.effects);
     done.ran.forEach((e) => {
       const hook = e.do === 'notify' ? hostHooks.notify : e.do === 'host' ? hostHooks.run : null;
@@ -558,9 +573,12 @@ export class ViewHandle {
 
   /** @private sends the state back to the host and draws what the changed states' reads name */
   async rebind(changed, controls) {
-    const bind = this.options.host && this.options.host.bind;
-    if (typeof bind !== 'function') { return; }
     controls = controls || [];
+    let bind = this.options.host && this.options.host.bind;
+    if (typeof bind !== 'function') {                   // no bind: a view given by its address is read again with the controls' values
+      if (!controls.length || typeof this.src !== 'string') { return; }
+      bind = (req) => this.reread(req);
+    }
     let readers = [];           // the panels the changed states and controls read (null: one of them does not say, so the whole view)
     const add = (names) => { if (readers === null) { return; } if (!Array.isArray(names)) { readers = null; return; } names.forEach((r) => { if (readers.indexOf(r) < 0) { readers.push(r); } }); };
     if (changed.length) { add(this.state.readers(changed)); }
@@ -568,11 +586,19 @@ export class ViewHandle {
     const state = this.state.request(), params = {}, ctl = {};
     changed.forEach((id) => { if (this.state.get(id) === null) { state[id] = null; } });
     Object.keys(state).forEach((id) => { if (state[id] !== null) { params['state.' + id] = state[id]; } });
-    controls.forEach((c) => { const t = requestText(c.value); ctl[c.id] = t; if (t !== null) { params['ctl.' + c.id] = t; } });
+    this.ctl.touched.forEach((id) => { const t = this.ctl.values[id]; ctl[id] = t == null ? '' : String(t); params['ctl.' + id] = ctl[id]; });   // every value the reader set, the changed one too
     const req = { state: state, params: params, changed: changed.slice() };
     if (controls.length) { req.controls = ctl; }
+    const busy = (on) => (readers === null ? Array.from(this.frames.keys()) : readers).map((r) => this.frames.get(String(r))).filter(Boolean).map((f) => f.element)
+      .forEach((el) => { if (on) { el.setAttribute('aria-busy', 'true'); } else { el.removeAttribute('aria-busy'); } });
+    if (controls.length) { busy(true); }
     let next;
-    try { next = await bind(req); } catch (e) { this.emit('error', { code: 'view.bind', error: e }); return; }
+    try { next = await bind(req); } catch (e) {
+      busy(false);
+      if (this.controls && controls.length) { this.controls.say(say(this.ctx.messages, 'ctlFailed', { detail: String((e && e.message) || e) })); }
+      this.emit('error', { code: 'view.bind', error: e }); return;
+    }
+    busy(false);
     if (this.disposed || !isView(next)) { return; }
     if (this.options.complete) { next = complete(JSON.parse(JSON.stringify(next)), 'ViewModel'); }
     this.adopt(next, readers);
@@ -583,7 +609,7 @@ export class ViewHandle {
     const vm = this.vm, ids = (v) => (Array.isArray(v.panels) ? v.panels.map((p) => String(p && p.id)) : []);
     const same = vm && ids(vm).join('\u0001') === ids(next).join('\u0001');
     const partial = same && readers && readers.every((r) => r === 'strip' || this.frames.has(String(r))) && readers.indexOf('title') < 0 && !Array.isArray(this.options.panels);
-    if (!partial) { this.show(next, now()); this.emit('bound', { panels: ids(next), full: true }); return; }
+    if (!partial) { this.show(next, now()); this.toldControls(null); this.emit('bound', { panels: ids(next), full: true }); return; }
     const drawn = [];
     readers.forEach((r) => {
       if (r === 'strip') {
@@ -594,9 +620,63 @@ export class ViewHandle {
       if (i >= 0 && frame) { frame.draw(next.panels[i]); vm.panels[vm.panels.findIndex((x) => x && String(x.id) === String(r))] = next.panels[i]; drawn.push(String(r)); }
     });
     vm.state = next.state;
-    if (next.controls !== undefined) { vm.controls = next.controls; }
+    if (next.controls !== undefined) { vm.controls = next.controls; if (this.controls) { this.controls.reconcile(next.controls); } }
     this.state.load(next.state);
+    this.toldControls(drawn);
     this.emit('bound', { panels: drawn, full: false });
+  }
+
+  /** @private the status region says which panels a control's change drew again */
+  toldControls(drawn) {
+    if (!this.controls) { return; }
+    const m = this.ctx.messages, titles = (drawn || []).map((id) => { const f = this.frames.get(id); return f && f.panel && f.panel.title ? String(f.panel.title) : id; });
+    this.controls.say(titles.length ? say(m, 'ctlUpdated', { panels: titles.join(', ') }) : say(m, 'ctlUpdatedAll'));
+  }
+
+  /** @private a control's value taken (a reader's pick or the host's change()): kept, shown, and told to the host */
+  takeControl(id, value) {
+    const t = requestText(value);
+    this.ctl.values[id] = t === null ? '' : t;
+    this.ctl.touched.add(id);
+    if (this.controls) { this.controls.show(id); }
+    this.emit('control-change', { control: id, value: value, values: this.controlValues, query: this.controlQuery() });
+  }
+
+  /**
+   * The control values the reader set (text by id; a multi-select's joined with commas, a range from..to).
+   * @returns {Object<string, string>}
+   */
+  get controlValues() { const out = {}; this.ctl.touched.forEach((id) => { out[id] = this.ctl.values[id]; }); return out; }
+
+  /**
+   * The control values the reader set as query text (ctl.legs=2&ctl.when=2026-01-01..), for the host's address or its own request.
+   * @returns {string}
+   */
+  controlQuery() { return controlQuery(this.ctl.values, Array.from(this.ctl.touched)); }
+
+  /** @private a view's address with the control values the reader set (ctl.<id>), the ones it had replaced */
+  withControls(src) {
+    if (!this.ctl.touched.size) { return src; }
+    const doc = this.el.ownerDocument;
+    let u;
+    try { u = new URL(src, doc.baseURI); } catch (e) { return src; }
+    Array.from(u.searchParams.keys()).filter((k) => k.indexOf('ctl.') === 0).forEach((k) => u.searchParams.delete(k));
+    this.ctl.touched.forEach((id) => u.searchParams.set('ctl.' + id, this.ctl.values[id] == null ? '' : this.ctl.values[id]));
+    return u.href;
+  }
+
+  /** @private the view read again from its address with the controls' and the state's values (the bind of a view without one) */
+  reread(req) {
+    let u;
+    try { u = new URL(this.src, this.el.ownerDocument.baseURI); } catch (e) { return Promise.reject(e); }
+    Array.from(u.searchParams.keys()).filter((k) => k.indexOf('ctl.') === 0 || k.indexOf('state.') === 0).forEach((k) => u.searchParams.delete(k));
+    Object.keys(req.params).forEach((k) => u.searchParams.set(k, req.params[k]));
+    this.src = u.href;                                   // a resync of the live stream reads the view with them too
+    const f = fetcher(this.options.fetch) || ((x, init) => fetch(x, init));
+    return Promise.resolve(f(u.href, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((r) => {
+      if (!r.ok) { throw Object.assign(new Error(r.status + ' ' + (r.statusText || '')), { status: r.status }); }
+      return r.json();
+    });
   }
 
   /**

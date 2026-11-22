@@ -36,6 +36,7 @@ export { AGGS, engineAgg, aggregate, DATASET_FORMS, READ_LIMIT, valueText, rowKe
 export { isMasked } from '../../drishti-core/src/drishti_index.js';
 export { DATASET_KINDS, gridColumns, chartSpec, gridChart } from './drishti_views-datakinds.js';
 export { LIVE_KINDS, LiveLink } from './drishti_views-live.js';
+export { CONTROL_KINDS, TYPING_PAUSE_MS, Controls, controlValues, controlQuery, controlText } from './drishti_views-controls.js';
 
 /**
  * Registers a panel kind's painter: a host's own kind, drawn in the frame, with the states, the layout and the patches of every kind.

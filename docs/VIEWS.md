@@ -46,6 +46,17 @@ columns and with the filter box, survive a patch, and are cleared from the table
 goes across and the series to choose, and the chart card's data table and export (drishti-chart's `openTableChart`, which a page can call
 on any rows). A grid's "Chart the range" (its context menu) opens the same dialog. The view raises `filter` and `chart-table` events.
 
+A view's `controls` (filters, inputs, toggles) are drawn by the painter with drishti-inputs' components, in the bar under the title line,
+a side bar or a panel's header. A pick tells the page first (`control-change`: `{control, value, values, query}`), runs the control's
+effects, then asks `host.bind` with every value the reader set (`ctl.<id>`) and draws again only the panels the control reads; a view
+loaded from an address and given no `bind` is read again with the values. `controls: 'legs=2'` gives the values the reader had set
+(`<elements-view controls="legs=2">`); `controls: false` leaves the drawing to the page, which calls `handle.change(id, value)`.
+
+```js
+const handle = paint(el, vm, { controls: 'legs=2', host: { bind: (req) => fetch('/views/trade/MX-1?' + new URLSearchParams(req.params)).then((r) => r.json()) } });
+handle.on('control-change', (e) => history.replaceState(null, '', '?' + e.detail.query));     // the page keeps its own address
+```
+
 **2. The element**
 
 ```html

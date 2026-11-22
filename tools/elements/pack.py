@@ -59,7 +59,7 @@ def pack(libs: list[str], out: Path, theme: str | None = None, engines: bool = T
     """Writes the packed JavaScript and style sheet (and what they read at run time) into ``out``; returns the record of what is inside.
     With ``data`` the shared tables a server reads too (``data/formats.yaml``, ``data/world-regions.yaml``) ride along under ``data/``,
     listed with their hashes like every other file: one pinned folder holds both the painter and the tables its host formats with.
-    ``label`` is the version the pack says of itself (headers and record) when a host pins an untagged build, e.g. ``3.3.1-dev+<commit>``:
+    ``label`` is the version the pack says of itself (headers and record) when a host pins an untagged build, e.g. ``3.3.2-dev+<commit>``:
     it must be the version of the folder the pack is vendored in; default the train's own."""
     train = train or dist.Train()
     version = label or train.version

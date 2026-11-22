@@ -128,7 +128,24 @@
 .dv-narrow > .dv-sec { order: 9999; }
 .dv-narrow .dv-sticky { position: static; }
 .dv-narrow .dv-split { display: none; }
-@media (pointer: coarse) { .dv-tab, .dv-fold, .dv-sec-fold, .dv-keybtn, .dv-back, .dv-retry { min-height: 44px; } }
+/* the controls (drishti-inputs' components in holders of a kept height: nothing moves when they are filled) */
+.dv-ctl-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--d-sp-6) var(--d-sp-12); }
+.dv-ctl { display: inline-flex; flex-direction: column; gap: var(--d-sp-2); min-width: 0; }
+.dv-ctl-l { color: var(--d-muted); font-size: var(--d-fs-11_5); }
+.dv-ctl-own-label > .dv-ctl-l { display: none; }
+.dv-ctl-w { display: flex; align-items: center; gap: var(--d-sp-4); min-height: 30px; min-width: 8rem; }
+.dv-ctl-c { display: block; min-width: 8rem; }
+.dv-ctl-num { width: 6.5rem; }
+.dv-ctl-dash { color: var(--d-faint); }
+.dv-ctl-note { color: var(--d-faint); font-size: var(--d-fs-11); }
+.dv-ctl-head { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--d-sp-4) var(--d-sp-10); margin-left: auto; }
+.dv-ctl-head .dv-ctl { flex-direction: row; align-items: center; gap: var(--d-sp-4); }
+.dv-ctl-split { display: grid; grid-template-columns: minmax(9rem, 15rem) minmax(0, 1fr); gap: var(--dv-gap); align-items: start; }
+.dv-ctl-side { flex-direction: column; align-items: stretch; }
+.dv-ctl-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dv-view[data-density="terminal"] .dv-ctl-w { min-height: 24px; }
+@container (max-width: 640px) { .dv-ctl-split { grid-template-columns: minmax(0, 1fr); } }
+@media (pointer: coarse) { .dv-tab, .dv-fold, .dv-sec-fold, .dv-keybtn, .dv-back, .dv-retry, .dv-ctl-w { min-height: 44px; } }
 @media (prefers-reduced-motion: reduce) { .dv-chev::before { transition: none; } }
 @media (forced-colors: active) { .dv-panel { border-color: CanvasText; } .dv-tab[aria-selected="true"] { border-bottom-color: Highlight; } }
 @media print { .dv-keys, .dv-back, .dv-split, .dv-fold { display: none; } .dv-panel { break-inside: avoid; } .dv-panel-b { overflow: visible; } }

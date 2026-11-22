@@ -247,16 +247,26 @@ The layout is data for drishti-designer's layout model, so a view can be opened 
 ### 2.6 Controls
 
 `{ id, kind, label, value, values?, options?: [{value, label}], placement?: "strip" | "side" | {panel}, min?, max?, step?, required?, reads?: [panel ids], optionsFrom?: DataRef }`.
-Kinds: `dropdown`, `multi-select`, `cascading`, `toggle`, `segmented`, `date`, `date-range`, `number-range`, `top-n`, `search`. Each is drawn by
-the drishti-inputs component of that name.
+Kinds: `dropdown`, `multi-select`, `cascading`, `toggle`, `segmented`, `date`, `date-range`, `number-range`, `top-n`, `search` (and a
+`slider` with `step` and `range`). The painter draws each with drishti-inputs' own component: Select (dropdown, cascading, top-n),
+MultiSelect, Switch (a toggle of two options), ButtonGroup (segmented, a toggle of more), DatePicker, DateRangePicker (the options are its
+presets), WhatIf (a slider with bounds); a number range and a search are the library's field. A control is a `[data-ctl=<id>]` holder with
+its label, in the bar under the title line (`strip`), a side bar (`side`) or its panel's header (`header` with `panel`); the holders are
+drawn in the first paint with their height kept, so nothing moves when the components arrive. A control whose panels are not drawn
+(`options.panels`) is not drawn. `options.controls` gives the values the reader had set (query text `legs=2&when=..` or an object);
+`false` draws none (the host draws its own and calls `handle.change`).
 
-A changed control raises the cancelable event `control-change` with every control's value. What happens next is one of three, in this order:
+A pick raises `control-change` `{control, value, values, query}` (`values` and `query`: every value the reader set), then:
 
-1. **In the browser.** A control with `"filters": { "dataset": "orders", "field": "country" }` filters that dataset through drishti-core's
-   shared filter model; every panel reading the dataset follows. Nothing is fetched.
-2. **From the producer.** When the view was loaded from an address, the painter fetches it again with the controls as query parameters
-   (`?region=AMER`; the names can be prefixed with `options.controlPrefix`) and applies the answer as a patch of the panels in `reads`.
-3. **By the host.** The host's listener answers with a ViewModel or patches (`handle.update`, `handle.patch`).
+1. **The control's effects** (`on.change`, contract 1.2) run with the value as the event.
+2. **By the host.** The host's `bind` is asked with every value the reader set (`ctl.<id>` in `params`, and `controls`); the panels the
+   control `reads` are drawn again in their frames (a header's controls stay, with the focus), the whole view when it does not say. The
+   answer's `controls` bring new options and corrected values. The panels being read again are `aria-busy`; a status region says which
+   were updated.
+3. **From the producer.** Without `bind`, a view loaded from an address is read again with `ctl.<id>=<value>` query parameters.
+
+In the browser, a control with `"filters": { "dataset": "orders", "field": "country" }` is designed to filter that dataset through
+drishti-core's shared filter model, with nothing fetched.
 
 ---
 
@@ -708,11 +718,11 @@ and loads only the libraries they need.
 | `handle.patch(frameOrPatches)` | | Applies a frame (section 5). |
 | `handle.subscribe(source?)` | `off()` | Follows the view's stream: the default of section 5.4, a topic, an address, or a function `(on) => off` for a host's own channel. |
 | `handle.panel(id)` | `{element, data, update(panel), state(state), component}` | One panel; `component` is the grid, chart or tree it drew, for a host that needs it. |
-| `handle.controls()` / `handle.setControl(id, value)` | | The controls' values. |
+| `handle.controlValues` / `handle.controlQuery()` | object / string | The control values the reader set, by id, or as query text (`ctl.legs=2&...`). |
 | `handle.open(link)` / `handle.back()` | | Navigation between views in place. |
 | `handle.export(panelId, format)` | `Promise<Blob>` | A panel's download. |
 | `handle.fire(panel, trigger, mark?, values?)` | `Promise<{effects, problems, state}>` | Fires a trigger (`row-click`, `bar-click`, `point-click`; `submit` and `cancel` of a `form` panel with the submitted `values`; `action` with the button's place as `mark`) as a click does (section 8.5). A submit is refused (RCH-5003, nothing runs) with the messages the host's `check({panel, form, values})` hook answers: the form's rules, required fields and limits belong to the Rachana runtime, never to the painter. |
-| `handle.change(control, value)` | `Promise<{effects, problems, state}>` | A control's change (`ControlView.on.change`): the effects run with the value as the event; the bind request carries `controls` and `ctl.<id>` params. The host draws controls and calls this. |
+| `handle.change(control, value)` | `Promise<{effects, problems, state}>` | A control's change (`ControlView.on.change`): the effects run with the value as the event; the bind request carries `controls` and the `ctl.<id>` params of every value the reader set. The painter's own controls call it; a host that draws its own (`controls: false`) does. |
 | `handle.stateValues` | object | The screen's state values now (contract 1.2), id to value. |
 | `handle.on(name, fn)` | `off()` | The events below. |
 | `handle.metrics()` | | Paint times, patches applied, conflated, ignored. |
