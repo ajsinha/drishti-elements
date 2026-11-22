@@ -17,7 +17,7 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
-## Unreleased
+## 3.3.1 (2026-11-21)
 
 - **Report charts** (drishti-chart, a new part `report`: `drishti_chart-report.js`, loaded beside the bundle or by `loadPart('drishti-chart', 'report')`):
   a report page's chart visuals drawn from the server's answers, moved in from Drishti's BI so that a host draws no chart of its own.
