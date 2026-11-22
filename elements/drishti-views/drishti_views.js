@@ -597,6 +597,8 @@
       ctlFirst: 'first {count} shown',
       ctlUpdated: '{panels} updated.',
       ctlUpdatedAll: 'Updated.',
+      ctlSet: '{label} set to {value}.',
+      ctlCleared: '{label} cleared.',
       ctlFailed: 'The panels could not be updated: {detail}'
     });
     const TONES = Object.freeze(['pos', 'neg', 'link', 'accent', 'ok', 'warn', 'bad', 'muted', 'inactive']);
@@ -1796,6 +1798,23 @@
         this.bars = {};
         this.status = h(this.doc, 'span', { cls: 'dv-ctl-status', attrs: { role: 'status', 'aria-live': 'polite', 'data-ctl-status': '' } });
       }
+      memoKey(id) { const o = this.view.options, ref = this.view.vm && this.view.vm.ref; return 'drishti.ctl.' + String(o.scope || (ref && ref.kind) || '') + '.' + id; }
+      keep(id, text) {
+        const d = this.defs.find((x) => x.id === id);
+        if (!d || !d.remember) { return; }
+        const r = this.view.options.remember, k = this.memoKey(id);
+        try { if (r && typeof r.set === 'function') { r.set(k, text); } else { this.doc.defaultView.localStorage.setItem(k, text); } } catch (e) { /* not kept: the view works without */ }
+      }
+      remembered() {
+        const r = this.view.options.remember, out = [];
+        this.defs.forEach((d) => {
+          if (!d.remember || this.view.ctl.touched.has(d.id)) { return; }
+          let v = null;
+          try { v = r && typeof r.get === 'function' ? r.get(this.memoKey(d.id)) : this.doc.defaultView.localStorage.getItem(this.memoKey(d.id)); } catch (e) { v = null; }
+          if (typeof v === 'string' && v !== this.value(d.id)) { out.push([d, v]); }
+        });
+        return out;
+      }
       value(id) { const v = this.view.ctl.values[id]; return v == null ? '' : String(v); }
       mount(screen, frames, focus) {
         if (!this.defs.length) { return null; }
@@ -1817,6 +1836,9 @@
           this.defs.forEach((d) => this.fill(I, d));
           this.I = I;
           if (focus) { this.focus(focus); }
+          const back = this.remembered();                // remembered choices: taken together, with one request
+          back.forEach(([d, v], i) => { if (i < back.length - 1) { this.view.takeControl(d.id, handed(d, v)); } });
+          if (back.length) { const [d, v] = back[back.length - 1]; this.view.change(d.id, handed(d, v)); }
           this.ctx.emit('drawn', { controls: this.defs.map((d) => d.id) });
         }).catch((e) => { if (!this.gone) { this.ctx.emit('error', { code: 'view.controls', error: e }); } });
         return this.bars.side || null;
@@ -2029,6 +2051,7 @@
           hrefOf: (link) => (o.links && typeof o.links.href === 'function' ? safeHref(o.links.href(link)) : null),
           open: (link, how) => self.openLink(link, how),
           emit: (name, detail) => self.emit(name, detail),
+          selecting: (id) => !!(self.vm && Array.isArray(self.vm.selects) && self.vm.selects.some((x) => x && String(x.panel) === String(id) && x.by)),
           key: (k) => self.pressKey(k),
           back: () => self.back(),
           flash: (node) => self.flash(node),
@@ -2182,6 +2205,7 @@
         this.screen.back.hidden = !this.history.length;
         this.layout.fit(this.width || 1280);
         this.layout.mounted();
+        this.markPicked();
       }
       card(o) {
         this.clear();
@@ -2232,7 +2256,23 @@
         this.listeners.get(name).add(fn);
         return () => { const s = this.listeners.get(name); if (s) { s.delete(fn); } };
       }
+      selectFrom(d) {
+        const s = this.vm && Array.isArray(this.vm.selects) ? this.vm.selects.find((x) => x && String(x.panel) === String(d.panel) && typeof x.by === 'string' && x.by) : null;
+        if (!s || typeof d.pick !== 'string') { return; }
+        const c = Array.isArray(this.vm.controls) ? this.vm.controls.find((x) => x && x.id === s.by) : null, now = this.ctl.values[s.by] === d.pick ? '' : d.pick;
+        this.change(s.by, c && c.kind === 'multi-select' ? (now ? [now] : []) : now);
+        if (this.controls) { this.controls.say(now ? say(this.ctx.messages, 'ctlSet', { label: (c && c.label) || s.by, value: now }) : say(this.ctx.messages, 'ctlCleared', { label: (c && c.label) || s.by })); }
+      }
+      markPicked() {
+        if (!this.vm || !Array.isArray(this.vm.selects) || !this.root) { return; }
+        this.vm.selects.forEach((s) => {
+          if (!s || !s.by) { return; }
+          const f = this.frames.get(String(s.panel)), v = this.ctl.values[s.by];
+          if (f) { f.element.querySelectorAll('[data-pick]').forEach((r) => { const on = v !== undefined && v !== '' && r.getAttribute('data-pick') === v; r.setAttribute('aria-selected', on ? 'true' : 'false'); r.classList.toggle('dv-picked', on); }); }
+        });
+      }
       emit(name, detail) {
+        if (name === 'pick' && detail) { this.selectFrom(detail); }
         let prevented = false;
         const ev = { type: name, detail: detail, preventDefault: () => { if (CANCELABLE[name]) { prevented = true; } } };
         (this.listeners.get(name) || []).forEach((fn) => { try { fn(ev); } catch (e) { if (typeof console !== 'undefined') { console.error(e); } } });
@@ -2397,6 +2437,7 @@
         this.emit('bound', { panels: drawn, full: false });
       }
       toldControls(drawn) {
+        this.markPicked();
         if (!this.controls) { return; }
         const m = this.ctx.messages, titles = (drawn || []).map((id) => { const f = this.frames.get(id); return f && f.panel && f.panel.title ? String(f.panel.title) : id; });
         this.controls.say(titles.length ? say(m, 'ctlUpdated', { panels: titles.join(', ') }) : say(m, 'ctlUpdatedAll'));
@@ -2405,7 +2446,8 @@
         const t = requestText(value);
         this.ctl.values[id] = t === null ? '' : t;
         this.ctl.touched.add(id);
-        if (this.controls) { this.controls.show(id); }
+        if (this.controls) { this.controls.show(id); this.controls.keep(id, this.ctl.values[id]); }
+        this.markPicked();
         this.emit('control-change', { control: id, value: value, values: this.controlValues, query: this.controlQuery() });
       }
       get controlValues() { const out = {}; this.ctl.touched.forEach((id) => { out[id] = this.ctl.values[id]; }); return out; }
@@ -3317,6 +3359,13 @@
           const li = h(doc, 'li', {}, [h(doc, 'span', { cls: 'dv-bar-label', text: str(b.label) }), h(doc, 'span', { cls: 'dv-bar-track' }, [bar]),
             h(doc, 'span', { cls: 'dv-bar-text', text: str(b.text || b.value) })]);
           clickable(ctx, li, panel, 'bar-click', marks.indexOf(b), b);               // a bar that carries effects (contract 1.2)
+          if (ctx.selecting && ctx.selecting(panel.id) && str(b.label)) {            // a bar in a panel the ViewModel's selects name sets that control to its label
+            const label = str(b.label), go = () => ctx.emit('pick', { panel: panel.id, pick: label, ev: null });
+            li.classList.add('dv-pick'); li.setAttribute('data-pick', label);
+            if (!li.hasAttribute('tabindex')) { li.setAttribute('tabindex', '0'); }
+            li.addEventListener('click', go);
+            li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+          }
           ul.appendChild(li);
         });
         body.appendChild(ul);

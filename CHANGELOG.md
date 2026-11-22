@@ -17,6 +17,11 @@
 
 Each release lists what changed, by library. One version for every library: the `elements` key of `elements/drishti_elements.json`.
 
+## 3.3.3 (unreleased)
+
+* drishti-views: `ViewModel.selects` restored: a click or Enter on a table row (its `pick`) or a bar (its label) in a panel a `selects` entry names sets that entry's control (the same value again clears it), through the control's `change` (effects, bind, `control-change`); the rows and bars whose pick is the control's value are marked (`aria-selected`, `.dv-picked`); the status region says what was set.
+* drishti-views: `ControlView.remember` restored: a control that says `remember` keeps the reader's value through `options.remember` `{get(key), set(key, value)}` (key `drishti.ctl.<scope>.<id>`, scope `options.scope` or the view's `ref.kind`), else the browser's local storage (a throwing storage is tolerated); the remembered values the reader has not overridden are applied together with one request.
+
 ## 3.3.2 (2026-11-22)
 
 - **A view's controls are drawn by the painter** (drishti-views): a ViewModel's `controls` (dropdown, cascading, top-n, multi-select, toggle,
