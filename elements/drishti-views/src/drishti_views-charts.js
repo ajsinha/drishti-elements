@@ -178,6 +178,13 @@ const bars = {
       const li = h(doc, 'li', {}, [h(doc, 'span', { cls: 'dv-bar-label', text: str(b.label) }), h(doc, 'span', { cls: 'dv-bar-track' }, [bar]),
         h(doc, 'span', { cls: 'dv-bar-text', text: str(b.text || b.value) })]);
       clickable(ctx, li, panel, 'bar-click', marks.indexOf(b), b);               // a bar that carries effects (contract 1.2)
+      if (ctx.selecting && ctx.selecting(panel.id) && str(b.label)) {            // a bar in a panel the ViewModel's selects name sets that control to its label
+        const label = str(b.label), go = () => ctx.emit('pick', { panel: panel.id, pick: label, ev: null });
+        li.classList.add('dv-pick'); li.setAttribute('data-pick', label);
+        if (!li.hasAttribute('tabindex')) { li.setAttribute('tabindex', '0'); }
+        li.addEventListener('click', go);
+        li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+      }
       ul.appendChild(li);
     });
     body.appendChild(ul);

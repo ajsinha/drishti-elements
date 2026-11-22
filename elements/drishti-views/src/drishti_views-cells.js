@@ -101,6 +101,8 @@ export const MESSAGES = Object.freeze({
   ctlFirst: 'first {count} shown',
   ctlUpdated: '{panels} updated.',
   ctlUpdatedAll: 'Updated.',
+  ctlSet: '{label} set to {value}.',
+  ctlCleared: '{label} cleared.',
   ctlFailed: 'The panels could not be updated: {detail}'
 });
 

@@ -256,6 +256,12 @@ drawn in the first paint with their height kept, so nothing moves when the compo
 (`options.panels`) is not drawn. `options.controls` gives the values the reader had set (query text `legs=2&when=..` or an object);
 `false` draws none (the host draws its own and calls `handle.change`).
 
+`ViewModel.selects` makes a panel pick a control: a table row that carries a `pick`, or a bar, in a panel a `selects` entry names sets that
+entry's `by` control when clicked (Enter or Space from the keyboard); the same value again clears it. The click goes through the control's
+change as a pick of the control itself would, and the rows or bars holding the control's value are marked `aria-selected`. A control with
+`remember` keeps its value through `options.remember` (`get(key)`, `set(key, value)`; without it, the browser's local storage), and a
+remembered value the reader has not overridden is applied once, together with the others, in one request.
+
 A pick raises `control-change` `{control, value, values, query}` (`values` and `query`: every value the reader set), then:
 
 1. **The control's effects** (`on.change`, contract 1.2) run with the value as the event.

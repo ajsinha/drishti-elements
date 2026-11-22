@@ -23629,6 +23629,17 @@ The controls of one painted ViewModel, drawn into the view's header, side bar an
 | `list` | `Object[]` | the ViewModel's controls |
 | `panels` | `{drawn: string[], all: boolean}` | the panels drawn (all: no panels option) |
 
+##### `Controls.keep(id, text)`
+
+Keeps a control's value when the control says remember (the view calls it for every pick and change()).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `id` | `string` |  |
+| `text` | `string` |  |
+
+Returns `void`.
+
 ##### `Controls.value(id)`
 
 The reader's value of a control now.

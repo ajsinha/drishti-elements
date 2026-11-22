@@ -89,6 +89,34 @@ export class Controls {
     this.status = h(this.doc, 'span', { cls: 'dv-ctl-status', attrs: { role: 'status', 'aria-live': 'polite', 'data-ctl-status': '' } });
   }
 
+  /** @private where a remembered value lives: the host's options.remember {get, set}, else the browser's local storage (a private window: not kept) */
+  memoKey(id) { const o = this.view.options, ref = this.view.vm && this.view.vm.ref; return 'drishti.ctl.' + String(o.scope || (ref && ref.kind) || '') + '.' + id; }
+
+  /**
+   * Keeps a control's value when the control says remember (the view calls it for every pick and change()).
+   * @param {string} id
+   * @param {string} text
+   * @returns {void}
+   */
+  keep(id, text) {
+    const d = this.defs.find((x) => x.id === id);
+    if (!d || !d.remember) { return; }
+    const r = this.view.options.remember, k = this.memoKey(id);
+    try { if (r && typeof r.set === 'function') { r.set(k, text); } else { this.doc.defaultView.localStorage.setItem(k, text); } } catch (e) { /* not kept: the view works without */ }
+  }
+
+  /** @private the remembered values the reader has not overridden (a given value or an earlier pick wins) */
+  remembered() {
+    const r = this.view.options.remember, out = [];
+    this.defs.forEach((d) => {
+      if (!d.remember || this.view.ctl.touched.has(d.id)) { return; }
+      let v = null;
+      try { v = r && typeof r.get === 'function' ? r.get(this.memoKey(d.id)) : this.doc.defaultView.localStorage.getItem(this.memoKey(d.id)); } catch (e) { v = null; }
+      if (typeof v === 'string' && v !== this.value(d.id)) { out.push([d, v]); }
+    });
+    return out;
+  }
+
   /**
    * The reader's value of a control now.
    * @param {string} id
@@ -123,6 +151,9 @@ export class Controls {
       this.defs.forEach((d) => this.fill(I, d));
       this.I = I;
       if (focus) { this.focus(focus); }
+      const back = this.remembered();                // remembered choices: taken together, with one request
+      back.forEach(([d, v], i) => { if (i < back.length - 1) { this.view.takeControl(d.id, handed(d, v)); } });
+      if (back.length) { const [d, v] = back[back.length - 1]; this.view.change(d.id, handed(d, v)); }
       this.ctx.emit('drawn', { controls: this.defs.map((d) => d.id) });
     }).catch((e) => { if (!this.gone) { this.ctx.emit('error', { code: 'view.controls', error: e }); } });
     return this.bars.side || null;

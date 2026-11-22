@@ -192,3 +192,66 @@ def test_without_a_bind_a_view_given_by_its_address_is_read_again_with_the_value
         assert await pg.evaluate("window.__harness.handle.controlValues") == {"asset": "FX", "q": "coupon"}
     with_page(browsers, body)
 
+
+
+SELECTS = """
+window.__sel = async (extra) => {
+  const H = window.__harness, w = window.__w = { binds: [], changes: [], store: {} };
+  const make = (ctl) => ({ contract: '1.2', ref: { kind: 'netting-set', id: 'NS-1' }, title: { pill: 'Netting set', id: 'NS-1' }, strip: [], keys: [],
+    provenance: { generation: 1 }, timings: {},
+    panels: [{ id: 'trades', kind: 'table', title: 'Trades', data: { columns: ['Trade', 'MtM'], numeric: [false, true],
+        rows: [['T1', '10'], ['T2', '20']].map((r) => ({ pick: r[0], cells: r.map((t) => ({ text: t })) })) } },
+      { id: 'mix', kind: 'hbar', title: 'Mix', data: { bars: [{ label: 'IR', value: 3, text: '3' }, { label: 'FX', value: 1, text: '1' }] } }],
+    selects: [{ panel: 'trades', by: 'trade', filter: null }, { panel: 'mix', by: 'asset', filter: null }],
+    controls: [{ id: 'trade', kind: 'dropdown', label: 'Trade', options: [{ value: 'T1', label: 'T1' }, { value: 'T2', label: 'T2' }], value: ctl.trade || '', reads: ['mix'] },
+      { id: 'asset', kind: 'dropdown', label: 'Asset', options: [{ value: 'IR', label: 'IR' }, { value: 'FX', label: 'FX' }], value: ctl.asset || '', reads: ['trades'], remember: true },
+      { id: 'side', kind: 'dropdown', label: 'Side', options: [{ value: 'pay', label: 'pay' }], value: ctl.side || '', reads: ['trades'], remember: true }] });
+  const host = { bind: (req) => { w.binds.push(req.controls); return make(req.controls || {}); } };
+  const opts = Object.assign({ host: host, complete: true }, extra || {});
+  await H.paint(make({}), opts);
+  H.handle.on('control-change', (e) => w.changes.push([e.detail.control, e.detail.value]));
+  await H.handle.controls.ready;
+  return true;
+};
+"""
+
+
+def test_a_row_or_a_bar_click_sets_the_control_the_selects_name_and_the_same_click_clears_it(browsers):
+    async def body(pg):
+        await pg.evaluate("() => { " + SELECTS + " }")
+        await pg.evaluate("window.__sel()")
+        await pg.locator(f"#hx-view [data-panel=trades] tbody tr[data-pick=T2]").click()
+        await pg.wait_for_function("() => window.__w.binds.length > 0", timeout=10000)
+        assert await pg.evaluate("window.__w.binds[0]") == {"trade": "T2"}
+        assert await pg.evaluate(f"{R}.querySelector('[data-panel=trades] tr[data-pick=T2]').getAttribute('aria-selected')") == "true"
+        await pg.evaluate(f"{R}.querySelector('[data-panel=trades] tr[data-pick=T2]').click()")           # the same row again clears it
+        await pg.wait_for_function("() => window.__w.binds.length > 1", timeout=10000)
+        assert await pg.evaluate("window.__w.binds[1]") == {"trade": ""}
+        await pg.evaluate(f"{R}.querySelector('[data-panel=mix] li[data-pick=FX]').click()")           # a bar sets its control to its label
+        await pg.wait_for_function("() => window.__w.binds.length > 2", timeout=10000)
+        assert (await pg.evaluate("window.__w.binds[2]"))["asset"] == "FX"
+        assert await pg.evaluate("window.__w.changes.map((c) => c[0] + '=' + c[1])") == ["trade=T2", "trade=", "asset=FX"]
+    with_page(browsers, body)
+
+
+def test_a_remembered_control_is_kept_through_the_hosts_hook_and_applied_with_one_request(browsers):
+    async def body(pg):
+        await pg.evaluate("() => { " + SELECTS + " }")
+        await pg.evaluate("""window.__sel({ remember: { get: (k) => (window.__mem || {})[k] === undefined ? null : window.__mem[k],
+            set: (k, v) => { (window.__mem = window.__mem || {})[k] = v; } } })""")
+        await pg.evaluate(f"{R}.querySelector('[data-panel=mix] li[data-pick=IR]').click()")
+        await pg.wait_for_function("() => window.__w.binds.length > 0", timeout=10000)
+        mem = await pg.evaluate("window.__mem")
+        assert list(mem.values()) == ["IR"] and list(mem)[0].endswith(".asset")                      # kept by the hook; side was never picked
+        await pg.evaluate("window.__mem['drishti.ctl.netting-set.side'] = 'pay'")
+        await pg.evaluate("window.__sel({ remember: { get: (k) => (window.__mem || {})[k] === undefined ? null : window.__mem[k], set: () => {} } })")
+        await pg.wait_for_function("() => window.__w.binds.length === 1", timeout=10000)
+        assert await pg.evaluate("window.__w.binds[0]") == {"asset": "IR", "side": "pay"}              # both remembered values, one request
+        # without a hook the browser's storage is used; a storage that throws is tolerated (the view still draws)
+        await pg.evaluate("localStorage.setItem('drishti.ctl.netting-set.asset', 'FX')")
+        await pg.evaluate("window.__sel()")
+        await pg.wait_for_function("() => window.__w.binds.length === 1", timeout=10000)
+        assert await pg.evaluate("window.__w.binds[0]") == {"asset": "FX"}
+        await pg.evaluate("Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } })")
+        assert await pg.evaluate("window.__sel()") is True
+    with_page(browsers, body)

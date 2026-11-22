@@ -138,6 +138,7 @@ export class ViewHandle {
       hrefOf: (link) => (o.links && typeof o.links.href === 'function' ? safeHref(o.links.href(link)) : null),
       open: (link, how) => self.openLink(link, how),
       emit: (name, detail) => self.emit(name, detail),
+      selecting: (id) => !!(self.vm && Array.isArray(self.vm.selects) && self.vm.selects.some((x) => x && String(x.panel) === String(id) && x.by)),
       key: (k) => self.pressKey(k),
       back: () => self.back(),
       flash: (node) => self.flash(node),
@@ -311,6 +312,7 @@ export class ViewHandle {
     this.screen.back.hidden = !this.history.length;
     this.layout.fit(this.width || 1280);
     this.layout.mounted();
+    this.markPicked();
   }
 
   /** @private */
@@ -401,8 +403,28 @@ export class ViewHandle {
     return () => { const s = this.listeners.get(name); if (s) { s.delete(fn); } };
   }
 
+  /** @private a row or bar that carries a pick, in a panel the ViewModel's selects name, sets that control (the same value again clears it) */
+  selectFrom(d) {
+    const s = this.vm && Array.isArray(this.vm.selects) ? this.vm.selects.find((x) => x && String(x.panel) === String(d.panel) && typeof x.by === 'string' && x.by) : null;
+    if (!s || typeof d.pick !== 'string') { return; }
+    const c = Array.isArray(this.vm.controls) ? this.vm.controls.find((x) => x && x.id === s.by) : null, now = this.ctl.values[s.by] === d.pick ? '' : d.pick;
+    this.change(s.by, c && c.kind === 'multi-select' ? (now ? [now] : []) : now);
+    if (this.controls) { this.controls.say(now ? say(this.ctx.messages, 'ctlSet', { label: (c && c.label) || s.by, value: now }) : say(this.ctx.messages, 'ctlCleared', { label: (c && c.label) || s.by })); }
+  }
+
+  /** @private the rows and bars whose pick is the value of the control their panel sets are marked selected (aria-selected, .dv-picked) */
+  markPicked() {
+    if (!this.vm || !Array.isArray(this.vm.selects) || !this.root) { return; }
+    this.vm.selects.forEach((s) => {
+      if (!s || !s.by) { return; }
+      const f = this.frames.get(String(s.panel)), v = this.ctl.values[s.by];
+      if (f) { f.element.querySelectorAll('[data-pick]').forEach((r) => { const on = v !== undefined && v !== '' && r.getAttribute('data-pick') === v; r.setAttribute('aria-selected', on ? 'true' : 'false'); r.classList.toggle('dv-picked', on); }); }
+    });
+  }
+
   /** @private */
   emit(name, detail) {
+    if (name === 'pick' && detail) { this.selectFrom(detail); }
     let prevented = false;
     const ev = { type: name, detail: detail, preventDefault: () => { if (CANCELABLE[name]) { prevented = true; } } };
     (this.listeners.get(name) || []).forEach((fn) => { try { fn(ev); } catch (e) { if (typeof console !== 'undefined') { console.error(e); } } });
@@ -629,6 +651,7 @@ export class ViewHandle {
 
   /** @private the status region says which panels a control's change drew again */
   toldControls(drawn) {
+    this.markPicked();
     if (!this.controls) { return; }
     const m = this.ctx.messages, titles = (drawn || []).map((id) => { const f = this.frames.get(id); return f && f.panel && f.panel.title ? String(f.panel.title) : id; });
     this.controls.say(titles.length ? say(m, 'ctlUpdated', { panels: titles.join(', ') }) : say(m, 'ctlUpdatedAll'));
@@ -639,7 +662,8 @@ export class ViewHandle {
     const t = requestText(value);
     this.ctl.values[id] = t === null ? '' : t;
     this.ctl.touched.add(id);
-    if (this.controls) { this.controls.show(id); }
+    if (this.controls) { this.controls.show(id); this.controls.keep(id, this.ctl.values[id]); }
+    this.markPicked();
     this.emit('control-change', { control: id, value: value, values: this.controlValues, query: this.controlQuery() });
   }
 
