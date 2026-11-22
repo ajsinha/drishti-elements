@@ -24,14 +24,14 @@ Each release lists what changed, by library. One version for every library: the 
   ButtonGroup, DatePicker, DateRangePicker, WhatIf; a search or a number is the library's field) in the bar under the title line, a side bar
   or a panel's header (`placement`), each a `[data-ctl=<id>]` holder with its label, drawn in the first paint with its height kept (nothing
   moves when drishti-inputs fills it). A pick runs the control's change effects, then the host's `bind` with every value the reader set
-  (`ctl.<id>` in `params`, `controls`), and the panels the control `reads` are drawn again in their frames (the header's controls stay, with
+  (`ctl.<id>` in `params`, `controls`; `panels` names the panels it will draw again, null for the whole view), and the panels the control `reads` are drawn again in their frames (the header's controls stay, with
   the focus); typing counts when the reader pauses; a bind's `controls` bring new options and corrected values; a status region tells a screen
   reader which panels were updated, and the panels being read again are `aria-busy`. Without `bind`, a view given by its address is read
   again with the values. New: the paint option `controls` (the values the reader had set, as query text or an object; `false`: none drawn,
   the host draws its own), the event `control-change` `{control, value, values, query}`, the handle's `controlValues` and `controlQuery()`,
   `<elements-view controls="...">` and its `controls` property, and the exports `CONTROL_KINDS`, `Controls`, `controlValues`,
   `controlQuery`, `controlText`. Until now the painter passed `ctl.*` through and drew no control: a screen embedded through the painter
-  (another page, a pure-JS application) showed none. The bundle's budget is 276,000 bytes (262,938 with the controls, plus about 5%).
+  (another page, a pure-JS application) showed none. The bundle's budget is 276,000 bytes (263,045 with the controls, plus about 5%).
 
 ## 3.3.1 (2026-11-21)
 
