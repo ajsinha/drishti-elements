@@ -18442,6 +18442,391 @@ The ECharts option of a world or region map over the projected shapes (an identi
 
 Returns `Object`.
 
+### drishti_chart-report-kinds.js
+
+#### `REPORT_CHART_KINDS`
+
+The report visuals drawn as charts by reportOption (the map is reportMap's).
+
+#### `REPORT_NO_DATA`
+
+The note of a visual with no rows.
+
+#### `reportTable(res)`
+
+An answer read into helpers: the index of a column by name, the rows, whether a column is masked.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `res` | `{columns: Array&lt;{name: string}&gt;, rows: Array&lt;Array&lt;*&gt;&gt;, meta: Object}` |  |
+
+Returns `{names: string[], rows: Array&lt;Array&lt;*&gt;&gt;, masked: Set&lt;string&gt;, at: function(string): number, isMasked: function(string): boolean}`.
+
+#### `reportSeries(spec, res, other)`
+
+The categories, series and values of a category chart: one series per measure, or one per value of the legend field (the first measure).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `Object` |  |
+| `res` | `Object` |  |
+| `[other]` | `string[]` | more measures (a combo's second axis) |
+
+Returns `{tb: Object, axis: string, cats: Array, labels: string[], series: Array&lt;{name: string, measure: string, values: Array}&gt;, seen: Map&lt;string, number&gt;}`.
+
+#### `reportMarks(field, s, env)`
+
+The marks of a chart in the order of its first axis (a click, a hover and the keyboard reach them): {value, label, text}.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `field` | `string` |  |
+| `s` | `Object` | reportSeries' answer |
+| `env` | `ReportEnv` |  |
+
+Returns `{field: string, items: Array&lt;{value: *, label: string, text: string}&gt;, byName: function(string): Object}`.
+
+#### `reportOption(spec, res, env)`
+
+What a report visual draws from its answer: the option, its marks (and words for the chart, a multiples summary), or the note of a visual with nothing to draw.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `Object` | the visual: {id, type, title, alt, wells, format} |
+| `res` | `Object` | the server's answer |
+| `env` | `ReportEnv` |  |
+
+Returns `{option: Object, marks: Object, alt: string, multiples: Object}\|{empty: string}\|null`: null for a type that is not a chart.
+
+#### `reportBase(spec, env, o)`
+
+The option every report chart starts from: palette, text, tooltip, legend and grid in the theme's tokens.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `Object` | the visual |
+| `env` | `ReportEnv` |  |
+| `o` | `{legend: boolean, horizontal: boolean, extra: Object}` |  |
+
+Returns `Object`.
+
+#### `reportAxis(t)`
+
+An axis in the theme's tokens.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `t` | `Object&lt;string, string&gt;` |  |
+
+Returns `Object`.
+
+#### `reportBrush(spec, option, marks, env)`
+
+What a drag selects on a chart that can be brushed (line, area, histogram, scatter, bubble): a function of the axis values at the band's ends to the selection, or null when the chart cannot be brushed.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spec` | `Object` |  |
+| `option` | `Object` | the drawn option |
+| `marks` | `Object` |  |
+| `env` | `ReportEnv` |  |
+
+Returns `(function(*, *): (Object\|null))\|null`.
+
+#### `sparklineOption(categories, values, colour)`
+
+The line under a card's figure: the measure over the axis, no axes, an area under it.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `categories` | `Array` |  |
+| `values` | `Array&lt;number&gt;` |  |
+| `colour` | `string` |  |
+
+Returns `Object`.
+
+#### `valueAxisFormat(axis, f)`
+
+The value axis as a format says: minimum, maximum, logarithmic, gridlines, shown or not.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `axis` | `Object` |  |
+| `f` | `Object` | the visual's format |
+
+Returns `Object`.
+
+#### `categoryAxisFormat(axis, f)`
+
+The category axis as a format says: label rotation, shown or not.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `axis` | `Object` |  |
+| `f` | `Object` |  |
+
+Returns `Object`.
+
+#### `labelEvery(f, count)`
+
+How many points a label goes on: every point at 100%, else every n-th so that the share labelled is about the density.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `f` | `Object` |  |
+| `count` | `number` |  |
+
+Returns `number`.
+
+#### `labelPosition(f, horizontal)`
+
+Where a point's label goes.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `f` | `Object` |  |
+| `horizontal` | `boolean` |  |
+
+Returns `string`.
+
+#### `percentOf(series, count)`
+
+100% stacking: each category's series as shares of the category's total.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `series` | `Array&lt;{values: Array&lt;number&gt;}&gt;` |  |
+| `count` | `number` |  |
+
+Returns `Array&lt;Object&gt;`.
+
+#### `seriesColour(f, name, measure)`
+
+A series' colour from the format (seriesColours by series name or measure), else null.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `f` | `Object` |  |
+| `name` | `string` |  |
+| `measure` | `string` |  |
+
+Returns `string\|null`.
+
+### drishti_chart-report.js
+
+#### `reportNote(host, text, env)`
+
+A visual's note in its body (nothing to draw, a mask, the engine missing).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `text` | `string` |  |
+| `[env]` | `Object` |  |
+
+Returns `{dispose: function(): void, resize: function(): void}`.
+
+#### class `OptionChart`
+
+One engine instance on an element (the engine is the vendored ECharts): what a host that draws its own options keeps.
+
+##### `new OptionChart(el, o)`
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` |  |
+| `[o]` | `{renderer: ('canvas'\|'svg'), width: number, height: number, echarts: Object}` |  |
+
+##### `OptionChart.draw(option, merge)`
+
+Draws an option (replacing what was drawn unless merge is said).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `option` | `Object` |  |
+| `[merge]` | `boolean` |  |
+
+Returns `OptionChart`.
+
+##### `OptionChart.resize()`
+
+Fits the drawing to its element again.
+
+Returns `void`.
+
+##### `OptionChart.dispose()`
+
+Ends the instance.
+
+Returns `void`.
+
+##### `OptionChart.on(name, fn)`
+
+Listens to the engine's events (click, mouseover, mouseout, globalout).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `name` | `string` |  |
+| `fn` | `function(Object): void` |  |
+
+Returns `void`.
+
+##### `OptionChart.tip(seriesIndex, dataIndex)`
+
+Shows the tip of a mark (the keyboard's cursor).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `seriesIndex` | `number` |  |
+| `dataIndex` | `number` |  |
+
+Returns `void`.
+
+##### `OptionChart.highlight(dataIndex, on)`
+
+Highlights a mark, or takes the highlight off.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `dataIndex` | `number` |  |
+| `on` | `boolean` |  |
+
+Returns `void`.
+
+##### `OptionChart.svg(background)`
+
+The drawing as SVG text on a background (an SVG renderer's instance).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `background` | `string` |  |
+
+Returns `string`.
+
+##### `static OptionChart.png(doc, option, o)`
+
+An option drawn off screen as a PNG data URL (twice the pixels).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `doc` | `Document` |  |
+| `option` | `Object` |  |
+| `o` | `{width: number, height: number, background: string, echarts: Object}` |  |
+
+Returns `string`.
+
+#### `drawOption(host, option, o)`
+
+Draws an option in a new box in the host: the box's class, words and attributes; data-ready once drawn.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `option` | `Object` |  |
+| `[o]` | `{cls: string, label: string, attrs: Object&lt;string, string&gt;, echarts: Object}` |  |
+
+Returns `{dispose: function(): void, resize: function(): void}`.
+
+#### `mountReport(host, built, spec, env)`
+
+Mounts a built report chart in the host and wires click, hover, the keyboard and the brush. A live redraw (env.update) of the same visual replaces the option in place.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `built` | `{option: Object, marks: Object, alt: string}` |  |
+| `spec` | `Object` | the visual |
+| `env` | `Object` | the host's adapter (ReportEnv, with interactive, onMark, onHover, onHoverEnd, onBrush, classes) |
+
+Returns `{dispose: function(): void, resize: function(): void}`.
+
+#### `drawReport(host, spec, res, env)`
+
+Draws a report visual's chart (any of REPORT_CHART_KINDS but the map), or its note; null when the type is not a chart.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `spec` | `Object` |  |
+| `res` | `Object` |  |
+| `env` | `Object` |  |
+
+Returns `{dispose: function(): void, resize: function(): void}\|null`.
+
+#### `sparkline(el, categories, values, colour, o)`
+
+The line under a card's figure.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `el` | `HTMLElement` |  |
+| `categories` | `Array` |  |
+| `values` | `Array&lt;number&gt;` |  |
+| `colour` | `string` |  |
+| `[o]` | `Object` | {echarts} |
+
+Returns `{dispose: function(): void, resize: function(): void}`.
+
+#### `reportMap(host, spec, res, env)`
+
+The map visual: a measure by location (countries, or ISO 3166-2 regions; a click on a country opens its regions) or by latitude and longitude (bubbles). env.geo is the map helper of the geo part (geoHelper()).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `host` | `HTMLElement` |  |
+| `spec` | `Object` |  |
+| `res` | `Object` |  |
+| `env` | `Object` |  |
+
+Returns `{dispose: function(): void, resize: function(): void}`.
+
+#### `pythonOption(option, t)`
+
+An option a program gave (a Python visual's), made safe and readable: the keys that could carry markup or code dropped (formatter, extraCssText, appendToBody, valueFormatter), what it left unsaid given the theme's colours (text, axes, grid lines), no animation.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `option` | `Object` |  |
+| `t` | `Object&lt;string, string&gt;` | the theme tokens |
+
+Returns `Object`.
+
+#### `measureBarsOption(res, title, t, colour)`
+
+A measure's rows as bars: one bar per group (the groups joined by " / "), in the palette's first colour.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `res` | `{by: string[], rows: Array&lt;Array&lt;*&gt;&gt;, measure: string}` |  |
+| `title` | `string` |  |
+| `t` | `Object&lt;string, string&gt;` |  |
+| `colour` | `string` |  |
+
+Returns `Object`.
+
+#### `tableChartPalette(t)`
+
+The colours of a table chart: the tokens' palette, else the tones.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `t` | `Object&lt;string, *&gt;` |  |
+
+Returns `string[]`.
+
+#### `tableChartOption(model, settings, t, o)`
+
+The option of a drawn table-chart model (the host's engine aggregates; this draws): every colour from the theme tokens t (never a literal), no animation; colour is never the only difference past the palette's length (dashes on lines, decals on bars).
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `model` | `Object` | {x, xLabel, xField, axis ('category'\|'time'\|'value'), horizontal, series: [{name, label, data, type, axis, fmt, others, sized}], others} |
+| `settings` | `Object` | {type, bars, percent, donut, labels, split, x: {gaps}} |
+| `t` | `Object&lt;string, *&gt;` | the tokens (link, accent, ok, neg, warn, bad, muted, ink, faint, border, surface, mono; palette) |
+| `o` | `{fmt: function(number, string): string, description: string}` | the value's words by its format, the chart's summary |
+
+Returns `Object`.
+
 ### Types of drishti-chart
 
 #### `BulletOptions` : `Object`
@@ -18516,6 +18901,25 @@ A chart's frames.
 | `[tokensFrom]` | `function(): Element` | the element the colour tokens are read from (default the root's .view, its host, or the page) |
 | `[attr='data-r-chart']` | `string` | the attribute that marks a container still to draw (taken off one that cannot be drawn) |
 | `[relayout=false]` | `boolean` | a change of size draws again (the waterfall's labels are fitted to the width), not only resizes |
+
+#### `ReportEnv` : `Object`
+
+The host's adapter: how the report's page reads, formats and colours what a chart draws.
+
+| Name | Type | Meaning |
+|---|---|---|
+| `t` | `Object&lt;string, string&gt;` | the theme tokens (ink, muted, border, surface, surface-2, link, pos, neg, mono, accent-soft) |
+| `palette` | `string[]` | the series colours |
+| `fmt` | `function(*, string, boolean): string` | a value in a named format (null: the mask when masked, else a dash) |
+| `compact` | `function(number): string` | a value for an axis or a tight place |
+| `numFmt` | `function(string): string` | the format name of a measure in this visual |
+| `[styler]` | `function(Object): ({point: function(string, *, Array): (string\|null)}\|null)` | the conditional colours over a table (reportTable) |
+| `[label]` | `function(string): string` | a field's words |
+| `[selected]` | `{visual: string, values: Array}` | the report's selection |
+| `[interactive]` | `boolean` |  |
+| `[update]` | `boolean` | a live redraw (the chart is replaced in place) |
+| `[rolling]` | `Object&lt;string, Object&gt;` | where a live visual keeps its points |
+| `[rollingKey]` | `string` |  |
 
 #### `ScaleOptions` : `Object`
 
