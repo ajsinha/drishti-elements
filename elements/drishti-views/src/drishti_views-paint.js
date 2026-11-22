@@ -78,7 +78,8 @@ let counter = 0;
  *   state and effects (contract 1.2). notify(effect, where) shows a notify effect {do, text, tone}; run(effect, where) runs a host effect {do, action, with}
  *   (Elements never runs one); bind({state, params}) is the next bind after a click wrote state: state is every value as text (null: cleared, its default
  *   stands), params the same as state.<id> request parameters; it answers the new ViewModel (or a promise of one), of which only the panels the changed
- *   states' reads name are drawn again. Without bind the values are kept and nothing is drawn again. where is {panel, trigger, mark}.
+ *   states' reads name are drawn again (req.panels names them, null for the whole view: a host may ask its server for only those). Without bind
+ *   the values are kept and nothing is drawn again (a control's change re-reads a view given by its address). where is {panel, trigger, mark}.
  * @property {import('./drishti_views-live.js').LiveOptions} [live] the view's live stream over drishti-events (subscribed after the first paint)
  * @property {(string|Object<string, *>|boolean)} [controls] the view's controls (ViewModel.controls) are drawn by the painter with drishti-inputs' components
  *   (in the bar under the title line, a side bar or a panel's header); a query text ("legs=2&ctl.when=2026-01-01..") or an object gives the values the
@@ -587,7 +588,7 @@ export class ViewHandle {
     changed.forEach((id) => { if (this.state.get(id) === null) { state[id] = null; } });
     Object.keys(state).forEach((id) => { if (state[id] !== null) { params['state.' + id] = state[id]; } });
     this.ctl.touched.forEach((id) => { const t = this.ctl.values[id]; ctl[id] = t == null ? '' : String(t); params['ctl.' + id] = ctl[id]; });   // every value the reader set, the changed one too
-    const req = { state: state, params: params, changed: changed.slice() };
+    const req = { state: state, params: params, changed: changed.slice(), panels: readers === null ? null : readers.slice() };   // panels: what is drawn again (null: the whole view)
     if (controls.length) { req.controls = ctl; }
     const busy = (on) => (readers === null ? Array.from(this.frames.keys()) : readers).map((r) => this.frames.get(String(r))).filter(Boolean).map((f) => f.element)
       .forEach((el) => { if (on) { el.setAttribute('aria-busy', 'true'); } else { el.removeAttribute('aria-busy'); } });

@@ -126,7 +126,7 @@ def test_a_pick_asks_the_bind_with_every_value_draws_only_the_panels_that_read_i
             status: {R}.querySelector('[data-ctl-status]').textContent, query: window.__harness.handle.controlQuery(), search: location.search }})""")
         assert set(got["rows"]) == {"deal", "2"} and len(got["rows"]) < total
         req = got["w"]["binds"][0]
-        assert req["params"] == {"ctl.legs": "2"} and req["controls"] == {"legs": "2"}
+        assert req["params"] == {"ctl.legs": "2"} and req["controls"] == {"legs": "2"} and req["panels"] == ["event-list"]
         assert got["w"]["bound"][0] == {"panels": ["event-list"], "full": False}
         assert got["mark"] == "kept"                                                          # the other panels did not move
         assert got["w"]["changes"][0]["control"] == "legs" and got["w"]["changes"][0]["value"] == ["2"] and got["w"]["changes"][0]["query"] == "ctl.legs=2"

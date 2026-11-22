@@ -2360,7 +2360,7 @@
         changed.forEach((id) => { if (this.state.get(id) === null) { state[id] = null; } });
         Object.keys(state).forEach((id) => { if (state[id] !== null) { params['state.' + id] = state[id]; } });
         this.ctl.touched.forEach((id) => { const t = this.ctl.values[id]; ctl[id] = t == null ? '' : String(t); params['ctl.' + id] = ctl[id]; });   // every value the reader set, the changed one too
-        const req = { state: state, params: params, changed: changed.slice() };
+        const req = { state: state, params: params, changed: changed.slice(), panels: readers === null ? null : readers.slice() };   // panels: what is drawn again (null: the whole view)
         if (controls.length) { req.controls = ctl; }
         const busy = (on) => (readers === null ? Array.from(this.frames.keys()) : readers).map((r) => this.frames.get(String(r))).filter(Boolean).map((f) => f.element)
           .forEach((el) => { if (on) { el.setAttribute('aria-busy', 'true'); } else { el.removeAttribute('aria-busy'); } });

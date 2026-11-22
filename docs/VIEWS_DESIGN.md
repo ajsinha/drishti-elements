@@ -259,7 +259,8 @@ drawn in the first paint with their height kept, so nothing moves when the compo
 A pick raises `control-change` `{control, value, values, query}` (`values` and `query`: every value the reader set), then:
 
 1. **The control's effects** (`on.change`, contract 1.2) run with the value as the event.
-2. **By the host.** The host's `bind` is asked with every value the reader set (`ctl.<id>` in `params`, and `controls`); the panels the
+2. **By the host.** The host's `bind` is asked with every value the reader set (`ctl.<id>` in `params`, and `controls`; `panels`: the
+   panels it will draw, null for the whole view, so the host may ask its server for only those); the panels the
    control `reads` are drawn again in their frames (a header's controls stay, with the focus), the whole view when it does not say. The
    answer's `controls` bring new options and corrected values. The panels being read again are `aria-busy`; a status region says which
    were updated.
