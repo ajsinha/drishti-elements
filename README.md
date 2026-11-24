@@ -106,7 +106,7 @@ No Java here: Python and Node only. The launchers are checked in and visible.
 
 | IDE | What runs what |
 |---|---|
-| **PyCharm** (open this folder) | `run-configs/`, folder **Elements**, names `Elements: <verb> <what>`: build all, build dist, check bundles / API docs / licence headers, test, test static, test one file, and the Maven launchers (`pom.xml`, exec-maven-plugin) `test Node` and `run gallery server` |
+| **PyCharm** (open this folder) | `run-configs/`, folders **PyCharm-elements-<purpose>** and **IntelliJ-elements-<purpose>**, names `Elements: <verb> <what>`: build all, build dist, check bundles / API docs / licence headers, test, test static, test one file, and the Maven launchers (`pom.xml`, exec-maven-plugin) `test Node` and `run gallery server` |
 | **IntelliJ IDEA Community** | no Python and no Node/JavaScript support: the two Maven launchers (`Elements: test Node`, `Elements: run gallery server`; Node and Python on the PATH, no bash), PyCharm or VS Code for the rest |
 | **VS Code** | **File, Open Workspace from File**, `drishti-elements.code-workspace`: tasks (checks, build, dist, Node and pytest suites, gallery server) and Run and Debug configurations; recommended extensions: Python and Pylance, ESLint, YAML |
 
