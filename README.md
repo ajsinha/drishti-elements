@@ -86,32 +86,56 @@ changed is in [CHANGELOG.md](CHANGELOG.md).
 
 The current and previous major versions of Chrome, Edge, Firefox and Safari. No build step and no framework are needed. CI tests Chromium.
 
-## Build and test
+## Where it fits the Drishti platform
+
+Elements is the screen layer of the platform: Drishti Rachana paints its ViewModels with it, and Drishti serves its libraries to the console.
+It is JavaScript and Python only, so it is **not** a Maven artefact, and the platform's `build_all.py` (IntelliJ launcher `platform-clean-install`)
+does not build it: the Maven products build in the order Drishti Tools, Drishti Rachana, Drishti Lake, Drishti, and they take the Elements
+release tree as vendored files (`js/vendor/` in Rachana, `static/vendor/` in Drishti). Elements itself needs no Java and nothing in `~/.m2`.
+
+## Requirements
+
+| Need | Version | For |
+|---|---|---|
+| Python | 3.13 | the build, the checks, the test runner (Linux and macOS `python3`, Windows `py -3.13`) |
+| Node | 20 or later | the Node tests |
+| Playwright with Chromium | pinned in `tests/requirements.txt` | the browser tests |
+
+Drishti never makes a virtual environment: install the test requirements into the Python you choose, once:
 
 ```bash
-python3 tools/elements/build.py --check && python3 tools/docs/elements_api.py --check && python3 tools/license_headers.py
-python3 tools/run_tests.py               # the standard test command: parallel run, then the budget tests alone, serially; fails on any skip
-                                         # needs: pip install -r tests/requirements.txt && python3 -m playwright install chromium (pinned: Playwright 1.64.0)
+python3 -m pip install -r tests/requirements.txt && python3 -m playwright install chromium       # Windows: py -3.13 -m pip ... and py -3.13 -m playwright ...
 ```
 
-The performance-budget tests (a rate or a time limit: pytest marker `budget`, Node tests named `budget: ...`) never run beside other work:
-`tools/run_tests.py` runs everything else in parallel (`node tools/node_tests.mjs tests/elements`, then `pytest -n 8 -m "not budget"`), then the
-budget tests one at a time. The browsers are required: a missing Playwright or Chromium fails the run with the install command, and so does any skipped test.
+## Build and test on its own
 
-`python3 tools/elements/build.py` rewrites the bundles after a change to a module (offline, Python only).
+| | Linux / macOS | Windows |
+|---|---|---|
+| rewrite the bundles after a module changed (offline) | `python3 tools/elements/build.py` | `py -3.13 tools\elements\build.py` |
+| the checks: bundles, API docs, licence headers | `python3 tools/elements/build.py --check && python3 tools/docs/elements_api.py --check && python3 tools/license_headers.py` | the same with `py -3.13` and backslashes |
+| the release tree | `python3 tools/elements/cli.py dist --out dist` | `py -3.13 tools\elements\cli.py dist --out dist` |
+| every test (the standard command) | `python3 tools/run_tests.py` | `py -3.13 tools\run_tests.py` |
+| the Node tests alone | `node tools/node_tests.mjs tests/elements` | the same |
+| one test file | `python3 -m pytest tests/<file>.py` | `py -3.13 -m pytest tests\<file>.py` |
+
+`tools/run_tests.py` runs everything in parallel (Node tests, then `pytest -n 8 -m "not budget"`), then the performance-budget tests (marker `budget`;
+a rate or a time limit) one at a time, never beside other work. A missing Playwright or Chromium fails the run with the install command, and so does any skipped test.
 
 ## Build and run in the IDE
 
-No Java here: Python and Node only. The launchers are checked in and visible.
+The launchers are checked in under `run-configs/` at the repository root (`*.run.xml`, named `Elements: <verb> <what>`), visible files with no bash.
+Open the **repository root**; there is no Java here.
 
-| IDE | What runs what |
-|---|---|
-| **PyCharm** (open this folder) | `run-configs/`, folders **PyCharm-elements-<purpose>** and **IntelliJ-elements-<purpose>**, names `Elements: <verb> <what>`: build all, build dist, check bundles / API docs / licence headers, test, test static, test one file, and the Maven launchers (`pom.xml`, exec-maven-plugin) `test Node` and `run gallery server` |
-| **IntelliJ IDEA Community** | no Python and no Node/JavaScript support: the two Maven launchers (`Elements: test Node`, `Elements: run gallery server`; Node and Python on the PATH, no bash), PyCharm or VS Code for the rest |
-| **VS Code** | **File, Open Workspace from File**, `drishti-elements.code-workspace`: tasks (checks, build, dist, Node and pytest suites, gallery server) and Run and Debug configurations; recommended extensions: Python and Pylance, ESLint, YAML |
+| IDE | Opens | Launcher groups |
+|---|---|---|
+| **PyCharm** | the repository root, a Python 3.13 interpreter you choose | **PyCharm-elements-build** (build all, build dist), **PyCharm-elements-check** (check bundles, check API docs, check licence headers), **PyCharm-elements-test** (test, test static, test one file) |
+| **IntelliJ IDEA** (Community has no Python or Node support) | the repository root, `pom.xml` (exec-maven-plugin; Node and Python on the PATH, or `-Dnode=` / `-Dpython=` on the goals) | **IntelliJ-elements-test** (test Node), **IntelliJ-elements-run** (run gallery server) |
+| **VS Code** | `drishti-elements.code-workspace` (File, Open Workspace from File) | tasks (checks, build, dist, Node and pytest suites, gallery server) and Run and Debug configurations; recommended extensions: Python and Pylance, ESLint, YAML |
 
-Prepare once: `pip install -r tests/requirements.txt` and `playwright install chromium`. Windows: use `python` for `python3`; the Maven launchers need no bash (name the programs with `-Dnode=` / `-Dpython=` when they are not on the PATH). Elements needs no Java and no `~/.m2` artefact itself. The family's install order is Rachana (tag), then the tools, then Lake (tag), then Drishti; the Rachana and Lake jars land in
-`~/.m2/repository/com/ash/{rachana,lake}/` (Windows `C:\Users\<user>\.m2\repository`) (Elements itself is not a Maven artefact). The installation order, JDK 21 and the local Maven repository are described once, in [Drishti Rachana's java/README](https://github.com/ajsinha/drishti-rachana/blob/g2/integration/java/README.md#build-and-run-in-the-ide).
+## Documentation
+
+[docs/README.md](docs/README.md) is the index: [USING](docs/USING.md), [VIEWS](docs/VIEWS.md), [EVENTS](docs/EVENTS.md), [TUTORIALS](docs/TUTORIALS.md), [DESIGN](docs/DESIGN.md), [API](docs/API.md), [CONTRACTS](docs/CONTRACTS.md),
+[THEMING](docs/THEMING.md), [MOVING_FROM_AG_GRID](docs/MOVING_FROM_AG_GRID.md). What changed when: [CHANGELOG.md](CHANGELOG.md).
 
 ## Licence
 
@@ -122,8 +146,3 @@ their own licences, listed in [vendor/VENDOR.md](vendor/VENDOR.md). Contribution
 ## Ownership and contact
 
 The copyright holder is Ashutosh Sinha. For permission or questions, contact the copyright holder through the GitHub profile `ajsinha`.
-
-## Documentation
-
-[docs/README.md](docs/README.md) is the index: [USING](docs/USING.md), [VIEWS](docs/VIEWS.md), [EVENTS](docs/EVENTS.md), [TUTORIALS](docs/TUTORIALS.md), [DESIGN](docs/DESIGN.md), [API](docs/API.md), [CONTRACTS](docs/CONTRACTS.md),
-[THEMING](docs/THEMING.md), [MOVING_FROM_AG_GRID](docs/MOVING_FROM_AG_GRID.md).
