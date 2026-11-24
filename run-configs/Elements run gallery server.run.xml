@@ -8,7 +8,7 @@
   Shared, so it is in git: copy the configuration (Ctrl+D) to change it; a pull overwrites this file.
 -->
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Elements: run gallery server" type="MavenRunConfiguration" factoryName="Maven" folderName="Elements">
+  <configuration default="false" name="Elements: run gallery server" type="MavenRunConfiguration" factoryName="Maven" folderName="IntelliJ-elements-run">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings">
