@@ -147,7 +147,7 @@ Open the **repository root**; there is no Java here.
 
 ## Documentation
 
-Nine documents, each with one job. Every other fact has one home and is linked, not repeated.
+Ten documents, each with one job. Every other fact has one home and is linked, not repeated.
 
 | Document | What it holds |
 |---|---|
@@ -160,8 +160,10 @@ Nine documents, each with one job. Every other fact has one home and is linked, 
 | [docs/TUTORIALS.md](docs/TUTORIALS.md) | four hands-on tutorials with commands: the gallery, a grid and a whole screen, events, a two-file pack |
 | [docs/DESIGN.md](docs/DESIGN.md) | the ten libraries and the rules each keeps; how drishti-events keeps its promises; how drishti-views is built |
 | [docs/API.md](docs/API.md) | every library's functions, classes, options and events, generated from the typed JSDoc (never edited by hand) |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | designed but not built: what drishti-views may add next |
 
-The gallery (`gallery/drishti_gallery.html`) shows every component live.
+The gallery (`gallery/drishti_gallery.html`) shows every component live. The release tree carries this README and the CHANGELOG only;
+the documents under `docs/` are in the source repository at the release's tag.
 
 ## Licence
 
