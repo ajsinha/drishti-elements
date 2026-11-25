@@ -21,8 +21,8 @@ Designed but **not built**. Nothing here is in the release; what is built is in 
 ## drishti-views: producing a ViewModel from a server
 
 - **Helpers for Python, Java and Node** that build a ViewModel in a few calls, each with a 30-line example dashboard.
-- **A linter** that explains a ViewModel's problems with fixes, a **playground page** to edit one live, and a **"Views: speed" gallery
-  page** that shows the budgets being met.
+- **A linter** that explains a ViewModel's problems with fixes, a **views playground** to edit a whole ViewModel live (the gallery's
+  Playground page, built, draws one element from its code), and a **"Views: speed" gallery page** that shows the budgets being met.
 - **`migrate.mjs`**: upgrades a ViewModel between contract versions; `since` and deprecation marks on every field.
 
 ## drishti-views: the contract
