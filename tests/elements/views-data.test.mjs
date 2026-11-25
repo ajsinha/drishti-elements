@@ -13,7 +13,7 @@
  *
  * See the LICENSE file in the root of this repository.
  */
-/* drishti-views' datasets under Node (contract 1.1, VIEWS_DESIGN step 5): the forms of a dataset, rows patches by key in their order
+/* drishti-views' datasets under Node (contract 1.1): the forms of a dataset, rows patches by key in their order
    (reset, remove, update, add), derived reads (groups, aggregations, the top categories), raw values formatted by the field's format with
    the mask, the data allow-list, the inline-rows bound, the minimal stamp of the builders, and the grid's columns and the chart's spec
    made from a dataset. */

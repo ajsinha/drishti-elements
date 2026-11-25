@@ -11,7 +11,7 @@
 # copyright holder.
 #
 # See the LICENSE file in the root of this repository.
-"""drishti-views' datasets and the kinds that read them (contract 1.1, VIEWS_DESIGN step 5) in a real browser, under the strict CSP:
+"""drishti-views' datasets and the kinds that read them (contract 1.1) in a real browser, under the strict CSP:
 
 * a grid of 10,000 synthetic trades from an inline dataset: virtual rows (the DOM holds only the rows in view), groups and an order,
   each value formatted with its field's format, a sign tone; rows patches (update, add, remove, reset) reach the grid and a chart that

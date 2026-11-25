@@ -22,7 +22,7 @@ How Drishti Elements is built and the rules it keeps. How to use it is [USING.md
 
 An application that grows screen by screen collects a grid per screen, a chart wrapper per chart, a number formatter per file, each with its own
 keyboard, accessibility, bugs and look. Drishti Elements is one implementation of each: ten libraries, each with one job, and a guard that stops
-a second copy from growing beside them (section 10).
+a second copy from growing beside them (section 11).
 
 ## 2. The ten libraries
 
@@ -52,7 +52,7 @@ depends on a host: a library names no host route and needs no host page (section
 - **Vendored, never a CDN.** Engines (ECharts, CodeMirror, Arrow JS) and map shapes live under `vendor/` with their licences, listed in
   `vendor/VENDOR.md`.
 - **Files under 2,000 lines**; object-oriented, configuration-driven, one namespace on `window` (`Drishti.elements`).
-- **The theme is CSS custom properties** from drishti-core's tokens ([THEMING.md](THEMING.md)); light and dark, three **densities** (comfortable,
+- **The theme is CSS custom properties** from drishti-core's tokens ([the Theming section of USING.md](USING.md#theming)); light and dark, three **densities** (comfortable,
   compact, terminal) shared by every component. Colours come from tokens only.
 - **Accessibility is part of the component**: roles, names, keyboard, focus, announcements, contrast (WCAG 2.2 AA); every drawing has a table or text
   alternative; `prefers-reduced-motion` is honoured.
@@ -113,7 +113,7 @@ streams, ticking cells, a record panel beside the grid and the person's tray. It
 server-side row model and tree data and builds a drishti-grid. Drishti Elements never uses AG Grid: no code, package, CSS or look; the adapter was written
 from AG Grid's public documentation of its option and API shapes only. Every option not taken in full is named once in the browser's console and by
 `reportUnsupported()`. The mapping's one home is the code (`AG_MAPPING` in `drishti_grid-ag-map.js`); the gallery's tab and
-[MOVING_FROM_AG_GRID.md](MOVING_FROM_AG_GRID.md) are generated from it.
+the AG Grid section of [USING.md](USING.md#moving-an-ag-grid-application) are generated from it.
 
 ## 7. drishti-chart
 
@@ -409,17 +409,134 @@ Under Node 22 or later the page scope, the mock and the WebSocket and `fetch` tr
 The bundle and the parts have byte budgets like every library (`tests/test_elements_budget.py`): each is its size when 3.0.0 was made ready
 plus about 5%, so growth is a decision, not a drift.
 
-## 9. Packaging and versions
+## 9. drishti-views
+
+The aim: **anyone's server, script or page can describe a whole screen as JSON and have Drishti Elements paint it.** A screen is a **ViewModel**:
+a title line, a strip of figures, panels of many kinds, a layout, controls, datasets and, when it is live, frames of patches. The description is an
+open, versioned specification with a JSON Schema; the painter is one library over the grid, the chart, the tree, the graph and the inputs that
+already exist. No framework, no build step, no CDN; it runs from `file://`. How to use it is [VIEWS.md](VIEWS.md); the shapes are in
+[CONTRACTS.md](CONTRACTS.md#the-viewmodel-drishti-views).
+
+### Three things, each with one home
+
+| Thing | What it is | Home |
+|---|---|---|
+| **The specification** | the ViewModel as a JSON Schema (contract 1.x), the frames and patches of a live view, and the conformance vectors; its one home is drishti-rachana's `spec/1/viewmodel.schema.json`, and drishti-views carries a byte-for-byte copy whose SHA-256 is pinned beside it | `elements/drishti-views/spec/` |
+| **The painter** | `paint(el, viewModel, options)` and `<elements-view>`: draws a ViewModel, applies frames, follows a stream | `elements/drishti-views/src/` |
+| **The builders** | a fluent builder of views and of frames, and `sse()`, in one source that runs in the browser and under Node (no DOM) | `elements/drishti-views/src/drishti_views-build.js` |
+
+A ViewModel is **data, no logic**. It holds no expression, no script, no template and no style text. A client walks the JSON and draws it; a script
+reads it; a test compares it; a stream patches it. That is what makes it safe to accept from a server one does not control, easy to write from any
+language, and stable across versions.
+
+drishti-views draws nothing of its own that another library draws. A grid is drishti-grid, every chart is drishti-chart (the only place an engine is
+called), a tree is drishti-tree, a network is drishti-graph, a control is a drishti-inputs component, a live connection is drishti-events. It owns only
+what is about a *screen*: the frame of a panel, the layout, the title line and strip, the states, the application of frames, and the specification.
+A library is loaded only for a view that needs it: a view of words and tables never loads a chart engine.
+
+### The modules
+
+| File | Holds |
+|---|---|
+| `spec/drishti_viewmodel.schema.json`, `spec/drishti_viewmodel.pin.json`, `spec/drishti_vectors.json` | the pinned copy of the schema, its hash and the rachana commit it was taken at, and the conformance vectors |
+| `drishti_views-schema.js` | **generated** from the copy by `python3 tools/views/gen.py` (and by the build): the compact form the validator reads |
+| `drishti_views-validate.js` | the validator (the keywords the schema uses, no dependency; normal and strict modes), the bounds (`LIMITS`) and the refused keys |
+| `drishti_views-build.js` | the builders of views and frames, `ViewError`, and `sse()` |
+| `drishti_views-paint.js`, `-screen.js` | `paint` and the handle; the title line, the strip, the freshness line, the function keys and the cards a view shows instead of itself |
+| `drishti_views-layout.js` | the 12-column flow, named areas, tabs, folds, sections, the divider, the narrow and medium forms of the container |
+| `drishti_views-panels.js`, `-kinds.js` | the panel frame and its states; the registry of kinds (`registerKind`) |
+| `drishti_views-cells.js`, `-words.js` | cells, tones, links and the painter's own words; the words-and-figures kinds and the markdown parser |
+| `drishti_views-tables.js`, `-tabs.js`, `-charts.js` | the table, ladder and pivot kinds with the column funnels; the tabs kind; the chart and map kinds |
+| `drishti_views-data.js`, `-datakinds.js` | datasets (contract 1.1) and the `grid`, `tree` and `chart` kinds that read them |
+| `drishti_views-patch.js`, `-live.js` | frames, order and conflation; the stream over drishti-events |
+| `drishti_views-controls.js`, `-forms.js`, `-state.js` | controls drawn with drishti-inputs; the form panel and the actions; the screen's state and effects (contract 1.2) |
+| `drishti_views-element.js` | `<elements-view>` |
+
+### The rules
+
+- **Text or value, never guessed.** In the words, tables and figures kinds every figure is the producer's text and the painter computes and formats
+  nothing. A dataset's values are raw and printed by the field's named format (drishti-core's formats, rounding half up), so a server that formats
+  and a browser that formats print the same digits.
+- **A tone is a word.** `pos`, `neg`, `link`, `accent`, `ok`, `warn`, `bad`, `muted`, `inactive`: the theme decides the colour and always pairs it with
+  a sign or a glyph. A ViewModel never names a colour, a font or a class.
+- **Failures stay local.** A panel that cannot be filled carries its state; one whose painter throws is drawn in its `error` state; the rest of the view
+  is drawn. An error never blanks a view that was already painted.
+- **Unknown is ignored.** A painter ignores a field it does not know, draws an unknown kind as a titled panel that says so, ignores an unknown patch,
+  and refuses another major in words. Producers and painters of different minor versions work together.
+- **Structure and data are separate.** Rows live in datasets, so two panels can read one dataset and a rows patch reaches both.
+- **Every screen has a text alternative.** Every chart keeps a data table, closed until opened; every panel has a name; a live change is announced
+  through one polite status region, and flashes stop under `prefers-reduced-motion`.
+
+### A paint
+
+1. Read the source (a ViewModel, an address, a `Response`, a promise of one), refuse a major the painter does not draw, validate (`warn` by default).
+2. Draw the frame in one pass: the title line, the strip, the freshness line, the keys, the controls and every panel's frame in its place, each in
+   its state. This first paint needs no data and no engine.
+3. Draw each panel's body; a library (grid, tree, chart, graph, the chart engine) is loaded, and its sheets adopted into the view's root, the first
+   time a view has a panel that needs it. Then `ready`; the stream is subscribed when the view is live.
+
+### Live
+
+A live view, a view that arrives in pieces and a view a page updates by hand are the same thing: a ViewModel, then **frames** of **patches** applied in
+order. A frame is `{seq, generation, patches}`; the ops are `strip`, `panel`, `provenance`, `deleted`, `restored` and `rows` (a dataset's rows, by
+key). A patch is addressed by identity (a strip index, a panel id, a row key), so it can be validated, conflated and explained: there is no
+path-addressed "set anything".
+
+- Frames are applied in `seq` order; a frame not newer than the last applied is dropped. Every frame that arrived since the last paint is applied
+  whole, in **one animation frame**, so the reader never sees half of one; frames that arrive faster than the page paints are conflated, and a hidden
+  page catches up in one paint when shown.
+- A patch goes from the stream to the node that draws it through a map by identity: no validation, no deep copy and no re-layout of the view on that
+  path. Validation, the builders and any mapping of a host's contract run when a view is loaded, never per patch.
+- The stream is drishti-events' (the view's topic, ordered, resumed and replayed by the events protocol); a gap it cannot fill, or a new epoch, makes
+  the painter read the view again. A server that speaks no protocol sends Server-Sent Events named `view` and `frame` through raw mode, and every
+  reconnect of such a stream begins with a `view`. `handle.patch(frame)` is the third way, for a host's own channel.
+
+### Security
+
+A ViewModel may come from a server the page does not control, and frames arrive all day. The rule: **a ViewModel can make the painter draw text and
+shapes and offer links and actions; it can never run code, load code, style the page, or reach an address the host did not allow.**
+
+- Strings are written as text: the painter never assigns `innerHTML` and evaluates nothing. Markdown is built as DOM nodes by the library's own
+  parser; raw HTML in it is text.
+- A link's address is made safe first and a click raises a cancelable event: the host decides. An action raises an event and stops.
+- The painter fetches only from the page's origin, the view's own origin and the origins the host allowed (`data.allow`).
+- The validator holds a view to its bounds (panels, strip cells, nesting, inline rows) and refuses the keys `__proto__`, `constructor` and `prototype`.
+- The view draws inside a shadow root by default; drawing is DOM and CSSOM, so no inline script, no inline style and no `unsafe-eval` are needed.
+- Who may see what is the producer's job: a value a reader may not see is absent or masked before it is sent.
+
+### Speed
+
+Screens like these are used by people who act on what they see within a second, so speed is held by tests, not by intent. `tests/views_budget.json`
+holds the budgets and the browser test checks each as a ratio to a calibration loop run in the same page, so a slow runner does not fail a good change:
+
+| Budget | What it bounds |
+|---|---|
+| `first-paint-ms` 60 | a 12-panel view's frame drawn after its JSON arrives |
+| `ready-ms` 400 | every panel drawn or in a state |
+| `patch-apply-ms` 1 | one frame of strip and panel patches applied |
+| `patch-to-pixel-p99-ms` 20 | from handing a frame to the painter to the next animation frame |
+| `validate-200kb-ms` 15 | a 200 KB view validated under Node |
+
+A budget is loosened only by a commit that says why. The bundle has a byte budget like every library (`tests/test_elements_budget.py`).
+
+### A library that names no host
+
+drishti-views contains no address, route, header name, authentication scheme, entity type, error-code prefix or settings key of any host. What a host
+needs is an option (`fetch`, `links`, `data`, `host`, `messages`, `libraries`, `live`), a registered kind, or an adapter that lives in the host's own
+code. The generic-library guard (`tests/test_elements_guards.py`) reads every source and style sheet of the library for domain vocabulary, and the
+gallery's made-up sample data is the only place instruments and countries are named.
+
+## 10. Packaging and versions
 
 One distribution: the release tree `drishti-elements-<version>/` and its zip, built from a tag by `python3 tools/elements/cli.py dist` (offline, Python
 only, reproducible). `cli.py pack` writes one JavaScript file and one style sheet for a page that wants two files. **One version for every library**:
 `elements` in `elements/drishti_elements.json`; the bundles' headers, the loader's `ELEMENTS_VERSION`, the release tree's manifest, the catalogue and the
 reference are generated from it. A released version never changes; a fault is fixed by the next patch version.
 
-## 10. Documentation, the gallery and the checks
+## 11. Documentation, the gallery and the checks
 
 - **The reference** [API.md](API.md) is generated from the typed JSDoc by `python3 tools/docs/elements_api.py`; a public symbol without a typed comment
-  fails the check, and so does a stale file. The same parse writes the gallery's catalogue and the migration guide's option table.
+  fails the check, and so does a stale file. The same parse writes the gallery's catalogue and the AG Grid option table of USING.md.
 - **The gallery** (`gallery/drishti_gallery.html`) shows every component live with its options, its events and the code to use it, in a playground and a
   documentation mode. It is static: it runs from the file system and needs no server; its stand-in data is made up. It ships in the release tree.
 - **The checks** (the gate): `python3 tools/elements/build.py --check`, `python3 tools/docs/elements_api.py --check`, `python3 tools/license_headers.py`,

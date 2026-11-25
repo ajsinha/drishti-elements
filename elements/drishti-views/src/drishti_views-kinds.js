@@ -14,7 +14,7 @@
  * See the LICENSE file in the root of this repository.
  */
 /* The registry of panel kinds: a kind's painter draws a panel's data into the body of the frame drishti_views-panels.js made.
-   The built-in kinds register here as they are written (VIEWS_DESIGN step 4 on); a kind with no painter is drawn as a titled panel
+   The built-in kinds register here; a kind with no painter is drawn as a titled panel
    that says so (the specification's "unknown is ignored"), never as a blank or a thrown error. */
 
 /**

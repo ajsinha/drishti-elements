@@ -23418,7 +23418,7 @@ Returns `string`.
 
 #### `rowKey(row, key, index)`
 
-A row's key: its key fields' values as text, joined by U+001F (VIEWS_DESIGN 5.3); the row's place when the dataset has no key.
+A row's key: its key fields' values as text, joined by U+001F (docs/CONTRACTS.md, datasets); the row's place when the dataset has no key.
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -23440,7 +23440,7 @@ Returns `Array&lt;{name: string, type: string}&gt;`.
 
 #### `derive(rows, q)`
 
-A derived read (VIEWS_DESIGN 4.5): the rows grouped by x (and by), each measure combined by its aggregation; without any aggregation the rows as they are. limit keeps the categories with the largest first figure (the others are left out).
+A derived read (docs/VIEWS.md, datasets): the rows grouped by x (and by), each measure combined by its aggregation; without any aggregation the rows as they are. limit keeps the categories with the largest first figure (the others are left out).
 
 | Parameter | Type | Meaning |
 |---|---|---|

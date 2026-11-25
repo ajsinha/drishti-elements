@@ -13,7 +13,7 @@
  *
  * See the LICENSE file in the root of this repository.
  */
-/* Datasets (contract 1.1, VIEWS_DESIGN step 5): the rows a view's grid, tree and chart panels read, by name, shared. A dataset is ONE
+/* Datasets (contract 1.1): the rows a view's grid, tree and chart panels read, by name, shared. A dataset is ONE
    of: values (rows as lists in the order of its fields: what drishti-rachana writes), rows (objects), name (rows, Arrow bytes or a
    drishti-data source the page hands the painter: options.data[name]), arrow ({url} or {base64}), pages (REST pages read a window at a
    time as the reader scrolls), server (a server-side row model) or live (contract 1.2: a live table of the Data Protocol, read a window
@@ -65,7 +65,7 @@ export function valueText(v, fmt, type) {
 }
 
 /**
- * A row's key: its key fields' values as text, joined by U+001F (VIEWS_DESIGN 5.3); the row's place when the dataset has no key.
+ * A row's key: its key fields' values as text, joined by U+001F (docs/CONTRACTS.md, datasets); the row's place when the dataset has no key.
  * @param {Object} row
  * @param {string[]} key
  * @param {number} [index]
@@ -99,7 +99,7 @@ function typeOf(values) {
 }
 
 /**
- * A derived read (VIEWS_DESIGN 4.5): the rows grouped by x (and by), each measure combined by its aggregation; without any aggregation
+ * A derived read (docs/VIEWS.md, datasets): the rows grouped by x (and by), each measure combined by its aggregation; without any aggregation
  * the rows as they are. limit keeps the categories with the largest first figure (the others are left out).
  * @param {Object[]} rows
  * @param {{x: ?string, by: ?string, y: Array<{field: string, agg: ?string}>, limit: number}} q

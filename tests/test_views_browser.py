@@ -14,7 +14,7 @@
 """drishti-views' painter in a real browser, against its static fixture harness (elements/drishti-views/drishti_harness.html, which paints
 a conformance vector): no server, the files served under a strict CSP (nothing inline), the per-worker browser only.
 
-* the screen (VIEWS_DESIGN step 3): the title line, the strip, the freshness line and the function keys; every panel's frame with its
+* the screen: the title line, the strip, the freshness line and the function keys; every panel's frame with its
   header tags and its state from the contract's fields (error, denied, waiting, computing, stale, failed, empty, and a kind with no
   painter yet said in words); drawn inside a shadow root and styled there, in both themes, and into the element itself;
 * a kind's painter: registered, drawn, updated in place by a panel patch, and one that throws leaves its panel in an error state;
@@ -23,7 +23,7 @@ a conformance vector): no server, the files served under a strict CSP (nothing i
 * frames: strip, panel and provenance patches in one animation frame, old frames dropped, unknown ops ignored, deleted and restored;
 * the cards drawn instead of a view (a newer major, refused as invalid, an address that could not be read, with Retry), links and
   navigation in place with a back step, the function keys from the keyboard;
-* speed (P1 to P3 of the design, budgets in tests/views_budget.json as a ratio to a calibration loop run in the same page).
+* speed (the budgets of docs/DESIGN.md, drishti-views, Speed, in tests/views_budget.json as a ratio to a calibration loop run in the same page).
 
 DRISHTI_VIEWS_SHOTS names a folder for screenshots (none are taken otherwise)."""
 import json

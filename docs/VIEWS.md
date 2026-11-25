@@ -16,8 +16,8 @@
 # Whole screens: drishti-views
 
 Whole screens from a **ViewModel** (contract 1, its schema in [CONTRACTS.md](CONTRACTS.md#the-viewmodel-drishti-views)): a title line, a
-strip of figures, panels of twenty-two kinds (label and value pairs, status chips, a metric, markdown, links, a timeline, tables, a
-ladder, a pivot, tabs, lines and areas, bars, a gauge, a surface, a waterfall, a histogram, a scatter, candlesticks, a graph, a map) and a
+strip of figures, panels of twenty-nine kinds (the twenty-two of contract 1: label and value pairs, status chips, a metric, markdown, links, a timeline, tables, a
+ladder, a pivot, tabs, lines and areas, bars, a gauge, a surface, a waterfall, a histogram, a scatter, candlesticks, a graph, a map; then `grid`, `tree` and `chart`, which read datasets, and `live`, `treemap`, `bullet` and `form`) and a
 layout. In those panels the painter computes and formats nothing: every figure is the producer's text. Contract 1.1 adds **datasets**:
 rows by name, with raw values the painter formats by each field's format, read by `grid`, `tree` and `chart` panels (4 below).
 
@@ -117,6 +117,115 @@ stream.view(vm); stream.frame(frame(1).strip(0, { label: 'Booked', text: '18,432
 ```
 
 `validate(view, { strict })` checks any ViewModel; `registerKind(name, { paint })` adds a host's own kind.
+
+## The handle, the options and the events
+
+`paint(el, source, options)` answers a handle. `source` is a ViewModel, an address, or a `Response`. Painting into an element again disposes the
+handle that was there.
+
+| Member | What it does |
+|---|---|
+| `handle.ready` | a promise, resolved when the first paint is done (every panel drawn or in a state) |
+| `handle.viewModel` | the ViewModel as it stands, patches applied |
+| `handle.update(source)` | a new ViewModel (or address) for the same container; answers the new `ready` |
+| `handle.patch(frameOrPatches)` | applies a frame `{seq, generation, patches}` or a list of patches in the next animation frame; `false` when the frame was dropped (not newer than the last applied) |
+| `handle.panel(id)` | `{element, body, panel, state}` of one panel, or null |
+| `handle.dataset(name)` | a dataset (its fields and the rows it holds), or null |
+| `handle.on(name, fn)` | listens to an event; answers a function that stops listening |
+| `handle.back()` | steps back to the view before the last one a link opened in place; `false` when there is none |
+| `handle.fire(panel, trigger, mark, values)` | fires a trigger as a click does (`row-click`, `bar-click`, `point-click`, `submit`, `cancel`, `action`); answers `{effects, problems, state}`; a panel, trigger or mark the screen does not have runs nothing and answers `RCH-5001` |
+| `handle.change(control, value)` | a control's change, as the painter's own controls call it; for a host that draws its own (`controls: false`) |
+| `handle.stateValues`, `handle.controlValues`, `handle.controlQuery()` | the screen's state values by id; the control values the reader set, by id and as query text (`ctl.legs=2&...`) |
+| `handle.metrics()` | paints, patches applied, ignored and dropped, and the time to ready |
+| `handle.dispose()` | stops the stream, disposes every component and empties the container |
+
+Also exported: `validate(viewModel, { strict })` answering `{ok, issues}` (an issue names its level, code, path, message and fix), `registerKind(name, def)`,
+`view()`, `frame()`, `sse()` and `define({ tag })`, which registers `<elements-view>` under another name.
+
+**Options.** Every one has a default.
+
+| Option | Meaning |
+|---|---|
+| `shadow` (true) | draw inside a shadow root; `false` draws into the element, styled by the page's sheets |
+| `sheets` | constructable `CSSStyleSheet`s the host builds; adopted by the view's root, and no stylesheet is linked |
+| `density` | `comfortable`, `compact` or `terminal`; default the page's |
+| `locale`, `messages` | how times are printed; the painter's own words over the bundled English |
+| `header` (`full`) | `full`, `strip` or `none`: how much of the title line and strip is drawn |
+| `panels` | draw only these panel ids |
+| `validate` (`warn`) | `off`, `warn` (paint, list the issues in the console and the `issues` event) or `refuse` (do not paint an invalid view) |
+| `complete` (false) | fill the fields contract 1 requires and the producer left out, on a copy, before checking |
+| `keys` (false) | the view's function keys answer the keyboard (inside the view) |
+| `links` | `{ href(link), resolveView(link) }`: an address for a link (else a button that raises `link`), and the ViewModel, address or promise a link to another view opens in place |
+| `fetch` | the host's fetch, for a view given by its address |
+| `data` | `{ allow: [origins or 'any-https'], <name>: rows, Arrow bytes or a drishti-data source }` for datasets |
+| `live` | `{ events, url, topic, raw, resync, connect }`: the view's stream (3 above) |
+| `controls` | query text or an object of the values the reader had set; `false` draws none |
+| `host` | `{ notify, run, bind, check, confirm, allowed }`: the host's hooks for effects, the next bind, a form's check, a confirmation and a button's right |
+| `libraries`, `engine`, `gl` | the libraries a kind draws with, the chart engine's loader and the 3D engine's loader, when the host loads them its own way |
+| `geo`, `mapsBase` | the map helper and the folder of the map shapes ([Maps](#maps)) |
+| `tableTools` | `{ filters, chart }`: column funnels and Chart any table |
+| `label` | the region's accessible name (default: the title) |
+
+**Events** (on the handle, and as DOM events `elements-view:<name>` on the container; `link` and `key` are cancelable): `ready`, `error`, `issues`,
+`link`, `key`, `patch`, `navigate`, `pick`, `select`, `point`, `filter`, `chart-table`, `control-change`, `state-change`, `notify`, `host`, `refused`,
+`bound`, `drawn`, `dispose`.
+
+**The element.** `<elements-view>` reads the attributes `src`, `density`, `header`, `panels`, `locale`, `validate`, `label`, `live`, `complete` and
+`controls`; `.viewModel` and `.options` are its properties, `.handle` the handle once painted, and it raises `elements-view:painted`.
+
+## State and effects (contract 1.2)
+
+The painter keeps the ViewModel's `state[]` and, on a click, runs what the clicked mark carries, never evaluating an expression: a mark's `set`
+(or its `on` list: `set`, `toggle`, `clear`, `notify`, `host`, each already evaluated for that mark) comes in the ViewModel. A row, bar, event, figure
+or chart point that carries effects is clickable (the pointer, the keyboard: Enter or Space). A trigger fired on a panel, trigger or mark the screen
+does not have runs nothing and answers `RCH-5001`.
+
+`set`, `toggle` and `clear` change the values; `notify` and `host` go to `options.host.notify` and `options.host.run` (and the `notify` and `host`
+events) and are never run by Elements. Then `options.host.bind({state, params, changed, panels})` is called with every value as text (`params` as the
+`state.<id>` request parameters; a cleared state is `null` in `state` and absent from `params`: its default stands) and answers the next ViewModel;
+only the panels the changed states' `reads` name are drawn again (a `reads` that is missing draws the whole view), then `state[]` is taken from it and
+`bound` is raised. Without `bind` the values are kept and nothing is drawn again. Triggers run one after the other.
+
+A `form` panel is drishti-inputs' Form drawn from its fields (starting values from the ViewModel's `initial` result) with Submit and Cancel. A submit
+hands its values to `options.host.check({panel, form, values})`, which answers the problems the Rachana runtime found (the rules are never evaluated
+in the browser): any problem refuses the submit, shown at its field, and nothing runs; otherwise the `submit` effects run with `event` the values
+(`set` takes `event.<field>`, a `host` effect's `withEvent` arguments are filled from them). `cancel` runs without checks. A panel's `actions` are
+buttons in its header: `confirm` asks in a dialog first (or `options.host.confirm(text)`), and a `requires` is enabled only when
+`options.host.allowed(name)` answers `true`: with no hook, or any other answer, the button is disabled; a page that wants every button passes
+`allowed: () => true`. A control's `on.change` runs through `handle.change(control, value)`.
+
+## States and errors
+
+A panel is drawn in a frame that keeps its place, so one panel's trouble never moves another. The frame's `data-state` is one of `ready`, `error`
+(with the producer's words), `denied` (no access, in words), `waiting`, `computing` (the last result stays under a quiet progress line), `failed`,
+`stale`, `empty` (calm, no alarm) and `unknown-kind` (drawn as a titled panel that says so). A panel whose painter throws is drawn in its `error`
+state, the `error` event says `panel.paint` with the panel's id, and the others are drawn.
+
+| What went wrong | What the reader sees | The `error` event's `code` |
+|---|---|---|
+| the ViewModel is not valid (with `validate: 'refuse'`) | a card naming what is wrong, the path and the fix | `view.invalid` |
+| a major version the painter does not draw | the card says so | `view.version` |
+| the address could not be read | the error's words | `view.fetch` |
+| the live stream failed | the view keeps what it shows, marked stale | `view.live` |
+| a form's `host.check` threw | the form is not submitted | `view.check` |
+| the host's `bind` threw | the controls say so; the view stays as it was | `view.bind` |
+
+## What a view may do
+
+A ViewModel may come from a server the page does not control. It can make the painter draw text and shapes and offer links and actions. It cannot run
+code, load code, style the page, or reach an address the host did not allow.
+
+- Every string is written as text; the painter never assigns `innerHTML` and evaluates nothing. Markdown is parsed into DOM nodes by the library's
+  own small parser; raw HTML in it is printed as text.
+- A link's address is made safe first (`javascript:`, `data:` and the like are refused), and a click raises the cancelable `link` event: the host
+  decides. An action raises an event and stops; a `confirm` is asked in a dialog; the host's `allowed(name)` enables a button that needs a right.
+- Addresses the painter fetches (a dataset's `arrow`, `pages` or `server`) must be on the page's origin, the view's origin or an origin in
+  `data.allow`; others are refused.
+- Bounds: a view may hold 200 panels, 24 strip cells, tabs nested 4 deep and 50,000 inline rows per dataset; beyond them the validator reports a
+  `limit` issue. The keys `__proto__`, `constructor` and `prototype` are refused anywhere in a view or a frame.
+- The view draws inside a shadow root by default, so a ViewModel's names cannot collide with the page's, and it needs no inline script, no inline
+  style and no `unsafe-eval` (the sheets are constructable and adopted).
+- Who may see what is the producer's job: a value a reader may not see is absent or masked before it is sent; the painter has no way to unmask one.
 
 ## Maps
 
