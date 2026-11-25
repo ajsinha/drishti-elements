@@ -12,7 +12,7 @@
 #
 # See the LICENSE file in the root of this repository.
 
-"""Drishti Elements packed for another application (``drishti.py elements pack``; docs/MOVING_FROM_AG_GRID.md): a tiny static
+"""Drishti Elements packed for another application (``drishti.py elements pack``; docs/USING.md (Moving an AG Grid application)): a tiny static
 page that loads only the two packed files draws a grid and a chart, with no Drishti server, under a strict CSP (nothing inline), and
 asks for nothing but the packed files. The packing itself (dependencies, the banking exclusion, themes) is test_elements_dist.py."""
 import re
