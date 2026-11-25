@@ -30,7 +30,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ("README", "USING", "EVENTS", "VIEWS", "TUTORIALS", "DESIGN", "API", "CONTRACTS", "THEMING", "MOVING_FROM_AG_GRID")
+DOCS = ("README", "USING", "EVENTS", "VIEWS", "TUTORIALS", "DESIGN", "API", "CONTRACTS")
 FOOTER = "Proprietary. Copyright (c) 2026 Ashutosh Sinha. All rights reserved. No licence is granted: see LICENSE."
 STYLE = """:root{--bg:#fff;--ink:#14202b;--mute:#52606d;--line:#d5dce3;--link:#0a5cad;--code:#f3f6f9}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1419;--ink:#e3e9ef;--mute:#9aa7b4;--line:#2a3640;--link:#6db3ff;--code:#17202a}}
@@ -65,6 +65,7 @@ def fix_link(u: str) -> str:
 
 def markdown(text: str) -> str:
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    text = re.sub(r"<p align=.*?</p>\n?", "", text, flags=re.S)   # the README's logo line is HTML
     out, lines, i = [], text.split("\n"), 0
     while i < len(lines):
         ln = lines[i]
@@ -140,7 +141,7 @@ def main(argv=None) -> int:
     logo = "../brand/drishti_elements-mark.svg" if (out / "brand" / "drishti_elements-mark.svg").is_file() else None
     (out / "docs").mkdir(exist_ok=True)
     for d in DOCS:
-        src = ROOT / ("README.md" if d == "README" and False else f"docs/{d}.md")
+        src = ROOT / ("README.md" if d == "README" else f"docs/{d}.md")
         if not src.is_file():
             continue
         (out / "docs" / f"{d}.html").write_text(page(f"Drishti Elements: {d}", markdown(src.read_text(encoding="utf-8")), logo), encoding="utf-8")

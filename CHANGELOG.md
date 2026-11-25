@@ -250,7 +250,7 @@ addition a minor, and 3.1.0 is that minor).
 
 Released 2026-11-21. drishti-events, the ninth library, complete (steps E1 to E12): events in the page, across tabs and with a server, one
 connection shared by every tab, an offline queue that survives a reload, the mock server and its faults, metrics, "why didn't I get it?",
-the status badge and the inspector. Its wire protocol is in docs/CONTRACTS.md. Breaking since 2.4.0: see docs/MIGRATING_TO_3.md (every removal with its replacement).
+the status badge and the inspector. Its wire protocol is in docs/CONTRACTS.md. Breaking since 2.4.0: every removal and its replacement is in the 3.0.0-rc.1 and 3.0.0 entries below.
 
 - **drishti-events** (eventing step E12, documentation and guards): the wire protocol, version 1, is "The events contract" in
   docs/CONTRACTS.md (with `epoch: null` in `after` and `replay`, retained values outside the numbering, and raw mode's resume); how it keeps
@@ -325,9 +325,10 @@ The first release candidate of 3.0.0: drishti-events steps E1 to E7 (the kernel,
   held in order while down and sent again until acknowledged, requests with `cancel`, hostile frames dropped and counted. `parseSse`
   (now with `retry:`) and `readSse(response)`; `Backoff` and `Heartbeat` on the clock. `connect()` with no address uses the endpoint
   `configure({ endpoints: { events } })` names.
-- **drishti-data** (breaking, 3.0.0): `LiveClient`, `LIVE_STATES`, `live()`, `parseSse`, `Backoff` and `Heartbeat` removed: connections
-  are drishti-events' (`connect(url, { protocol: 'raw' })` reads the same feeds; a subscription is a feed for `pipeToGrid`,
-  `liveSource` and `grid.connectLive`). Its budget is lowered to 42,000 bytes. The guard that only one library opens a WebSocket or an
+- **drishti-data** (breaking, 3.0.0): `LiveClient`, `LIVE_STATES`, `live()`, `parseSse`, `Backoff`, `Heartbeat`, `TransactionSink`, `FeedMonitor`, `feedBadge` and the file `drishti_backpressure.js` removed: connections
+  are drishti-events' (`connect(url, { protocol: 'raw' })` reads the same feeds; `subscription.toGrid(grid, { getRowId, onStats })` replaces `pipeToGrid` and
+  `TransactionSink`, the subscription's `stats`, `metrics()` and `events.explain(...)` replace `FeedMonitor`, `statusBadge(el, events)` replaces `feedBadge`, its
+  `conflate`, `buffer`, `deliver` and `batch` options replace the backpressure file; a subscription is a feed for `liveSource` and `grid.connectLive`). Its budget is lowered to 42,000 bytes. The guard that only one library opens a WebSocket or an
   `EventSource` now names drishti-events (and `BroadcastChannel`, `SharedWorker`). The gallery's live page is drishti-events'
   "Connection" page; the inputs harness feeds its live grid through a drishti-events connection.
 - **drishti-events** (eventing step E5, flow): every subscription has a pipeline between arrival and its listeners: `conflate` (`true`:

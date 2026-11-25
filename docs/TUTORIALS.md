@@ -15,7 +15,7 @@
 -->
 # Tutorials
 
-Four hands-on tutorials, each with commands you can run. They need Python 3 and Node (see [README](../README.md#build-and-test)); a browser opens the pages. On Windows use `python` for `python3`.
+Four hands-on tutorials, each with commands you can run. They need Python 3 and Node (see [the README](../README.md#requirements)); a browser opens the pages. On Windows use `py -3.13` for `python3`.
 
 ## 1. Build the release tree and open the gallery
 

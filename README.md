@@ -65,7 +65,20 @@ Serve a copy of the release tree (`python3 tools/elements/cli.py dist`) from you
 </script>
 ```
 
-More in [docs/USING.md](docs/USING.md) (the widgets), [docs/VIEWS.md](docs/VIEWS.md) (the painter), [docs/EVENTS.md](docs/EVENTS.md) and four runnable [tutorials](docs/TUTORIALS.md).
+More in [docs/USING.md](docs/USING.md) (the widgets), [docs/VIEWS.md](docs/VIEWS.md) (the painter), [docs/EVENTS.md](docs/EVENTS.md) and four runnable [tutorials](docs/TUTORIALS.md); the whole map is under [Documentation](#documentation).
+
+## The release tree
+
+The one form Elements is handed over in is the release tree, `drishti-elements-<version>/` and its zip, built from a tag, offline and reproducible:
+
+```bash
+python3 tools/elements/cli.py dist --out dist            # dist/drishti-elements-<version>/ and dist/drishti-elements-<version>.zip
+python3 tools/elements/cli.py pack --libs grid,chart --theme dark --out web/vendor/drishti    # or: two files with exactly the libraries you pick
+```
+
+It holds `elements/<library>/` (the ES modules, the bundle, the style sheet and the `.d.ts`), `css/` and `themes/`, `vendor/` (the engines and map shapes, each
+with its licence), `gallery/`, `data/`, `config/`, `brand/`, `LICENSE`, `README.md`, `CHANGELOG.md` and `drishti-elements.json` (every file's bytes and SHA-384 hash).
+The guides under `docs/` stay in the repository. [docs/USING.md](docs/USING.md#install-the-release-tree) shows the layout and how to serve it.
 
 ## The gallery
 
@@ -134,8 +147,21 @@ Open the **repository root**; there is no Java here.
 
 ## Documentation
 
-[docs/README.md](docs/README.md) is the index: [USING](docs/USING.md), [VIEWS](docs/VIEWS.md), [EVENTS](docs/EVENTS.md), [TUTORIALS](docs/TUTORIALS.md), [DESIGN](docs/DESIGN.md), [API](docs/API.md), [CONTRACTS](docs/CONTRACTS.md),
-[THEMING](docs/THEMING.md), [MOVING_FROM_AG_GRID](docs/MOVING_FROM_AG_GRID.md). What changed when: [CHANGELOG.md](CHANGELOG.md).
+Nine documents, each with one job. Every other fact has one home and is linked, not repeated.
+
+| Document | What it holds |
+|---|---|
+| [README.md](README.md) | this page: what Elements is, the libraries, the release tree, building and testing, the documentation map |
+| [CHANGELOG.md](CHANGELOG.md) | what changed when, release by release; the only home of history (breaking changes and their replacements included) |
+| [docs/USING.md](docs/USING.md) | the widgets: installing the release tree, a first page, picking libraries, packing two files, theming, connecting to a server, integrity and CSP, and moving an AG Grid application |
+| [docs/VIEWS.md](docs/VIEWS.md) | the painter: paint a ViewModel, `<elements-view>`, live frames, datasets, the builders, the handle, options and events, states, what a view may do, maps |
+| [docs/EVENTS.md](docs/EVENTS.md) | drishti-events: topics, publish and subscribe, a server, tabs, the inspector, a persistent queue |
+| [docs/CONTRACTS.md](docs/CONTRACTS.md) | the shapes a host's server answers in: errors, live sets, data capabilities, Explain, pivots, the ViewModel and its live stream, the events protocol |
+| [docs/TUTORIALS.md](docs/TUTORIALS.md) | four hands-on tutorials with commands: the gallery, a grid and a whole screen, events, a two-file pack |
+| [docs/DESIGN.md](docs/DESIGN.md) | the ten libraries and the rules each keeps; how drishti-events keeps its promises; how drishti-views is built |
+| [docs/API.md](docs/API.md) | every library's functions, classes, options and events, generated from the typed JSDoc (never edited by hand) |
+
+The gallery (`gallery/drishti_gallery.html`) shows every component live.
 
 ## Licence
 
